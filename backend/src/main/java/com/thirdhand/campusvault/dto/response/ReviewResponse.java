@@ -1,0 +1,25 @@
+package com.thirdhand.campusvault.dto.response;
+
+import lombok.*;
+
+import java.time.LocalDateTime;
+
+@Getter
+@Setter
+@NoArgsConstructor
+@AllArgsConstructor
+@Builder
+public class ReviewResponse {
+
+    private Long reviewId;
+
+    private Long bookingId;
+
+    private UserResponse reviewer;
+
+    private Integer rating;
+
+    private String comment;
+
+    private LocalDateTime createdAt;
+}

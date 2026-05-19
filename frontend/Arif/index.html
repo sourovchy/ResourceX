@@ -1,0 +1,1540 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>CampusVault — Combined Project Outline</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=JetBrains+Mono:wght@400;500&family=Inter:wght@400;500;600&display=swap" rel="stylesheet"/>
+<style>
+:root {
+  --primary: #274441;
+  --primary-light: #F0FDFA;
+  --primary-dark: #0F766E;
+  --accent: #D97706;
+  --accent-light: #FFFBEB;
+  --success: #16A34A;
+  --error: #DC2626;
+  --warning: #EA580C;
+  --info: #0369A1;
+  --bg: #F1F5F4;
+  --surface: #FFFFFF;
+  --card: #FFFFFF;
+  --text: #0F172A;
+  --text-2: #475569;
+  --text-3: #94A3B8;
+  --border: #E2E8F0;
+  --outline: #CBD5E1;
+  --teal-tint: #F0FDFA;
+  --blue-tint: #EFF6FF;
+  --green-tint: #F0FDF4;
+  --yellow-tint: #FFFBEB;
+  --orange-tint: #FFF7ED;
+  --red-tint: #FEF2F2;
+  --purple: #7C3AED;
+  --purple-tint: #F5F3FF;
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: 'Inter', sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  line-height: 1.7;
+  font-size: 15px;
+}
+a { color: var(--primary); text-decoration: none; }
+a:hover { text-decoration: underline; }
+
+/* ── HEADER ── */
+.hero {
+  background: linear-gradient(135deg, #0D9488 0%, #0F766E 50%, #064E3B 100%);
+  color: #fff;
+  padding: 56px 48px 48px;
+  position: relative;
+  overflow: hidden;
+}
+.hero::before {
+  content: '';
+  position: absolute; inset: 0;
+  background: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.04'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+}
+.hero-tag {
+  display: inline-block;
+  background: rgba(255,255,255,0.15);
+  border: 1px solid rgba(255,255,255,0.25);
+  border-radius: 100px;
+  padding: 4px 14px;
+  font-size: 12px;
+  font-family: 'JetBrains Mono', monospace;
+  letter-spacing: 0.08em;
+  margin-bottom: 16px;
+}
+.hero h1 {
+  font-family: 'Syne', sans-serif;
+  font-size: clamp(28px, 5vw, 48px);
+  font-weight: 800;
+  line-height: 1.15;
+  margin-bottom: 12px;
+}
+.hero p {
+  font-size: 16px;
+  opacity: 0.85;
+  max-width: 680px;
+  margin-bottom: 28px;
+}
+.hero-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  font-size: 13px;
+  font-family: 'JetBrains Mono', monospace;
+}
+.hero-badge {
+  background: rgba(255,255,255,0.12);
+  border: 1px solid rgba(255,255,255,0.2);
+  border-radius: 6px;
+  padding: 4px 10px;
+}
+
+/* ── STATS ── */
+.stats-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 0;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+}
+.stat-box {
+  padding: 20px 24px;
+  border-right: 1px solid var(--border);
+  text-align: center;
+}
+.stat-box:last-child { border-right: none; }
+.stat-num {
+  font-family: 'Syne', sans-serif;
+  font-size: 30px;
+  font-weight: 800;
+  color: var(--primary);
+  display: block;
+}
+.stat-lbl {
+  font-size: 12px;
+  color: var(--text-2);
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+/* ── LAYOUT ── */
+.layout {
+  display: grid;
+  grid-template-columns: 260px 1fr;
+  min-height: 100vh;
+}
+@media(max-width:900px){ .layout { grid-template-columns: 1fr; } }
+
+/* ── SIDEBAR ── */
+.sidebar {
+  background: var(--surface);
+  border-right: 1px solid var(--border);
+  padding: 32px 0;
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  overflow-y: auto;
+}
+.sidebar-title {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text-3);
+  padding: 0 24px 8px;
+}
+.toc-link {
+  display: block;
+  padding: 7px 24px;
+  font-size: 13.5px;
+  color: var(--text-2);
+  border-left: 3px solid transparent;
+  transition: all 0.15s;
+}
+.toc-link:hover { background: var(--teal-tint); color: var(--primary); border-left-color: var(--primary); text-decoration: none; }
+.toc-link.active { background: var(--teal-tint); color: var(--primary-dark); border-left-color: var(--primary); font-weight: 600; }
+.toc-sep { height: 1px; background: var(--border); margin: 10px 24px; }
+
+/* ── MAIN CONTENT ── */
+.main { padding: 40px 48px 80px; max-width: 960px; }
+@media(max-width:700px){ .main { padding: 24px 20px 60px; } }
+
+/* ── SECTION ── */
+.section { margin-bottom: 60px; scroll-margin-top: 24px; }
+.section-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 20px;
+  padding-bottom: 12px;
+  border-bottom: 2px solid var(--border);
+}
+.section-icon {
+  width: 40px; height: 40px;
+  border-radius: 10px;
+  background: var(--primary-light);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 18px;
+  flex-shrink: 0;
+}
+.section-title {
+  font-family: 'Syne', sans-serif;
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--text);
+}
+.section-num {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  color: var(--primary);
+  background: var(--teal-tint);
+  border: 1px solid #99F6E4;
+  border-radius: 4px;
+  padding: 2px 6px;
+  margin-left: auto;
+  flex-shrink: 0;
+}
+h3.sub {
+  font-family: 'Syne', sans-serif;
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--text);
+  margin: 28px 0 12px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+h3.sub::before {
+  content: '';
+  display: inline-block;
+  width: 4px; height: 16px;
+  background: var(--primary);
+  border-radius: 2px;
+  flex-shrink: 0;
+}
+p { margin-bottom: 12px; color: var(--text-2); }
+
+/* ── TABLE ── */
+.tbl-wrap { overflow-x: auto; margin: 16px 0; border-radius: 10px; border: 1px solid var(--border); }
+table { width: 100%; border-collapse: collapse; font-size: 13.5px; }
+thead tr { background: #F8FAFC; }
+th {
+  padding: 11px 14px;
+  text-align: left;
+  font-weight: 600;
+  font-size: 12px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-2);
+  border-bottom: 1px solid var(--border);
+}
+td {
+  padding: 11px 14px;
+  border-bottom: 1px solid var(--border);
+  vertical-align: top;
+  color: var(--text-2);
+}
+tr:last-child td { border-bottom: none; }
+tr:hover td { background: #F8FAFC; }
+td code, th code {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+  background: #F1F5F9;
+  padding: 1px 5px;
+  border-radius: 4px;
+  color: var(--primary-dark);
+}
+
+/* ── BADGES ── */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 3px 9px;
+  border-radius: 100px;
+  white-space: nowrap;
+}
+.badge-teal { background: var(--teal-tint); color: var(--primary-dark); }
+.badge-blue { background: var(--blue-tint); color: #1D4ED8; }
+.badge-green { background: var(--green-tint); color: #15803D; }
+.badge-yellow { background: var(--yellow-tint); color: #92400E; }
+.badge-orange { background: var(--orange-tint); color: #9A3412; }
+.badge-red { background: var(--red-tint); color: #991B1B; }
+.badge-purple { background: var(--purple-tint); color: #5B21B6; }
+.badge-gray { background: #F1F5F9; color: #475569; }
+
+/* ── CARDS ── */
+.card-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 14px;
+  margin: 16px 0;
+}
+.card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 18px;
+  position: relative;
+  overflow: hidden;
+}
+.card-accent { border-top: 3px solid var(--primary); }
+.card-accent.acc { border-top-color: var(--accent); }
+.card-accent.suc { border-top-color: var(--success); }
+.card-accent.wrn { border-top-color: var(--warning); }
+.card-accent.inf { border-top-color: var(--info); }
+.card-accent.pur { border-top-color: var(--purple); }
+.card-icon { font-size: 24px; margin-bottom: 10px; }
+.card h4 {
+  font-family: 'Syne', sans-serif;
+  font-size: 14px;
+  font-weight: 700;
+  margin-bottom: 6px;
+  color: var(--text);
+}
+.card p { font-size: 13px; margin: 0; color: var(--text-2); }
+
+/* ── CALLOUT ── */
+.callout {
+  border-radius: 10px;
+  padding: 16px 18px;
+  margin: 16px 0;
+  display: flex;
+  gap: 12px;
+  font-size: 14px;
+}
+.callout-teal { background: var(--teal-tint); border: 1px solid #99F6E4; color: var(--primary-dark); }
+.callout-yellow { background: var(--yellow-tint); border: 1px solid #FDE68A; color: #92400E; }
+.callout-blue { background: var(--blue-tint); border: 1px solid #BAE6FD; color: #0C4A6E; }
+.callout-icon { font-size: 18px; flex-shrink: 0; margin-top: 1px; }
+.callout p { margin: 0; }
+
+/* ── CODE BLOCK ── */
+pre {
+  background: #0F172A;
+  color: #94A3B8;
+  border-radius: 10px;
+  padding: 18px 20px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12.5px;
+  line-height: 1.7;
+  overflow-x: auto;
+  margin: 14px 0;
+}
+pre .kw { color: #38BDF8; }
+pre .str { color: #A3E635; }
+pre .cm { color: #475569; font-style: italic; }
+pre .fn { color: #FB923C; }
+pre .num { color: #E879F9; }
+
+/* ── PHASE BLOCKS ── */
+.phase {
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  overflow: hidden;
+  margin: 16px 0;
+}
+.phase-header {
+  padding: 14px 20px;
+  font-family: 'Syne', sans-serif;
+  font-weight: 700;
+  font-size: 15px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.phase-1 .phase-header { background: var(--green-tint); color: #14532D; }
+.phase-2 .phase-header { background: var(--yellow-tint); color: #713F12; }
+.phase-3 .phase-header { background: var(--purple-tint); color: #3B0764; }
+
+/* ── FLOW ── */
+.flow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0;
+  align-items: center;
+  margin: 16px 0;
+}
+.flow-step {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 10px 16px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text);
+}
+.flow-arrow {
+  color: var(--primary);
+  font-size: 18px;
+  padding: 0 8px;
+}
+
+/* ── ROLE BLOCK ── */
+.role-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 16px;
+  margin: 16px 0;
+}
+.role-card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  overflow: hidden;
+}
+.role-card-head {
+  padding: 16px 20px;
+  font-family: 'Syne', sans-serif;
+  font-weight: 700;
+  font-size: 16px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.role-admin .role-card-head { background: var(--purple-tint); color: #3B0764; }
+.role-student .role-card-head { background: var(--teal-tint); color: var(--primary-dark); }
+.role-card-body { padding: 14px 20px; }
+.role-card-body ul { list-style: none; }
+.role-card-body li {
+  padding: 5px 0;
+  font-size: 13.5px;
+  color: var(--text-2);
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+}
+.role-card-body li::before { content: '→'; color: var(--primary); flex-shrink: 0; font-weight: 700; }
+
+/* ── SCREEN LIST ── */
+.screen-group {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  overflow: hidden;
+  margin: 14px 0;
+}
+.screen-group-title {
+  background: #F8FAFC;
+  padding: 12px 18px;
+  font-weight: 700;
+  font-size: 13px;
+  color: var(--text-2);
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+.screen-item {
+  padding: 12px 18px;
+  border-bottom: 1px solid #F1F5F9;
+  display: grid;
+  grid-template-columns: 180px 1fr;
+  gap: 12px;
+  align-items: start;
+  font-size: 13.5px;
+}
+.screen-item:last-child { border-bottom: none; }
+.screen-name { font-weight: 600; color: var(--text); }
+.screen-desc { color: var(--text-2); }
+
+/* ── ARCH BOX ── */
+.arch-box {
+  background: #0F172A;
+  border-radius: 12px;
+  padding: 24px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+  line-height: 1.8;
+  color: #94A3B8;
+  overflow-x: auto;
+  margin: 16px 0;
+}
+.arch-box .teal { color: #2DD4BF; }
+.arch-box .blue { color: #60A5FA; }
+.arch-box .yellow { color: #FBBF24; }
+.arch-box .white { color: #F1F5F9; }
+
+/* ── FOOTER ── */
+.doc-footer {
+  text-align: center;
+  padding: 32px;
+  font-size: 13px;
+  color: var(--text-3);
+  border-top: 1px solid var(--border);
+  background: var(--surface);
+}
+
+/* ── CHECK / CROSS ── */
+.y { color: var(--success); font-weight: 700; }
+.n { color: var(--text-3); }
+.o { color: var(--accent); font-weight: 600; font-size: 12px; }
+
+/* ── HIGHLIGHT ROW ── */
+.highlight-row { background: var(--teal-tint) !important; }
+</style>
+</head>
+<body>
+
+<!-- HERO -->
+<div class="hero">
+  <div class="hero-tag">COMBINED PROJECT OUTLINE v3.0</div>
+  <h1>CampusVault<br/>Campus Resource Rental Platform</h1>
+  <p>A trust-based, campus-only digital ecosystem for students to list, discover, and rent high-value items — with role-based routing, dual student roles, smart Trust Scores, and full admin governance.</p>
+  <div class="hero-meta">
+    <span class="hero-badge">☕ Java 17 + Spring Boot 3</span>
+    <span class="hero-badge">⚡ Next.js 14 + TSX</span>
+    <span class="hero-badge">🗄️ MySQL 8</span>
+    <span class="hero-badge">🔑 JWT Auth</span>
+    <span class="hero-badge">📚 DBMS + Java Backend — CUET</span>
+  </div>
+</div>
+
+<!-- STATS -->
+<div class="stats-row">
+  <div class="stat-box"><span class="stat-num">2</span><span class="stat-lbl">User Roles</span></div>
+  <div class="stat-box"><span class="stat-num">12+</span><span class="stat-lbl">DB Tables</span></div>
+  <div class="stat-box"><span class="stat-num">25+</span><span class="stat-lbl">API Endpoints</span></div>
+  <div class="stat-box"><span class="stat-num">30+</span><span class="stat-lbl">Pages / Screens</span></div>
+  <div class="stat-box"><span class="stat-num">3</span><span class="stat-lbl">Build Phases</span></div>
+  <div class="stat-box"><span class="stat-num">14</span><span class="stat-lbl">Dev Weeks</span></div>
+</div>
+
+<!-- LAYOUT -->
+<div class="layout">
+
+<!-- SIDEBAR -->
+<nav class="sidebar">
+  <div class="sidebar-title">Table of Contents</div>
+  <a class="toc-link active" href="#s1">1. Project Overview</a>
+  <a class="toc-link" href="#s2">2. User Roles & Auth</a>
+  <a class="toc-link" href="#s3">3. Role-Based Routing</a>
+  <a class="toc-link" href="#s4">4. Student App — All Pages</a>
+  <a class="toc-link" href="#s5">5. Admin Panel — All Pages</a>
+  <a class="toc-link" href="#s6">6. Role Permissions Matrix</a>
+  <a class="toc-link" href="#s7">7. Item Categories</a>
+  <a class="toc-link" href="#s8">8. Feature Phases</a>
+  <a class="toc-link" href="#s9">9. Database Design</a>
+  <a class="toc-link" href="#s10">10. REST API Endpoints</a>
+  <a class="toc-link" href="#s11">11. Key Business Logic</a>
+  <a class="toc-link" href="#s12">12. MVP Week Roadmap</a>
+  <a class="toc-link" href="#s13">13. Folder Structure</a>
+  <a class="toc-link" href="#s14">14. Color System</a>
+</nav>
+
+<!-- MAIN -->
+<main class="main">
+
+<!-- ══════════════════════════════════ S1 ══ -->
+<section class="section" id="s1">
+  <div class="section-header">
+    <div class="section-icon">🎯</div>
+    <div class="section-title">Project Overview & Tech Stack</div>
+    <span class="section-num">§01</span>
+  </div>
+
+  <p>Many students on campus own high-value items — cycles, DSLRs, Arduino kits, laptops, event equipment — that sit idle most of the time. Other students urgently need them but cannot afford to buy. <strong>CampusVault</strong> digitizes this peer-to-peer sharing with trust, accountability, and a built-in micro-economy. The entire platform runs in the browser — no mobile app required.</p>
+
+  <div class="callout callout-teal">
+    <span class="callout-icon">🏗️</span>
+    <p><strong>Architecture Decision:</strong> Two separate Next.js apps — one student-facing web app (port 3000) and one admin-only panel (port 3001) — both backed by the same Spring Boot REST API (port 8080) and MySQL database.</p>
+  </div>
+
+  <h3 class="sub">Technology Stack</h3>
+  <div class="tbl-wrap">
+    <table>
+      <thead><tr><th>Layer</th><th>Technology</th><th>Purpose</th></tr></thead>
+      <tbody>
+        <tr><td><strong>Backend</strong></td><td>Java 17 + Spring Boot 3</td><td>REST API, Business Logic, Security</td></tr>
+        <tr><td><strong>Student Web App</strong></td><td>Next.js 14 (App Router) + TSX</td><td>Student-facing interface — Browse, Book, List items</td></tr>
+        <tr><td><strong>Admin Panel</strong></td><td>Next.js 14 (App Router) + TSX</td><td>Admin-only governance dashboard</td></tr>
+        <tr><td><strong>Database</strong></td><td>MySQL 8</td><td>All persistent data storage</td></tr>
+        <tr><td><strong>Auth</strong></td><td>JWT (JSON Web Token)</td><td>Secure login & role-based route protection</td></tr>
+        <tr><td><strong>ORM</strong></td><td>Spring Data JPA / Hibernate</td><td>Java ↔ MySQL bridge</td></tr>
+        <tr><td><strong>HTTP Client</strong></td><td>Axios (Next.js)</td><td>API calls from both web apps to Spring Boot</td></tr>
+        <tr><td><strong>Styling</strong></td><td>Tailwind CSS</td><td>Utility-first styling for all web pages</td></tr>
+        <tr><td><strong>API Style</strong></td><td>RESTful API</td><td>JSON request / response</td></tr>
+        <tr><td><strong>Hosting</strong></td><td>Localhost (Dev) → AWS later</td><td>Deployment environment</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- ══════════════════════════════════ S2 ══ -->
+<section class="section" id="s2">
+  <div class="section-header">
+    <div class="section-icon">👥</div>
+    <div class="section-title">User Roles & Authentication</div>
+    <span class="section-num">§02</span>
+  </div>
+
+  <div class="callout callout-yellow">
+    <span class="callout-icon">⚠️</span>
+    <p><strong>Key Change from ThirdHand v1:</strong> There are now only <strong>2 roles</strong> — ADMIN and STUDENT. A Student can act as both an Owner (lister) and a Renter (borrower) simultaneously. No separate Owner role needed.</p>
+  </div>
+
+  <div class="role-cards">
+    <div class="role-card role-admin">
+      <div class="role-card-head">👑 ADMIN</div>
+      <div class="role-card-body">
+        <ul>
+          <li>Created directly in database (not via signup)</li>
+          <li>Has full governance access over the platform</li>
+          <li>Uses the separate admin web panel (port 3001)</li>
+          <li>Verify/suspend students, approve/reject items</li>
+          <li>Resolve disputes, override penalties</li>
+          <li>View analytics & system reports</li>
+          <li>Manage categories & announcements</li>
+          <li>Trust Score audit and manual override</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="role-card role-student">
+      <div class="role-card-head">🎒 STUDENT (Owner + Renter)</div>
+      <div class="role-card-body">
+        <ul>
+          <li>Registers via campus email + student ID</li>
+          <li>Requires admin verification before access</li>
+          <li>Uses the student web app (port 3000)</li>
+          <li><strong>As Owner:</strong> List items, approve bookings, report damage</li>
+          <li><strong>As Renter:</strong> Browse items, send booking requests, pay deposit</li>
+          <li>Both roles active simultaneously — same account</li>
+          <li>Has Trust Score that affects platform privileges</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <h3 class="sub">Authentication Flow</h3>
+  <div class="tbl-wrap">
+    <table>
+      <thead><tr><th>Step</th><th>Action</th><th>Detail</th></tr></thead>
+      <tbody>
+        <tr><td><span class="badge badge-gray">1</span></td><td>Student Registration</td><td>Campus email + Student ID + Password → Account created with <code>status: PENDING</code></td></tr>
+        <tr><td><span class="badge badge-gray">2</span></td><td>Admin Verification</td><td>Admin reviews Student ID via web panel → Changes status to <code>VERIFIED</code></td></tr>
+        <tr><td><span class="badge badge-gray">3</span></td><td>Login → JWT</td><td>Verified user logs in → Server returns JWT with <code>userId + role (ADMIN / STUDENT)</code></td></tr>
+        <tr><td><span class="badge badge-gray">4</span></td><td>Role-Based Redirect</td><td><code>role === ADMIN</code> → <code>/admin/dashboard</code> &nbsp;|&nbsp; <code>role === STUDENT</code> → <code>/dashboard</code></td></tr>
+        <tr><td><span class="badge badge-gray">5</span></td><td>Protected Routes</td><td>Every API call sends JWT in header → Spring Security checks role → Allow or Deny</td></tr>
+        <tr><td><span class="badge badge-gray">6</span></td><td>Token Expiry</td><td>JWT expires after 24 hours → User must login again</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- ══════════════════════════════════ S3 ══ -->
+<section class="section" id="s3">
+  <div class="section-header">
+    <div class="section-icon">🔀</div>
+    <div class="section-title">Role-Based Routing Logic</div>
+    <span class="section-num">§03</span>
+  </div>
+
+  <div class="callout callout-blue">
+    <span class="callout-icon">💡</span>
+    <p>This is the core routing change. After login, the JWT <code>role</code> claim determines where the user lands. Both apps have middleware that enforces this — unauthorized access redirects to login.</p>
+  </div>
+
+  <h3 class="sub">Login Redirect Flow</h3>
+  <div class="flow">
+    <div class="flow-step">User submits<br/>Login Form</div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-step"><code>POST /api/auth/login</code></div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-step">Server returns<br/>JWT + role</div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-step">Frontend checks<br/><code>jwt.role</code></div>
+  </div>
+  <div style="margin-top:10px; display:flex; gap:16px; flex-wrap:wrap;">
+    <div style="flex:1; min-width:200px; background:var(--purple-tint); border:1px solid #DDD6FE; border-radius:10px; padding:16px;">
+      <div style="font-weight:700; color:#3B0764; margin-bottom:6px; font-family:'Syne',sans-serif;">role === "ADMIN"</div>
+      <div style="font-family:'JetBrains Mono',monospace; font-size:13px; color:#5B21B6;">→ redirect to<br/>/admin/dashboard</div>
+      <div style="font-size:12px; color:var(--text-3); margin-top:6px;">Admin panel (port 3001)<br/>Full governance access</div>
+    </div>
+    <div style="flex:1; min-width:200px; background:var(--teal-tint); border:1px solid #99F6E4; border-radius:10px; padding:16px;">
+      <div style="font-weight:700; color:var(--primary-dark); margin-bottom:6px; font-family:'Syne',sans-serif;">role === "STUDENT"</div>
+      <div style="font-family:'JetBrains Mono',monospace; font-size:13px; color:var(--primary);">→ redirect to<br/>/dashboard</div>
+      <div style="font-size:12px; color:var(--text-3); margin-top:6px;">Student web app (port 3000)<br/>Owner + Renter combined</div>
+    </div>
+  </div>
+
+  <h3 class="sub">Route Protection Table</h3>
+  <div class="tbl-wrap">
+    <table>
+      <thead><tr><th>Route Pattern</th><th>App</th><th>Access Rule</th></tr></thead>
+      <tbody>
+        <tr><td><code>/auth/*</code></td><td>Student App</td><td>Public — no JWT required</td></tr>
+        <tr><td><code>/dashboard</code></td><td>Student App</td><td>STUDENT JWT required</td></tr>
+        <tr><td><code>/profile</code></td><td>Student App</td><td>STUDENT JWT required</td></tr>
+        <tr><td><code>/borrow/*</code></td><td>Student App</td><td>STUDENT JWT required (Renter actions)</td></tr>
+        <tr><td><code>/my-posts/*</code></td><td>Student App</td><td>STUDENT JWT required (Owner actions)</td></tr>
+        <tr><td><code>/notifications</code></td><td>Student App</td><td>STUDENT JWT required</td></tr>
+        <tr><td><code>/admin/login</code></td><td>Admin Panel</td><td>Public</td></tr>
+        <tr><td><code>/admin/*</code></td><td>Admin Panel</td><td>ADMIN JWT required — middleware.ts enforces</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- ══════════════════════════════════ S4 ══ -->
+<section class="section" id="s4">
+  <div class="section-header">
+    <div class="section-icon">🖥️</div>
+    <div class="section-title">Student Web App — All Pages</div>
+    <span class="section-num">§04</span>
+  </div>
+
+  <p>The student web app is a Next.js 14 project. Every verified student has both Owner and Renter capabilities inside the same account. The main navigation reflects this dual role.</p>
+
+  <div class="callout callout-teal">
+    <span class="callout-icon">🗺️</span>
+    <p><strong>Student Navigation Structure:</strong> After login, students see 5 primary sections — <strong>Dashboard</strong>, <strong>Borrow</strong> (browse & rent), <strong>My Posts</strong> (items they listed), <strong>Profile</strong>, and <strong>Notifications</strong>. Each section is described in detail below.</p>
+  </div>
+
+  <!-- AUTH -->
+  <div class="screen-group">
+    <div class="screen-group-title">🔐 Auth Pages (Public)</div>
+    <div class="screen-item">
+      <span class="screen-name">/auth/login</span>
+      <span class="screen-desc">Email + password form. On success, reads JWT role → redirects STUDENT to /dashboard, ADMIN to /admin/dashboard. Shows error if account is PENDING verification.</span>
+    </div>
+    <div class="screen-item">
+      <span class="screen-name">/auth/register</span>
+      <span class="screen-desc">Full name, campus email, student ID, password, confirm password. On success → redirects to /auth/pending. Campus email validation required.</span>
+    </div>
+    <div class="screen-item">
+      <span class="screen-name">/auth/pending</span>
+      <span class="screen-desc">Static screen — "Your account is awaiting admin verification. You'll receive an email once approved." No actions available.</span>
+    </div>
+    <div class="screen-item">
+      <span class="screen-name">/auth/forgot-password</span>
+      <span class="screen-desc">Enter campus email → OTP sent → Reset password form. Standard 2-step recovery flow.</span>
+    </div>
+  </div>
+
+  <!-- DASHBOARD -->
+  <div class="screen-group">
+    <div class="screen-group-title">🏠 Dashboard (Main Landing After Login)</div>
+    <div class="screen-item">
+      <span class="screen-name">/dashboard</span>
+      <span class="screen-desc">
+        <strong>Welcome section</strong> — student name, trust score badge, account status.<br/>
+        <strong>Quick stats row</strong> — Active Rentals (as renter), Items Listed (as owner), Pending Requests, Trust Score.<br/>
+        <strong>Recent Activity feed</strong> — latest booking updates, return reminders, new requests.<br/>
+        <strong>Featured / Trending items</strong> — top rented items this week (from CampusVault).<br/>
+        <strong>Quick action buttons</strong> — "Browse Items", "List an Item", "My Bookings", "My Posts".<br/>
+        Overdue rental alert banner if applicable.
+      </span>
+    </div>
+  </div>
+
+  <!-- BORROW PAGE -->
+  <div class="screen-group">
+    <div class="screen-group-title">🛍️ Borrow Page — Browse & Rent Items</div>
+    <div class="screen-item">
+      <span class="screen-name">/borrow</span>
+      <span class="screen-desc">
+        <strong>Main browse page.</strong> Grid of item cards from all other students' listings.<br/>
+        Filter bar: Category dropdown, Price range (min/max), Condition (New/Good/Fair), Availability date range, Owner trust score filter.<br/>
+        Search bar — filter by item name in real time.<br/>
+        Item card shows: photo, title, category badge, condition badge, price/day, owner name + trust score.<br/>
+        Tapping a card → /borrow/item/[id].
+      </span>
+    </div>
+    <div class="screen-item">
+      <span class="screen-name">/borrow/item/[id]</span>
+      <span class="screen-desc">
+        <strong>Item detail page.</strong> Full photo gallery, description, category, condition details.<br/>
+        Owner info card — name, trust score badge, rating, total successful rentals.<br/>
+        Availability calendar — visually shows booked vs available dates.<br/>
+        Deposit amount and price/day clearly shown.<br/>
+        "Book This Item" button → /borrow/book/[id].
+      </span>
+    </div>
+    <div class="screen-item">
+      <span class="screen-name">/borrow/book/[id]</span>
+      <span class="screen-desc">
+        <strong>Booking form.</strong> Shows item name, price/day, deposit amount.<br/>
+        Date range picker — start date and end date. System auto-blocks conflicting dates.<br/>
+        Calculates total rental cost dynamically (days × price + deposit).<br/>
+        Confirm booking → calls <code>POST /api/bookings</code>. On 409 Conflict → shows "Dates already booked". On success → redirects to /borrow/my-bookings.
+      </span>
+    </div>
+    <div class="screen-item">
+      <span class="screen-name">/borrow/my-bookings</span>
+      <span class="screen-desc">
+        <strong>My Bookings — Renter View.</strong> Tabbed layout: Pending | Approved | Active | Completed | Cancelled.<br/>
+        Each card: item name + photo thumbnail, booking dates, status badge (color-coded).<br/>
+        Active bookings: "Confirm Return" button → PUT /api/bookings/{id}/return.<br/>
+        Completed + unreviewed: "Leave a Review" link → /borrow/review/[bookingId].<br/>
+        Pending: "Cancel Booking" button.
+      </span>
+    </div>
+    <div class="screen-item">
+      <span class="screen-name">/borrow/deposit-tracker</span>
+      <span class="screen-desc">
+        <strong>Deposit Status Tracker.</strong> Lists all deposits: item name, deposit amount, current status (Held / Released / Deducted). Shows reason if deducted (penalty applied). Filter by status.
+      </span>
+    </div>
+    <div class="screen-item">
+      <span class="screen-name">/borrow/review/[bookingId]</span>
+      <span class="screen-desc">
+        Post-return review form. 1–5 star rating for the owner. Written comment. Submitted once per completed booking. Calls <code>POST /api/reviews</code>.
+      </span>
+    </div>
+    <div class="screen-item">
+      <span class="screen-name">/borrow/wishlist</span>
+      <span class="screen-desc">
+        <strong>Saved Items.</strong> Items the student bookmarked for later. Same card layout as browse. "Book Now" button on each card. Remove from wishlist option.
+      </span>
+    </div>
+  </div>
+
+  <!-- MY POSTS (OWNER) -->
+  <div class="screen-group">
+    <div class="screen-group-title">📦 My Posts — Owner Panel (Items Listed for Rent)</div>
+    <div class="screen-item">
+      <span class="screen-name">/my-posts</span>
+      <span class="screen-desc">
+        <strong>Main listing dashboard.</strong> Grid/list of all items the student has posted for rent.<br/>
+        Each card: photo, title, status badge (Available / Rented / Pending Approval / Inactive), price/day, total earnings from that item.<br/>
+        Quick actions: Edit, Delete, Toggle Availability, View Requests.<br/>
+        "Add New Item" button at top.
+      </span>
+    </div>
+    <div class="screen-item">
+      <span class="screen-name">/my-posts/add</span>
+      <span class="screen-desc">
+        <strong>Add New Item form.</strong> Fields: Title, Category (dropdown), Condition (New/Good/Fair), Photos (upload, min 1), Description, Price per day (৳), Deposit amount (৳), Availability date range.<br/>
+        Submits to <code>POST /api/items</code>. Item enters "Pending Approval" state until admin approves. Student sees confirmation screen.
+      </span>
+    </div>
+    <div class="screen-item">
+      <span class="screen-name">/my-posts/edit/[id]</span>
+      <span class="screen-desc">Edit item form — same fields as Add. Pre-filled with existing data. Calls <code>PUT /api/items/{id}</code>. Can toggle availability on/off.</span>
+    </div>
+    <div class="screen-item">
+      <span class="screen-name">/my-posts/requests</span>
+      <span class="screen-desc">
+        <strong>Booking Requests — Owner View.</strong> Incoming requests from renters. Each request card: renter name + trust score, item name, requested dates, message.<br/>
+        Action buttons: "Approve" → <code>PUT /api/bookings/{id}/approve</code> | "Reject" with reason → <code>PUT /api/bookings/{id}/reject</code>.<br/>
+        Filter: Pending | Approved | All.
+      </span>
+    </div>
+    <div class="screen-item">
+      <span class="screen-name">/my-posts/active-rentals</span>
+      <span class="screen-desc">
+        <strong>Active Rentals — Owner View.</strong> Ongoing rentals of items the owner listed. Shows renter info, item, dates, return deadline.<br/>
+        Actions: "Confirm Handover" (marks item as physically handed), "Report Damage" → opens damage form, "Mark Returned" after physical return.
+      </span>
+    </div>
+    <div class="screen-item">
+      <span class="screen-name">/my-posts/condition-report/[bookingId]</span>
+      <span class="screen-desc">
+        <strong>Condition Report form.</strong> Phase = BEFORE (pre-handover) or AFTER (post-return).<br/>
+        Checklist of item condition points. Photo upload. Notes text area. Submits to <code>POST /api/condition-reports</code>.
+      </span>
+    </div>
+    <div class="screen-item">
+      <span class="screen-name">/my-posts/earnings</span>
+      <span class="screen-desc">
+        <strong>Earnings Dashboard.</strong> Total rental income (historical). Pending deposits held. Penalties applied (deducted from deposits). Per-item earnings breakdown. Monthly chart.
+      </span>
+    </div>
+    <div class="screen-item">
+      <span class="screen-name">/my-posts/penalty/[bookingId]</span>
+      <span class="screen-desc">
+        <strong>Penalty Request form.</strong> Owner submits penalty request after return. Fields: reason, amount. Submits to <code>POST /api/penalties</code>. Enters PENDING state until admin approves.
+      </span>
+    </div>
+  </div>
+
+  <!-- PROFILE -->
+  <div class="screen-group">
+    <div class="screen-group-title">👤 Profile</div>
+    <div class="screen-item">
+      <span class="screen-name">/profile</span>
+      <span class="screen-desc">
+        <strong>Profile Overview.</strong> Avatar, full name, campus email, student ID, member since date.<br/>
+        <strong>Trust Score card</strong> — current score (0–100), color-coded tier (New / Trusted / Verified / Elite), score history mini-chart.<br/>
+        <strong>Stats summary</strong> — total items listed, total rentals as renter, total successful returns, reviews received.<br/>
+        <strong>Reviews section</strong> — reviews given by others about this student as an owner.<br/>
+        Edit Profile button → /profile/edit.
+      </span>
+    </div>
+    <div class="screen-item">
+      <span class="screen-name">/profile/edit</span>
+      <span class="screen-desc">Edit name, avatar/photo. View-only: email, student ID (cannot change). Change password section. Save calls <code>PUT /api/users/me</code>.</span>
+    </div>
+    <div class="screen-item">
+      <span class="screen-name">/profile/my-reviews</span>
+      <span class="screen-desc">Reviews the student has given to others (as renter) and received (as owner). Two tabs. Each review: item, date, rating stars, comment.</span>
+    </div>
+  </div>
+
+  <!-- NOTIFICATIONS -->
+  <div class="screen-group">
+    <div class="screen-group-title">🔔 Notifications</div>
+    <div class="screen-item">
+      <span class="screen-name">/notifications</span>
+      <span class="screen-desc">Chronological list of all notifications. Types: Booking approved/rejected, Return due reminder (1 day before), Penalty applied, Deposit released, New booking request received (as owner), Item approved by admin. Mark all as read button. Unread badge count in navigation.</span>
+    </div>
+  </div>
+
+  <!-- DISPUTES -->
+  <div class="screen-group">
+    <div class="screen-group-title">⚖️ Disputes</div>
+    <div class="screen-item">
+      <span class="screen-name">/disputes/raise</span>
+      <span class="screen-desc">Raise a dispute form. Select related booking, describe the issue, optionally upload evidence. Calls <code>POST /api/disputes</code>. Both owner and renter can raise disputes.</span>
+    </div>
+    <div class="screen-item">
+      <span class="screen-name">/disputes/my</span>
+      <span class="screen-desc">List of disputes raised by this student. Shows status: OPEN / RESOLVED / DISMISSED. Shows admin decision once resolved.</span>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════════════════════════ S5 ══ -->
+<section class="section" id="s5">
+  <div class="section-header">
+    <div class="section-icon">🛡️</div>
+    <div class="section-title">Admin Panel — All Pages</div>
+    <span class="section-num">§05</span>
+  </div>
+
+  <p>The admin panel is a separate Next.js 14 project running on port 3001. All routes require an ADMIN JWT. Middleware redirects to <code>/admin/login</code> if no valid token is found.</p>
+
+  <div class="screen-group">
+    <div class="screen-group-title">🔐 Admin Auth</div>
+    <div class="screen-item">
+      <span class="screen-name">/admin/login</span>
+      <span class="screen-desc">Email + password. On success, checks JWT role === ADMIN. If STUDENT → "Access Denied". If ADMIN → redirect to /admin/dashboard.</span>
+    </div>
+  </div>
+
+  <div class="screen-group">
+    <div class="screen-group-title">📊 Dashboard & Analytics</div>
+    <div class="screen-item">
+      <span class="screen-name">/admin/dashboard</span>
+      <span class="screen-desc">Stat cards: Total Users, Active Rentals, Overdue Rentals, Pending Disputes, Total Items, New Registrations today. Pending verifications table (quick Verify buttons). Recent dispute list. Platform health overview.</span>
+    </div>
+    <div class="screen-item">
+      <span class="screen-name">/admin/analytics</span>
+      <span class="screen-desc">Charts — Top 5 most rented items, Monthly rental revenue, Late return stats by user, Active vs completed bookings ratio, User growth over time, Category distribution pie chart.</span>
+    </div>
+  </div>
+
+  <div class="screen-group">
+    <div class="screen-group-title">👥 User Management</div>
+    <div class="screen-item">
+      <span class="screen-name">/admin/users</span>
+      <span class="screen-desc">Searchable table: Name, Email, Student ID, Status, Trust Score, Total Bookings, Registered Date. Filter by status (PENDING / VERIFIED / SUSPENDED). Actions: Verify, Suspend, View Profile.</span>
+    </div>
+    <div class="screen-item">
+      <span class="screen-name">/admin/users/[id]</span>
+      <span class="screen-desc">Full user detail view. All profile info, booking history, items listed, trust score log, reviews, disputes. Admin can manually adjust trust score with reason. Suspend / Reactivate button.</span>
+    </div>
+  </div>
+
+  <div class="screen-group">
+    <div class="screen-group-title">📦 Item Moderation</div>
+    <div class="screen-item">
+      <span class="screen-name">/admin/items</span>
+      <span class="screen-desc">All items table. Filter: Pending Approval / Active / Rejected / Inactive. Actions: Approve, Reject with reason. Each row shows: title, owner, category, price, submitted date.</span>
+    </div>
+    <div class="screen-item">
+      <span class="screen-name">/admin/items/[id]</span>
+      <span class="screen-desc">Full item detail. Photos, description, category, owner info. Approve or Reject buttons. Rejection requires a reason (sent as notification to owner).</span>
+    </div>
+  </div>
+
+  <div class="screen-group">
+    <div class="screen-group-title">📋 Booking Monitor</div>
+    <div class="screen-item">
+      <span class="screen-name">/admin/bookings</span>
+      <span class="screen-desc">All bookings across platform. Filter by status, date range, user. Highlight overdue rentals in orange. Admin can override booking status if needed. View booking details.</span>
+    </div>
+  </div>
+
+  <div class="screen-group">
+    <div class="screen-group-title">⚖️ Dispute Center</div>
+    <div class="screen-item">
+      <span class="screen-name">/admin/disputes</span>
+      <span class="screen-desc">All disputes. OPEN disputes highlighted. Each dispute card: booking ID, raised by, reason, evidence. Resolve form with admin decision text area. Calls <code>PUT /api/admin/disputes/{id}/resolve</code>. Decision sent as notification to both parties.</span>
+    </div>
+  </div>
+
+  <div class="screen-group">
+    <div class="screen-group-title">💰 Penalty Override & Trust Score</div>
+    <div class="screen-item">
+      <span class="screen-name">/admin/penalties</span>
+      <span class="screen-desc">Pending penalty requests from owners. Review reason + amount. Actions: Approve (deduct from deposit), Modify amount, Waive (dismiss). Each action updates payment record.</span>
+    </div>
+    <div class="screen-item">
+      <span class="screen-name">/admin/trust-scores</span>
+      <span class="screen-desc">View all users' trust scores. Full audit log of every change: user, change value, reason, timestamp. Manual override: adjust score + add reason (logged in trust_score_log).</span>
+    </div>
+  </div>
+
+  <div class="screen-group">
+    <div class="screen-group-title">⚙️ Platform Settings</div>
+    <div class="screen-item">
+      <span class="screen-name">/admin/categories</span>
+      <span class="screen-desc">Add, edit, delete item categories. Category name + description. Cannot delete a category that has active items.</span>
+    </div>
+    <div class="screen-item">
+      <span class="screen-name">/admin/announcements</span>
+      <span class="screen-desc">Post campus-wide notices. Title + body. Appears in all students' notification feeds. List of past announcements with edit/delete.</span>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════════════════════════ S6 ══ -->
+<section class="section" id="s6">
+  <div class="section-header">
+    <div class="section-icon">🗝️</div>
+    <div class="section-title">Role Permissions Matrix</div>
+    <span class="section-num">§06</span>
+  </div>
+
+  <div class="tbl-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>Feature / Action</th>
+          <th>ADMIN</th>
+          <th>STUDENT (as Owner)</th>
+          <th>STUDENT (as Renter)</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr class="highlight-row"><td colspan="4" style="font-weight:700; font-size:12px; letter-spacing:0.05em; color:var(--primary-dark);">ACCOUNT</td></tr>
+        <tr><td>Register / Login</td><td class="y">✓</td><td class="y">✓</td><td class="y">✓</td></tr>
+        <tr><td>Edit Own Profile</td><td class="y">✓</td><td class="y">✓</td><td class="y">✓</td></tr>
+        <tr><td>View Own Trust Score</td><td class="y">✓</td><td class="y">✓</td><td class="y">✓</td></tr>
+        <tr><td>View Others' Trust Score</td><td class="y">✓</td><td class="y">✓</td><td class="y">✓</td></tr>
+        <tr class="highlight-row"><td colspan="4" style="font-weight:700; font-size:12px; letter-spacing:0.05em; color:var(--primary-dark);">ITEMS</td></tr>
+        <tr><td>Browse / Search Items</td><td class="y">✓</td><td class="y">✓</td><td class="y">✓</td></tr>
+        <tr><td>List / Add Item</td><td class="n">✗</td><td class="y">✓</td><td class="n">—</td></tr>
+        <tr><td>Edit Own Item</td><td class="n">✗</td><td class="y">✓</td><td class="n">—</td></tr>
+        <tr><td>Delete Own Item</td><td class="n">✗</td><td class="y">✓</td><td class="n">—</td></tr>
+        <tr><td>Approve / Reject Items</td><td class="y">✓</td><td class="n">✗</td><td class="n">✗</td></tr>
+        <tr class="highlight-row"><td colspan="4" style="font-weight:700; font-size:12px; letter-spacing:0.05em; color:var(--primary-dark);">BOOKINGS</td></tr>
+        <tr><td>Send Booking Request</td><td class="n">✗</td><td class="n">—</td><td class="y">✓</td></tr>
+        <tr><td>Approve / Reject Booking</td><td class="y">✓</td><td class="y">✓</td><td class="n">✗</td></tr>
+        <tr><td>Cancel Booking</td><td class="n">✗</td><td class="n">✗</td><td class="y">✓</td></tr>
+        <tr><td>Confirm Handover</td><td class="n">✗</td><td class="y">✓</td><td class="n">✗</td></tr>
+        <tr><td>Confirm Return</td><td class="n">✗</td><td class="y">✓</td><td class="y">✓</td></tr>
+        <tr><td>View Own Bookings</td><td class="y">✓</td><td class="o">Own</td><td class="o">Own</td></tr>
+        <tr><td>View ALL Bookings</td><td class="y">✓</td><td class="n">✗</td><td class="n">✗</td></tr>
+        <tr class="highlight-row"><td colspan="4" style="font-weight:700; font-size:12px; letter-spacing:0.05em; color:var(--primary-dark);">PENALTIES & DISPUTES</td></tr>
+        <tr><td>Report Damage</td><td class="n">✗</td><td class="y">✓</td><td class="y">✓</td></tr>
+        <tr><td>Request Penalty</td><td class="n">✗</td><td class="y">✓</td><td class="n">✗</td></tr>
+        <tr><td>Override / Waive Penalty</td><td class="y">✓</td><td class="n">✗</td><td class="n">✗</td></tr>
+        <tr><td>Raise Dispute</td><td class="n">✗</td><td class="y">✓</td><td class="y">✓</td></tr>
+        <tr><td>Resolve Dispute</td><td class="y">✓</td><td class="n">✗</td><td class="n">✗</td></tr>
+        <tr class="highlight-row"><td colspan="4" style="font-weight:700; font-size:12px; letter-spacing:0.05em; color:var(--primary-dark);">REVIEWS & ADMIN</td></tr>
+        <tr><td>Rate & Review</td><td class="n">✗</td><td class="n">✗</td><td class="y">✓</td></tr>
+        <tr><td>Verify / Suspend Users</td><td class="y">✓</td><td class="n">✗</td><td class="n">✗</td></tr>
+        <tr><td>View Analytics Dashboard</td><td class="y">✓</td><td class="n">✗</td><td class="n">✗</td></tr>
+        <tr><td>Manage Categories</td><td class="y">✓</td><td class="n">✗</td><td class="n">✗</td></tr>
+        <tr><td>Publish Announcements</td><td class="y">✓</td><td class="n">✗</td><td class="n">✗</td></tr>
+        <tr><td>Trust Score Audit / Override</td><td class="y">✓</td><td class="n">✗</td><td class="n">✗</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- ══════════════════════════════════ S7 ══ -->
+<section class="section" id="s7">
+  <div class="section-header">
+    <div class="section-icon">📦</div>
+    <div class="section-title">Item Categories (from CampusVault)</div>
+    <span class="section-num">§07</span>
+  </div>
+
+  <div class="card-grid">
+    <div class="card card-accent">
+      <div class="card-icon">📚</div>
+      <h4>Academic & Study</h4>
+      <p>Books, calculators, lab equipment, engineering tools, drawing instruments</p>
+    </div>
+    <div class="card card-accent acc">
+      <div class="card-icon">📸</div>
+      <h4>Electronics & Gadgets</h4>
+      <p>Cameras, DSLRs, drones, speakers, power banks, graphic tablets, printers</p>
+    </div>
+    <div class="card card-accent suc">
+      <div class="card-icon">💻</div>
+      <h4>Computers & Dev</h4>
+      <p>Laptops, Arduino kits, Raspberry Pi, USB hubs, external drives</p>
+    </div>
+    <div class="card card-accent wrn">
+      <div class="card-icon">🎮</div>
+      <h4>Gaming & Entertainment</h4>
+      <p>Gaming consoles, accessories, board games, card games</p>
+    </div>
+    <div class="card card-accent inf">
+      <div class="card-icon">🎸</div>
+      <h4>Musical & Creative</h4>
+      <p>Guitar, ukulele, microphones, tripods, gimbals, lighting kits</p>
+    </div>
+    <div class="card card-accent pur">
+      <div class="card-icon">🎪</div>
+      <h4>Event Equipment</h4>
+      <p>Projectors, PA systems, extension cables, tents, banners</p>
+    </div>
+    <div class="card card-accent">
+      <div class="card-icon">🚴</div>
+      <h4>Transport & Outdoor</h4>
+      <p>Cycles, helmets, backpacks, camping gear</p>
+    </div>
+    <div class="card card-accent acc">
+      <div class="card-icon">🏅</div>
+      <h4>Sports Equipment</h4>
+      <p>Sports kits, football, cricket gear, badminton rackets</p>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════════════════════════ S8 ══ -->
+<section class="section" id="s8">
+  <div class="section-header">
+    <div class="section-icon">🚀</div>
+    <div class="section-title">Feature Build Phases</div>
+    <span class="section-num">§08</span>
+  </div>
+
+  <div class="callout callout-teal">
+    <span class="callout-icon">⚡</span>
+    <p><strong>Build Order:</strong> Auth → Item Listing → Search/Browse → Booking → Deposit → Return → Trust Score → Admin Panel → Advanced Features. Do NOT build everything at once.</p>
+  </div>
+
+  <div class="phase phase-1">
+    <div class="phase-header">✅ Phase 1 — MVP Core (Build This First)</div>
+    <div class="tbl-wrap" style="border-radius:0; border:none; margin:0;">
+      <table>
+        <thead><tr><th>Feature</th><th>Who</th><th>Description</th></tr></thead>
+        <tbody>
+          <tr><td>User Registration & Login (JWT)</td><td><span class="badge badge-gray">ALL</span></td><td>Register with campus email. Admin verifies. JWT with role returned on login → role-based redirect.</td></tr>
+          <tr><td>Role-Based Routing</td><td><span class="badge badge-gray">SYSTEM</span></td><td>ADMIN → /admin/dashboard. STUDENT → /dashboard. Middleware protection on all routes.</td></tr>
+          <tr><td>Item Listing (CRUD)</td><td><span class="badge badge-teal">STUDENT (Owner)</span></td><td>Add, edit, delete items. Category, price, condition, photos, deposit amount.</td></tr>
+          <tr><td>Browse & Search Items</td><td><span class="badge badge-teal">STUDENT (Renter)</span></td><td>Filter by category, condition, price range, availability. Search by name.</td></tr>
+          <tr><td>Date-Based Booking</td><td><span class="badge badge-teal">STUDENT (Renter)</span></td><td>Select dates → conflict check → confirm booking + record deposit.</td></tr>
+          <tr><td>Booking Approval</td><td><span class="badge badge-teal">STUDENT (Owner)</span></td><td>Owner approves or rejects booking requests via My Posts → Requests page.</td></tr>
+          <tr><td>Return Tracking</td><td><span class="badge badge-gray">BOTH</span></td><td>Owner confirms return. Renter confirms return. Status updated to COMPLETED.</td></tr>
+          <tr><td>Basic Trust Score</td><td><span class="badge badge-gray">AUTO</span></td><td>+5 on-time return, -10 late return, -20 damage reported.</td></tr>
+          <tr><td>Admin User Verification</td><td><span class="badge badge-purple">ADMIN</span></td><td>Admin reviews and approves PENDING student accounts via /admin/users.</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="phase phase-2" style="margin-top:16px;">
+    <div class="phase-header">⚠️ Phase 2 — Reliability Features</div>
+    <div class="tbl-wrap" style="border-radius:0; border:none; margin:0;">
+      <table>
+        <thead><tr><th>Feature</th><th>Who</th><th>Description</th></tr></thead>
+        <tbody>
+          <tr><td>Condition Report (before/after)</td><td><span class="badge badge-teal">STUDENT (Owner)</span></td><td>Upload photos + checklist before handover and after return for evidence.</td></tr>
+          <tr><td>Penalty Management</td><td><span class="badge badge-gray">Owner + Admin</span></td><td>Owner requests penalty. Admin reviews and approves/waives. Deducted from deposit.</td></tr>
+          <tr><td>Deposit Refund Tracking</td><td><span class="badge badge-teal">STUDENT (Renter)</span></td><td>Deposit tracker page: Held → Released or Deducted with reason.</td></tr>
+          <tr><td>Rating & Review System</td><td><span class="badge badge-teal">STUDENT (Renter)</span></td><td>After return, renter rates owner 1–5 stars + comment.</td></tr>
+          <tr><td>Booking Conflict Detection</td><td><span class="badge badge-gray">SYSTEM</span></td><td>DB query blocks overlapping bookings. Returns 409 Conflict to frontend.</td></tr>
+          <tr><td>Admin Item Moderation</td><td><span class="badge badge-purple">ADMIN</span></td><td>Admin approves/rejects newly listed items before they go live.</td></tr>
+          <tr><td>Dispute Raise & Resolve</td><td><span class="badge badge-gray">Both + Admin</span></td><td>User reports issue. Admin resolves with decision message to both parties.</td></tr>
+          <tr><td>Notification System</td><td><span class="badge badge-gray">ALL</span></td><td>Booking approved/rejected, return due, penalty applied, deposit released.</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="phase phase-3" style="margin-top:16px;">
+    <div class="phase-header">🚀 Phase 3 — Advanced (Impress Professor)</div>
+    <div class="tbl-wrap" style="border-radius:0; border:none; margin:0;">
+      <table>
+        <thead><tr><th>Feature</th><th>Who</th><th>Description</th></tr></thead>
+        <tbody>
+          <tr><td>Analytics Dashboard</td><td><span class="badge badge-purple">ADMIN</span></td><td>Charts: top rented items, revenue, late returns, user growth, category distribution.</td></tr>
+          <tr><td>Emergency Borrow Mode</td><td><span class="badge badge-teal">STUDENT (Renter)</span></td><td>Urgent request with higher deposit + instant approval flow.</td></tr>
+          <tr><td>Trust Score Audit Log</td><td><span class="badge badge-purple">ADMIN</span></td><td>Full history of every trust score change with reason, timestamp, admin.</td></tr>
+          <tr><td>OTP Handover Confirmation</td><td><span class="badge badge-gray">BOTH</span></td><td>OTP sent to renter at physical handover for verified proof of delivery.</td></tr>
+          <tr><td>Damage Evidence Upload</td><td><span class="badge badge-teal">STUDENT (Owner)</span></td><td>Photo + timestamp + description linked to specific booking as legal evidence.</td></tr>
+          <tr><td>Wishlist / Saved Items</td><td><span class="badge badge-teal">STUDENT (Renter)</span></td><td>Save items to /borrow/wishlist for later booking.</td></tr>
+          <tr><td>Priority Access System</td><td><span class="badge badge-gray">SYSTEM</span></td><td>High-value items (trust threshold) only accessible to students above score threshold.</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════════════════════════ S9 ══ -->
+<section class="section" id="s9">
+  <div class="section-header">
+    <div class="section-icon">🗄️</div>
+    <div class="section-title">Database Design</div>
+    <span class="section-num">§09</span>
+  </div>
+
+  <h3 class="sub">Core Tables</h3>
+  <div class="tbl-wrap">
+    <table>
+      <thead><tr><th>Table</th><th>Key Columns</th><th>Notes</th></tr></thead>
+      <tbody>
+        <tr><td><code>users</code></td><td>user_id, name, email, student_id, password_hash, <strong>role ENUM('ADMIN','STUDENT')</strong>, status ENUM('PENDING','VERIFIED','SUSPENDED'), trust_score, created_at</td><td>Role is now ADMIN or STUDENT only</td></tr>
+        <tr><td><code>items</code></td><td>item_id, owner_id (FK→users), category_id (FK), title, description, condition, price_per_day, deposit_amount, status ENUM('PENDING_APPROVAL','ACTIVE','INACTIVE','REJECTED'), created_at</td><td>Requires admin approval before ACTIVE</td></tr>
+        <tr><td><code>categories</code></td><td>category_id, name, description</td><td>Managed by admin only</td></tr>
+        <tr><td><code>bookings</code></td><td>booking_id, item_id (FK), renter_id (FK→users), start_date, end_date, status ENUM('PENDING','APPROVED','ACTIVE','COMPLETED','CANCELLED','REJECTED'), total_cost, created_at</td><td>Conflict check before INSERT</td></tr>
+        <tr><td><code>payments</code></td><td>payment_id, booking_id (FK), amount, type ENUM('DEPOSIT','RENTAL','PENALTY'), status ENUM('HELD','RELEASED','DEDUCTED'), created_at</td><td>1-to-1 with bookings</td></tr>
+        <tr><td><code>penalties</code></td><td>penalty_id, booking_id (FK), amount, reason, status ENUM('PENDING','APPROVED','WAIVED'), created_at</td><td>Owner requests, admin approves</td></tr>
+        <tr><td><code>condition_reports</code></td><td>report_id, booking_id (FK), phase ENUM('BEFORE','AFTER'), photo_url, notes, reported_at</td><td>Max 2 per booking</td></tr>
+        <tr><td><code>reviews</code></td><td>review_id, booking_id (FK), reviewer_id (FK), ratee_id (FK), rating (1-5), comment, created_at</td><td>Renter reviews owner post-return</td></tr>
+        <tr><td><code>trust_score_log</code></td><td>log_id, user_id (FK), change_value, reason, changed_at</td><td>Every score change logged</td></tr>
+        <tr><td><code>disputes</code></td><td>dispute_id, booking_id (FK), raised_by (FK→users), reason, evidence_url, status ENUM('OPEN','RESOLVED','DISMISSED'), admin_decision, created_at</td><td>Max 1 per booking</td></tr>
+        <tr><td><code>notifications</code></td><td>notif_id, user_id (FK), message, type, is_read, created_at</td><td>All user alerts</td></tr>
+        <tr><td><code>announcements</code></td><td>ann_id, admin_id (FK→users), title, body, created_at</td><td>Platform-wide notices</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h3 class="sub">Key SQL — Booking Conflict Check</h3>
+  <pre><span class="cm">-- Check before INSERT into bookings</span>
+<span class="kw">SELECT</span> * <span class="kw">FROM</span> bookings
+<span class="kw">WHERE</span> item_id = <span class="num">?</span>
+  <span class="kw">AND</span> status <span class="kw">NOT IN</span> (<span class="str">'CANCELLED'</span>, <span class="str">'REJECTED'</span>)
+  <span class="kw">AND</span> (start_date &lt;= <span class="num">?</span> <span class="kw">AND</span> end_date &gt;= <span class="num">?</span>);
+<span class="cm">-- If row returned → throw BookingConflictException (HTTP 409)</span></pre>
+
+  <h3 class="sub">Trust Score Trigger</h3>
+  <pre><span class="kw">CREATE TRIGGER</span> <span class="fn">update_trust_on_return</span>
+<span class="kw">AFTER UPDATE ON</span> bookings <span class="kw">FOR EACH ROW</span>
+<span class="kw">BEGIN</span>
+  <span class="kw">IF</span> NEW.status = <span class="str">'COMPLETED'</span> <span class="kw">AND</span> NEW.end_date &gt;= <span class="fn">CURDATE</span>() <span class="kw">THEN</span>
+    <span class="kw">UPDATE</span> users <span class="kw">SET</span> trust_score = trust_score + <span class="num">5</span>
+    <span class="kw">WHERE</span> user_id = NEW.renter_id; <span class="cm">-- on-time return: +5</span>
+  <span class="kw">ELSEIF</span> NEW.status = <span class="str">'COMPLETED'</span> <span class="kw">AND</span> NEW.end_date &lt; <span class="fn">CURDATE</span>() <span class="kw">THEN</span>
+    <span class="kw">UPDATE</span> users <span class="kw">SET</span> trust_score = trust_score - <span class="num">10</span>
+    <span class="kw">WHERE</span> user_id = NEW.renter_id; <span class="cm">-- late return: -10</span>
+  <span class="kw">END IF</span>;
+<span class="kw">END</span>;</pre>
+</section>
+
+<!-- ══════════════════════════════════ S10 ══ -->
+<section class="section" id="s10">
+  <div class="section-header">
+    <div class="section-icon">⚡</div>
+    <div class="section-title">REST API Endpoints</div>
+    <span class="section-num">§10</span>
+  </div>
+
+  <h3 class="sub">Auth</h3>
+  <div class="tbl-wrap">
+    <table>
+      <thead><tr><th>Method</th><th>Endpoint</th><th>Access</th><th>Description</th></tr></thead>
+      <tbody>
+        <tr><td><span class="badge badge-green">POST</span></td><td><code>/api/auth/register</code></td><td>Public</td><td>Register new student → status PENDING</td></tr>
+        <tr><td><span class="badge badge-green">POST</span></td><td><code>/api/auth/login</code></td><td>Public</td><td>Login → returns JWT with userId + role</td></tr>
+        <tr><td><span class="badge badge-green">POST</span></td><td><code>/api/auth/forgot-password</code></td><td>Public</td><td>Request OTP for password reset</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h3 class="sub">Items</h3>
+  <div class="tbl-wrap">
+    <table>
+      <thead><tr><th>Method</th><th>Endpoint</th><th>Access</th><th>Description</th></tr></thead>
+      <tbody>
+        <tr><td><span class="badge badge-blue">GET</span></td><td><code>/api/items</code></td><td>Public</td><td>Browse items (with filter params)</td></tr>
+        <tr><td><span class="badge badge-blue">GET</span></td><td><code>/api/items/{id}</code></td><td>Public</td><td>Get single item detail</td></tr>
+        <tr><td><span class="badge badge-green">POST</span></td><td><code>/api/items</code></td><td>STUDENT</td><td>Create new item listing</td></tr>
+        <tr><td><span class="badge badge-yellow">PUT</span></td><td><code>/api/items/{id}</code></td><td>STUDENT (owner)</td><td>Edit own item</td></tr>
+        <tr><td><span class="badge badge-red">DELETE</span></td><td><code>/api/items/{id}</code></td><td>STUDENT (owner)</td><td>Delete own item</td></tr>
+        <tr><td><span class="badge badge-blue">GET</span></td><td><code>/api/items/my</code></td><td>STUDENT</td><td>Get all items listed by current user</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h3 class="sub">Bookings</h3>
+  <div class="tbl-wrap">
+    <table>
+      <thead><tr><th>Method</th><th>Endpoint</th><th>Access</th><th>Description</th></tr></thead>
+      <tbody>
+        <tr><td><span class="badge badge-green">POST</span></td><td><code>/api/bookings</code></td><td>STUDENT (renter)</td><td>Create booking request</td></tr>
+        <tr><td><span class="badge badge-blue">GET</span></td><td><code>/api/bookings/my</code></td><td>STUDENT</td><td>Get own bookings (as renter)</td></tr>
+        <tr><td><span class="badge badge-blue">GET</span></td><td><code>/api/bookings/requests</code></td><td>STUDENT (owner)</td><td>Get incoming booking requests for owner's items</td></tr>
+        <tr><td><span class="badge badge-yellow">PUT</span></td><td><code>/api/bookings/{id}/approve</code></td><td>STUDENT (owner)</td><td>Approve booking request</td></tr>
+        <tr><td><span class="badge badge-yellow">PUT</span></td><td><code>/api/bookings/{id}/reject</code></td><td>STUDENT (owner)</td><td>Reject booking request</td></tr>
+        <tr><td><span class="badge badge-yellow">PUT</span></td><td><code>/api/bookings/{id}/cancel</code></td><td>STUDENT (renter)</td><td>Cancel pending booking</td></tr>
+        <tr><td><span class="badge badge-yellow">PUT</span></td><td><code>/api/bookings/{id}/return</code></td><td>STUDENT (both)</td><td>Confirm item return</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h3 class="sub">Admin</h3>
+  <div class="tbl-wrap">
+    <table>
+      <thead><tr><th>Method</th><th>Endpoint</th><th>Access</th><th>Description</th></tr></thead>
+      <tbody>
+        <tr><td><span class="badge badge-blue">GET</span></td><td><code>/api/admin/users</code></td><td>ADMIN</td><td>List all users (with status filter)</td></tr>
+        <tr><td><span class="badge badge-yellow">PUT</span></td><td><code>/api/admin/users/{id}/verify</code></td><td>ADMIN</td><td>Verify pending student</td></tr>
+        <tr><td><span class="badge badge-yellow">PUT</span></td><td><code>/api/admin/users/{id}/suspend</code></td><td>ADMIN</td><td>Suspend a user</td></tr>
+        <tr><td><span class="badge badge-yellow">PUT</span></td><td><code>/api/admin/items/{id}/approve</code></td><td>ADMIN</td><td>Approve item listing</td></tr>
+        <tr><td><span class="badge badge-yellow">PUT</span></td><td><code>/api/admin/items/{id}/reject</code></td><td>ADMIN</td><td>Reject item listing with reason</td></tr>
+        <tr><td><span class="badge badge-blue">GET</span></td><td><code>/api/admin/bookings</code></td><td>ADMIN</td><td>View all platform bookings</td></tr>
+        <tr><td><span class="badge badge-blue">GET</span></td><td><code>/api/admin/analytics</code></td><td>ADMIN</td><td>Dashboard stats</td></tr>
+        <tr><td><span class="badge badge-yellow">PUT</span></td><td><code>/api/admin/disputes/{id}/resolve</code></td><td>ADMIN</td><td>Resolve dispute with decision</td></tr>
+        <tr><td><span class="badge badge-yellow">PUT</span></td><td><code>/api/admin/penalties/{id}</code></td><td>ADMIN</td><td>Approve / waive penalty</td></tr>
+        <tr><td><span class="badge badge-green">POST</span></td><td><code>/api/admin/announcements</code></td><td>ADMIN</td><td>Post campus announcement</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- ══════════════════════════════════ S11 ══ -->
+<section class="section" id="s11">
+  <div class="section-header">
+    <div class="section-icon">⚙️</div>
+    <div class="section-title">Key Business Logic</div>
+    <span class="section-num">§11</span>
+  </div>
+
+  <div class="card-grid" style="grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));">
+    <div class="card card-accent">
+      <h4>🔀 Role-Based Redirect</h4>
+      <p>Login API returns <code>{token, role}</code>. Frontend checks role: ADMIN → router.push('/admin/dashboard'), STUDENT → router.push('/dashboard'). Middleware.ts re-checks on every page load.</p>
+    </div>
+    <div class="card card-accent acc">
+      <h4>📅 Booking Conflict Check</h4>
+      <p>Before creating a booking, query DB for overlapping active bookings on same item. Overlap found → throw <code>BookingConflictException</code> → return HTTP 409 to client.</p>
+    </div>
+    <div class="card card-accent suc">
+      <h4>⭐ Trust Score Engine</h4>
+      <p>COMPLETED on time: +5. COMPLETED late: -10. Damage reported: -20. Every change logged in trust_score_log. High-value items require minimum score threshold.</p>
+    </div>
+    <div class="card card-accent wrn">
+      <h4>💰 Deposit & Penalty Flow</h4>
+      <p>Deposit recorded at booking. Return completed → if no penalty: Released. Owner raises penalty → Admin approves → Deducted. If penalty > deposit → user flagged.</p>
+    </div>
+    <div class="card card-accent inf">
+      <h4>🛡️ JWT Security</h4>
+      <p>JWT contains userId + role. 24-hour expiry. JwtFilter validates every request. Spring Security @PreAuthorize by role. Admin routes: hasRole('ADMIN') only.</p>
+    </div>
+    <div class="card card-accent pur">
+      <h4>👤 Dual Role (Student)</h4>
+      <p>Same user_id can own items AND make bookings. The DB does not restrict this. Frontend shows owner actions in /my-posts, renter actions in /borrow — same account, separate UX contexts.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════════════════════════ S12 ══ -->
+<section class="section" id="s12">
+  <div class="section-header">
+    <div class="section-icon">📅</div>
+    <div class="section-title">MVP Week-by-Week Roadmap</div>
+    <span class="section-num">§12</span>
+  </div>
+
+  <div class="tbl-wrap">
+    <table>
+      <thead><tr><th>Week</th><th>Milestone</th><th>Tasks</th></tr></thead>
+      <tbody>
+        <tr><td><span class="badge badge-gray">1–2</span></td><td>Database Design</td><td>Create MySQL schema — all 12 tables, foreign keys, ENUMs, constraints. Test INSERT/SELECT. Write triggers.</td></tr>
+        <tr><td><span class="badge badge-gray">3</span></td><td>Spring Boot Setup</td><td>Create project, configure MySQL, create all Entity classes, Repository interfaces.</td></tr>
+        <tr><td><span class="badge badge-gray">4</span></td><td>Auth System</td><td>Register + Login API. JWT generation. Role-based security config. Test with Postman. Verify redirect logic.</td></tr>
+        <tr><td><span class="badge badge-gray">5</span></td><td>Item Listing API</td><td>Item CRUD endpoints. Category management. Image upload. Admin approval flow.</td></tr>
+        <tr><td><span class="badge badge-gray">6</span></td><td>Browse & Search</td><td>GET /items with query filters. Available-in-date-range query. Item detail endpoint.</td></tr>
+        <tr><td><span class="badge badge-gray">7</span></td><td>Booking System</td><td>Booking request flow. Conflict detection. Approve/reject/cancel logic.</td></tr>
+        <tr><td><span class="badge badge-gray">8</span></td><td>Deposit & Penalty</td><td>Record deposit at booking. Penalty request + admin approval. Refund logic.</td></tr>
+        <tr><td><span class="badge badge-gray">9</span></td><td>Trust Score Engine</td><td>Auto-update on return. Log every change. High-value item restriction.</td></tr>
+        <tr><td><span class="badge badge-gray">10</span></td><td>Admin Panel APIs</td><td>All admin endpoints: verify users, moderate items, monitor bookings, analytics, disputes.</td></tr>
+        <tr><td><span class="badge badge-gray">11</span></td><td>Admin Panel (Next.js)</td><td>Build admin web pages: Dashboard, Users, Items, Bookings, Disputes, Analytics, Penalties.</td></tr>
+        <tr><td><span class="badge badge-gray">12</span></td><td>Student Web App (Next.js)</td><td>Auth pages, Dashboard, Borrow/Browse, My Posts (owner), My Bookings, Profile, Notifications.</td></tr>
+        <tr><td><span class="badge badge-gray">13</span></td><td>Testing & Polish</td><td>End-to-end flow testing. Bug fixes. Error handling. Seed data. Role-based redirect test.</td></tr>
+        <tr><td><span class="badge badge-gray">14</span></td><td>Presentation Prep</td><td>Clean ER diagram (dbdiagram.io), API documentation, architecture diagram, demo video.</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- ══════════════════════════════════ S13 ══ -->
+<section class="section" id="s13">
+  <div class="section-header">
+    <div class="section-icon">📁</div>
+    <div class="section-title">Folder Structure</div>
+    <span class="section-num">§13</span>
+  </div>
+
+  <h3 class="sub">Spring Boot Backend</h3>
+  <pre>backend/
+├── src/main/java/com/campusvault/
+│   ├── config/          <span class="cm">← SecurityConfig, JwtConfig, CorsConfig</span>
+│   ├── controller/      <span class="cm">← AuthController, ItemController, BookingController...</span>
+│   ├── service/         <span class="cm">← AuthService, ItemService, BookingService, TrustScoreService...</span>
+│   ├── repository/      <span class="cm">← UserRepo, ItemRepo, BookingRepo (JPA interfaces)</span>
+│   ├── entity/          <span class="cm">← User.java, Item.java, Booking.java, Payment.java...</span>
+│   ├── dto/             <span class="cm">← LoginRequest, ItemCreateDTO, BookingCreateDTO...</span>
+│   ├── exception/       <span class="cm">← BookingConflictException, UnauthorizedException...</span>
+│   └── util/            <span class="cm">← JwtUtil.java, TrustScoreUtil.java</span>
+├── src/main/resources/
+│   └── application.properties   <span class="cm">← DB config, JWT secret, server port 8080</span>
+└── pom.xml</pre>
+
+  <h3 class="sub">Student Web App (Next.js) — Port 3000</h3>
+  <pre>web-app/
+├── app/
+│   ├── auth/
+│   │   ├── login/page.tsx       <span class="cm">← Login + role-based redirect</span>
+│   │   ├── register/page.tsx
+│   │   ├── pending/page.tsx
+│   │   └── forgot-password/page.tsx
+│   ├── dashboard/page.tsx       <span class="cm">← Main student landing after login</span>
+│   ├── borrow/
+│   │   ├── page.tsx             <span class="cm">← Browse all items</span>
+│   │   ├── item/[id]/page.tsx   <span class="cm">← Item detail</span>
+│   │   ├── book/[id]/page.tsx   <span class="cm">← Booking form</span>
+│   │   ├── my-bookings/page.tsx <span class="cm">← My bookings (renter)</span>
+│   │   ├── deposit-tracker/page.tsx
+│   │   ├── review/[id]/page.tsx
+│   │   └── wishlist/page.tsx
+│   ├── my-posts/
+│   │   ├── page.tsx             <span class="cm">← My items listed</span>
+│   │   ├── add/page.tsx
+│   │   ├── edit/[id]/page.tsx
+│   │   ├── requests/page.tsx    <span class="cm">← Incoming booking requests</span>
+│   │   ├── active-rentals/page.tsx
+│   │   ├── earnings/page.tsx
+│   │   └── penalty/[id]/page.tsx
+│   ├── profile/
+│   │   ├── page.tsx
+│   │   ├── edit/page.tsx
+│   │   └── my-reviews/page.tsx
+│   ├── notifications/page.tsx
+│   └── disputes/
+│       ├── raise/page.tsx
+│       └── my/page.tsx
+├── components/      <span class="cm">← ItemCard, BookingCard, TrustBadge, StatusBadge...</span>
+├── lib/             <span class="cm">← api.ts (Axios instance with JWT)</span>
+├── context/         <span class="cm">← AuthContext.tsx</span>
+├── middleware.ts    <span class="cm">← Protect all non-auth routes, check STUDENT role</span>
+└── types/           <span class="cm">← user.ts, item.ts, booking.ts</span></pre>
+
+  <h3 class="sub">Admin Panel (Next.js) — Port 3001</h3>
+  <pre>web-admin/
+├── app/
+│   ├── login/page.tsx           <span class="cm">← Admin login, rejects STUDENT role</span>
+│   ├── dashboard/page.tsx
+│   ├── users/
+│   │   ├── page.tsx
+│   │   └── [id]/page.tsx
+│   ├── items/
+│   │   ├── page.tsx
+│   │   └── [id]/page.tsx
+│   ├── bookings/page.tsx
+│   ├── disputes/page.tsx
+│   ├── penalties/page.tsx
+│   ├── trust-scores/page.tsx
+│   ├── categories/page.tsx
+│   ├── announcements/page.tsx
+│   └── analytics/page.tsx
+├── components/      <span class="cm">← StatCard, DataTable, Navbar, Sidebar...</span>
+├── lib/             <span class="cm">← api.ts (Axios with ADMIN JWT)</span>
+├── context/         <span class="cm">← AdminAuthContext.tsx</span>
+└── middleware.ts    <span class="cm">← Redirect to /login if no ADMIN JWT</span></pre>
+
+  <h3 class="sub">Database Scripts</h3>
+  <pre>database/
+├── schema.sql        <span class="cm">← All CREATE TABLE with constraints & ENUMs</span>
+├── seed_data.sql     <span class="cm">← Sample users, items, bookings for testing</span>
+├── queries.sql       <span class="cm">← Key SQL queries for DBMS submission</span>
+├── triggers.sql      <span class="cm">← Trust score & late-return triggers</span>
+└── er_diagram.png    <span class="cm">← ER diagram (dbdiagram.io export)</span></pre>
+</section>
+
+<!-- ══════════════════════════════════ S14 ══ -->
+<section class="section" id="s14">
+  <div class="section-header">
+    <div class="section-icon">🎨</div>
+    <div class="section-title">Color System</div>
+    <span class="section-num">§14</span>
+  </div>
+
+  <p>Shared across both web apps. Based on ThirdHand Material Design tokens.</p>
+
+  <div style="display:grid; grid-template-columns: repeat(auto-fill, minmax(180px,1fr)); gap:12px; margin:16px 0;">
+    <div style="background:#0D9488; color:#fff; border-radius:8px; padding:12px; font-family:'JetBrains Mono',monospace; font-size:12px;"><strong>Primary</strong><br/>#0D9488<br/><span style="opacity:0.7">Teal — Trust</span></div>
+    <div style="background:#D97706; color:#fff; border-radius:8px; padding:12px; font-family:'JetBrains Mono',monospace; font-size:12px;"><strong>Accent</strong><br/>#D97706<br/><span style="opacity:0.7">Amber — CTAs</span></div>
+    <div style="background:#16A34A; color:#fff; border-radius:8px; padding:12px; font-family:'JetBrains Mono',monospace; font-size:12px;"><strong>Success</strong><br/>#16A34A<br/><span style="opacity:0.7">Approved / On Time</span></div>
+    <div style="background:#DC2626; color:#fff; border-radius:8px; padding:12px; font-family:'JetBrains Mono',monospace; font-size:12px;"><strong>Error</strong><br/>#DC2626<br/><span style="opacity:0.7">Damage / Penalty</span></div>
+    <div style="background:#EA580C; color:#fff; border-radius:8px; padding:12px; font-family:'JetBrains Mono',monospace; font-size:12px;"><strong>Warning</strong><br/>#EA580C<br/><span style="opacity:0.7">Overdue / Pending</span></div>
+    <div style="background:#0369A1; color:#fff; border-radius:8px; padding:12px; font-family:'JetBrains Mono',monospace; font-size:12px;"><strong>Info</strong><br/>#0369A1<br/><span style="opacity:0.7">Notifications</span></div>
+    <div style="background:#7C3AED; color:#fff; border-radius:8px; padding:12px; font-family:'JetBrains Mono',monospace; font-size:12px;"><strong>Purple</strong><br/>#7C3AED<br/><span style="opacity:0.7">Admin / Trust</span></div>
+    <div style="background:#F1F5F4; color:#0F172A; border:1px solid #E2E8F0; border-radius:8px; padding:12px; font-family:'JetBrains Mono',monospace; font-size:12px;"><strong>Background</strong><br/>#F1F5F4<br/><span style="opacity:0.5">App background</span></div>
+  </div>
+
+  <h3 class="sub">Dashboard Status Colors</h3>
+  <div class="tbl-wrap">
+    <table>
+      <thead><tr><th>Status</th><th>Color</th><th>Tint</th><th>Usage</th></tr></thead>
+      <tbody>
+        <tr><td><span class="badge badge-teal">AVAILABLE</span></td><td>#0D9488</td><td>#F0FDFA</td><td>Items & active listings</td></tr>
+        <tr><td><span class="badge badge-blue">PENDING</span></td><td>#2563EB</td><td>#EFF6FF</td><td>Booking requests pending</td></tr>
+        <tr><td><span class="badge badge-green">COMPLETED</span></td><td>#16A34A</td><td>#F0FDF4</td><td>Successful returns</td></tr>
+        <tr><td><span class="badge badge-yellow">APPROVED</span></td><td>#D97706</td><td>#FFFBEB</td><td>Approved bookings</td></tr>
+        <tr><td><span class="badge badge-orange">OVERDUE</span></td><td>#EA580C</td><td>#FFF7ED</td><td>Late returns</td></tr>
+        <tr><td><span class="badge badge-red">DISPUTED</span></td><td>#DC2626</td><td>#FEF2F2</td><td>Open disputes</td></tr>
+        <tr><td><span class="badge badge-purple">ADMIN</span></td><td>#7C3AED</td><td>#F5F3FF</td><td>Admin actions, trust score</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- ARCHITECTURE -->
+<div class="arch-box">
+<span class="white">┌──────────────────────────────────────────────────────────────────────┐</span>
+<span class="white">│                   CAMPUSVAULT — FULL ARCHITECTURE                    │</span>
+<span class="white">├──────────────────────────┬───────────────────────────────────────────┤</span>
+<span class="white">│  STUDENTS                │  ADMIN                                    │</span>
+<span class="teal">│  web-app/ (Port 3000)    │  web-admin/ (Port 3001)                   │</span>
+<span class="white">│  Next.js 14 + TSX        │  Next.js 14 + TSX                        │</span>
+<span class="white">│                          │                                          │</span>
+<span class="yellow">│  /auth/login             │  /admin/login                            │</span>
+<span class="yellow">│    ↓ JWT role check      │    ↓ JWT role = ADMIN only               │</span>
+<span class="teal">│  STUDENT → /dashboard    │  ADMIN → /admin/dashboard                │</span>
+<span class="white">│                          │                                          │</span>
+<span class="white">│  /dashboard  (home)      │  /admin/users    (verify/suspend)        │</span>
+<span class="white">│  /borrow     (browse)    │  /admin/items    (approve/reject)        │</span>
+<span class="white">│  /my-posts   (list)      │  /admin/bookings (monitor)               │</span>
+<span class="white">│  /profile    (stats)     │  /admin/disputes (resolve)               │</span>
+<span class="white">│  /notifications          │  /admin/analytics (charts)               │</span>
+<span class="white">├──────────────────────────┴───────────────────────────────────────────┤</span>
+<span class="blue">│                  Java Spring Boot 3 — REST API (Port 8080)           │</span>
+<span class="blue">│                  Spring Security + JWT + @PreAuthorize               │</span>
+<span class="white">│                  12 Controllers · Service Layer · JPA Repos          │</span>
+<span class="white">├──────────────────────────────────────────────────────────────────────┤</span>
+<span class="yellow">│                    MySQL 8 Database                                  │</span>
+<span class="yellow">│                    12 Tables · 3NF · Triggers · ENUMs               │</span>
+<span class="white">└──────────────────────────────────────────────────────────────────────┘</span>
+</div>
+
+</main>
+</div>
+
+<div class="doc-footer">
+  <p><strong>CampusVault</strong> — Combined Outline of ThirdHand + CampusVault</p>
+  <p>DBMS Course · Java Backend Course · CUET &nbsp;|&nbsp; Next.js (Web) + Spring Boot + MySQL 8</p>
+</div>
+
+</body>
+</html>

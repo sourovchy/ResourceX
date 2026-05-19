@@ -1,0 +1,92 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Light Theme */
+:root {
+	--color-primary: #1216ed;
+	--color-primaryLight: #e8f0fe;
+	--color-primaryDark: #1557b0;
+	--color-onPrimary: #ffffff;
+	--color-accent: #12a37a;
+	--color-accentLight: #e6f4ef;
+	--color-accentDark: #0d7a5a;
+	
+	--color-success: #1e8e3e;
+	--color-secondary: #1e8e3e;
+	--color-successLight: #e6f4ea;
+	--color-successDark: #157234;
+
+	--color-error: #d93025;
+	--color-errorLight: #fce8e6;
+	--color-errorDark: #b3261e;
+	--color-warning: #f29900;
+	--color-warningLight: #fef7e0;
+	--color-warningDark: #c47800;
+	--color-background: #f8f9fa;
+	--color-surface: #ffffff;
+	--color-surfaceVariant: #f1f3f4;
+	--color-card: #ffffff;
+	--color-textPrimary: #202124;
+	--color-textSecondary: #5f6368;
+	--color-textTertiary: #9aa0a6;
+	--color-onSurface: #202124;
+	/* Borders and Dividers */
+	--color-border: #c0c6d5;
+	--color-borderLight: #d6e0e6;
+	--color-outline: #bdc1c6;
+	--color-outlineVariant: #dadce0;
+	--color-divider: #e8eaed;
+}
+
+/* Dark Theme */
+.dark {
+	--color-primary: #2dd4bf;
+	--color-primaryLight: #103a36;
+	--color-primaryDark: #5eead4;
+	--color-onPrimary: #041311;
+
+	--color-accent: #fbbf24;
+	--color-accentLight: #3b2a08;
+	--color-accentDark: #fde68a;
+
+	--color-success: #34d399;
+	--color-secondary: #60a5fa;
+	--color-successLight: #0f2f24;
+	--color-successDark: #6ee7b7;
+
+	--color-error: #f87171;
+	--color-errorLight: #3a1515;
+	--color-errorDark: #fca5a5;
+
+	--color-warning: #f59e0b;
+	--color-warningLight: #3b2605;
+	--color-warningDark: #fcd34d;
+
+	--color-background: #0b1120;
+	--color-surface: #111827;
+	--color-surfaceVariant: #1f2937;
+	--color-card: #182233;
+
+	--color-textPrimary: #f8fafc;
+	--color-textSecondary: #cbd5e1;
+	--color-textTertiary: #64748b;
+
+	--color-onSurface: #f8fafc;
+
+	--color-border: #334155;
+	--color-borderLight: #1e293b;
+	--color-outline: #475569;
+	--color-outlineVariant: #334155;
+	--color-divider: #273449;
+}
+
+/* Smooth theme transitions */
+*,
+*::before,
+*::after {
+	transition:
+		background-color 0.2s ease,
+		border-color 0.2s ease,
+		color 0.15s ease;
+}
