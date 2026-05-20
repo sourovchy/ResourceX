@@ -9,4 +9,5 @@ public interface AdminService {
     List<PendingUserResponse> getPendingUsers();
     void approveUser(Long pendingId);
     void rejectUser(Long pendingId);
+    void blockItem(Long itemId, String reason);
 }

@@ -22,6 +22,7 @@ public class AdminServiceImpl implements AdminService {
     private final UniversityRepository universityRepository;
     private final StudentVerificationRepository studentVerificationRepository;
     private final AuditLogRepository auditLogRepository;
+    private final ItemRepository itemRepository;
 
     @Override
     public DashboardStatsResponse getDashboardStats() {
@@ -106,6 +107,26 @@ public class AdminServiceImpl implements AdminService {
                 .entityId(pending.getId())
                 .outcome(AuditLog.AuditOutcome.REJECTED)
                 .details("User " + pending.getEmail() + " rejected")
+                .build();
+        auditLogRepository.save(log);
+    }
+
+    @Override
+    @Transactional
+    public void blockItem(Long itemId, String reason) {
+        Item item = itemRepository.findById(itemId)
+                .orElseThrow(() -> new IllegalArgumentException("Item not found"));
+        
+        item.setStatus(Item.ItemStatus.BLOCKED);
+        itemRepository.save(item);
+
+        AuditLog log = AuditLog.builder()
+                .actorType(AuditLog.ActorType.SYSTEM)
+                .actionType("ITEM_TAKEDOWN")
+                .entityType("ITEM")
+                .entityId(itemId)
+                .outcome(AuditLog.AuditOutcome.SUCCESS)
+                .details("Item " + item.getTitle() + " taken down. Reason: " + reason)
                 .build();
         auditLogRepository.save(log);
     }

@@ -26,4 +26,6 @@ public class CreateItemRequest {
 
     @NotNull
     private BigDecimal dailyRate;
+
+    private Long ownerId;
 }

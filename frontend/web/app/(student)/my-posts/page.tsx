@@ -36,17 +36,6 @@ const INITIAL_POSTS = [
 			"https://images.unsplash.com/photo-1555664424-778a1e5e1b48?auto=format&fit=crop&q=80&w=400&h=300",
 	},
 	{
-		id: "p3",
-		title: "Wireless Mic System",
-		status: "Pending Approval",
-		statusColor: "bg-primaryLight text-primaryDark",
-		price: 200,
-		earnings: 0,
-		requests: 0,
-		image:
-			"https://images.unsplash.com/photo-1608043152269-423dbba4e7e1?auto=format&fit=crop&q=80&w=400&h=300",
-	},
-	{
 		id: "p4",
 		title: "Camping Tent",
 		status: "Inactive",
@@ -200,10 +189,7 @@ export default function MyPostsPage() {
 
 									<button
 										onClick={() => toggleAvailability(post.id)}
-										disabled={
-											post.status === "Pending Approval" ||
-											post.status === "Rented Out"
-										}
+										disabled={post.status === "Rented Out"}
 										className="px-3 py-2 bg-surfaceVariant text-textSecondary rounded-lg text-xs font-bold disabled:opacity-50">
 										<Power className="w-3.5 h-3.5 inline" /> Toggle
 									</button>

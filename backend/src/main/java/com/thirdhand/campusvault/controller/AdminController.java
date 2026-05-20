@@ -37,4 +37,10 @@ public class AdminController {
         adminService.rejectUser(id);
         return ResponseEntity.ok().build();
     }
+
+    @PostMapping("/block-item/{id}")
+    public ResponseEntity<Void> blockItem(@PathVariable Long id, @RequestParam String reason) {
+        adminService.blockItem(id, reason);
+        return ResponseEntity.ok().build();
+    }
 }
