@@ -2,6 +2,7 @@ package com.thirdhand.campusvault.entity;
 
 import jakarta.persistence.*;
 import lombok.*;
+
 import java.time.LocalDateTime;
 
 @Entity
@@ -15,7 +16,8 @@ public class PendingUser {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+    @Column(name = "id")
+    private Long pendingUserId;
 
     @Column(nullable = false, unique = true)
     private String studentId;
@@ -26,28 +28,32 @@ public class PendingUser {
     @Column(nullable = false, unique = true)
     private String email;
 
-    @Column(nullable = false)
+    @Column(name = "password_hash", nullable = false)
     private String password;
 
     @Column(nullable = false, unique = true)
     private String phone;
 
     private String university;
+
     private String department;
 
+    @Lob
     @Column(columnDefinition = "LONGTEXT")
     private String idCardDataUrl;
 
     @Enumerated(EnumType.STRING)
-    private UserStatus status;
+    @Builder.Default
+    private UserStatus status = UserStatus.PENDING_VERIFICATION;
 
     @Builder.Default
-    private boolean emailVerified = false;
-    
+    private Boolean emailVerified = false;
+
     @Builder.Default
-    private boolean phoneVerified = false;
+    private Boolean phoneVerified = false;
 
     private LocalDateTime createdAt;
+
     private LocalDateTime updatedAt;
 
     @PrePersist

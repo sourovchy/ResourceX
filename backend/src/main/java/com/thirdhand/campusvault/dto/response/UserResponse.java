@@ -1,5 +1,6 @@
 package com.thirdhand.campusvault.dto.response;
 
+import com.thirdhand.campusvault.entity.UserStatus;
 import lombok.*;
 
 @Getter
@@ -19,7 +20,15 @@ public class UserResponse {
 
     private String phone;
 
+    private String university;
+
+    private String department;
+
     private Integer trustScore;
 
-    private Boolean verified;
+    private Boolean emailVerified;
+
+    private Boolean phoneVerified;
+
+    private UserStatus status;
 }

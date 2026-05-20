@@ -11,6 +11,7 @@ import org.springframework.web.bind.annotation.*;
 @RestController
 @RequestMapping("/api/auth")
 @RequiredArgsConstructor
+@CrossOrigin(origins = "*")
 public class AuthController {
 
     private final AuthService authService;
@@ -19,6 +20,7 @@ public class AuthController {
     public AuthResponse register(
             @Valid @RequestBody RegisterRequest request
     ) {
+
         return authService.register(request);
     }
 
@@ -26,6 +28,7 @@ public class AuthController {
     public AuthResponse login(
             @Valid @RequestBody LoginRequest request
     ) {
+
         return authService.login(request);
     }
 }

@@ -18,8 +18,6 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.Optional;
-
 @Service
 @RequiredArgsConstructor
 public class AuthServiceImpl implements AuthService {
@@ -33,18 +31,18 @@ public class AuthServiceImpl implements AuthService {
     @Transactional
     public AuthResponse register(RegisterRequest request) {
 
-        if (userRepository.existsByEmailIgnoreCase(request.getEmail()) || 
-            pendingUserRepository.existsByEmailIgnoreCase(request.getEmail())) {
+        if (userRepository.existsByEmailIgnoreCase(request.getEmail())
+                || pendingUserRepository.existsByEmailIgnoreCase(request.getEmail())) {
             throw new ConflictException("Email already exists");
         }
 
-        if (userRepository.existsByStudentId(request.getStudentId()) ||
-            pendingUserRepository.existsByStudentId(request.getStudentId())) {
+        if (userRepository.existsByStudentId(request.getStudentId())
+                || pendingUserRepository.existsByStudentId(request.getStudentId())) {
             throw new ConflictException("Student ID already exists");
         }
 
-        if (userRepository.existsByPhone(request.getPhone()) ||
-            pendingUserRepository.existsByPhone(request.getPhone())) {
+        if (userRepository.existsByPhone(request.getPhone())
+                || pendingUserRepository.existsByPhone(request.getPhone())) {
             throw new ConflictException("Phone number already exists");
         }
 
@@ -65,47 +63,47 @@ public class AuthServiceImpl implements AuthService {
         pendingUserRepository.save(pendingUser);
 
         return AuthResponse.builder()
-                .message("Registration successful. Please verify your email.")
-                .user(null) // Don't return user info yet
+                .message("Registration successful. Please verify your email and wait for approval.")
+                .token(null)
+                .user(null)
                 .build();
     }
 
     @Override
     public AuthResponse login(LoginRequest request) {
 
-        // Check permanent users first
-        Optional<User> userOpt = userRepository.findByEmailIgnoreCase(request.getEmail());
-        if (userOpt.isPresent()) {
-            User user = userOpt.get();
-            if (!passwordEncoder.matches(request.getPassword(), user.getPassword())) {
-                throw new UnauthorizedException("Invalid email or password");
-            }
-            
-            String token = jwtService.generateToken(user.getEmail());
-            return AuthResponse.builder()
-                    .message("Login successful")
-                    .token(token)
-                    .user(UserMapper.toResponse(user))
-                    .build();
+        User user = userRepository.findByEmailIgnoreCase(request.getEmail())
+                .orElseThrow(() -> new UnauthorizedException("Invalid email or password"));
+
+        if (!passwordEncoder.matches(request.getPassword(), user.getPassword())) {
+            throw new UnauthorizedException("Invalid email or password");
         }
 
-        // Check pending users
-        Optional<PendingUser> pendingOpt = pendingUserRepository.findByEmailIgnoreCase(request.getEmail());
-        if (pendingOpt.isPresent()) {
-            PendingUser pending = pendingOpt.get();
-            if (!passwordEncoder.matches(request.getPassword(), pending.getPassword())) {
-                throw new UnauthorizedException("Invalid email or password");
+        if (user.getStatus() != UserStatus.ACTIVE) {
+            if (user.getStatus() == UserStatus.PENDING_VERIFICATION) {
+                throw new UnauthorizedException("Account not verified yet.");
             }
-
-            if (pending.getStatus() == UserStatus.PENDING_VERIFICATION) {
-                throw new UnauthorizedException("Account not verified. Please verify your email.");
-            } else if (pending.getStatus() == UserStatus.PENDING_APPROVAL) {
-                throw new UnauthorizedException("Account verified but awaiting admin approval.");
-            } else if (pending.getStatus() == UserStatus.REJECTED) {
-                throw new UnauthorizedException("Account registration was rejected. Please contact support.");
+            if (user.getStatus() == UserStatus.PENDING_APPROVAL) {
+                throw new UnauthorizedException("Account is waiting for admin approval.");
             }
+            if (user.getStatus() == UserStatus.REJECTED) {
+                throw new UnauthorizedException("Account registration was rejected.");
+            }
+            if (user.getStatus() == UserStatus.SUSPENDED) {
+                throw new UnauthorizedException("Account is suspended.");
+            }
+            if (user.getStatus() == UserStatus.BANNED) {
+                throw new UnauthorizedException("Account is banned.");
+            }
+            throw new UnauthorizedException("Account is not active.");
         }
 
-        throw new UnauthorizedException("Invalid email or password");
+        String token = jwtService.generateToken(user.getEmail());
+
+        return AuthResponse.builder()
+                .message("Login successful")
+                .token(token)
+                .user(UserMapper.toResponse(user))
+                .build();
     }
 }

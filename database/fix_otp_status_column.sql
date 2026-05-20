@@ -1,0 +1,17 @@
+ALTER TABLE otp_tokens
+    MODIFY COLUMN status VARCHAR(50) NOT NULL;
+
+ALTER TABLE otp_tokens
+    MODIFY COLUMN created_at TIMESTAMP NOT NULL,
+    MODIFY COLUMN expires_at TIMESTAMP NOT NULL,
+    MODIFY COLUMN last_sent_at TIMESTAMP NULL,
+    MODIFY COLUMN verified_at TIMESTAMP NULL,
+    MODIFY COLUMN used_at TIMESTAMP NULL;
+
+UPDATE otp_tokens
+SET status = 'PENDING'
+WHERE status = 'ACTIVE';
+
+UPDATE otp_tokens
+SET status = 'CANCELLED'
+WHERE status = 'LOCKED';

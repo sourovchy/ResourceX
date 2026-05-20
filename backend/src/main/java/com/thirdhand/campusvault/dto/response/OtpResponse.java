@@ -1,9 +1,19 @@
 package com.thirdhand.campusvault.dto.response;
 
-import java.time.Instant;
+import lombok.*;
 
-public record OtpResponse(
-        boolean success,
-        String message,
-        Instant timestamp
-) {}
+@Getter
+@Setter
+@NoArgsConstructor
+@AllArgsConstructor
+@Builder
+public class OtpResponse {
+
+    private boolean success;
+
+    private String message;
+
+    private String email;
+
+    private Long expiresInSeconds;
+}

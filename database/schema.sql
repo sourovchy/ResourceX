@@ -200,16 +200,18 @@ CREATE TABLE audit_logs (
 );
 CREATE TABLE otp_tokens (
     id BIGINT AUTO_INCREMENT PRIMARY KEY,
-    email VARCHAR(100) NOT NULL,
-    otp_hash VARCHAR(100) NOT NULL,
-    status VARCHAR(50) NOT NULL,
+    email VARCHAR(255) NOT NULL,
+    otp_hash VARCHAR(255) NOT NULL,
+    status VARCHAR(50) NOT NULL DEFAULT 'PENDING',
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     expires_at TIMESTAMP NOT NULL,
     verified_at TIMESTAMP NULL DEFAULT NULL,
     used_at TIMESTAMP NULL DEFAULT NULL,
     attempt_count INT NOT NULL DEFAULT 0,
     last_sent_at TIMESTAMP NULL DEFAULT NULL,
-    version BIGINT DEFAULT 0
+    version BIGINT DEFAULT 0,
+    INDEX idx_otp_email_status (email, status),
+    INDEX idx_otp_expires_at (expires_at)
 );
 
 CREATE TABLE pending_users (

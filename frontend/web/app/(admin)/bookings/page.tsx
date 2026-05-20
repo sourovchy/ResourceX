@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import {
 	Search,
@@ -9,80 +9,9 @@ import {
 	Eye,
 	ChevronDown,
 	X,
+	Loader2,
 } from "lucide-react";
-
-const MOCK_BOOKINGS = [
-	{
-		id: "BK-2041",
-		item: "DSLR Camera Kit",
-		renter: "Arif Hossain",
-		owner: "Sumaiya Begum",
-		startDate: "May 1, 2024",
-		endDate: "May 7, 2024",
-		status: "OVERDUE",
-		amount: "৳3500",
-	},
-	{
-		id: "BK-2040",
-		item: "Arduino Mega Kit",
-		renter: "Mehedi Islam",
-		owner: "Rafi Uddin",
-		startDate: "Apr 28, 2024",
-		endDate: "May 2, 2024",
-		status: "ACTIVE",
-		amount: "৳320",
-	},
-	{
-		id: "BK-2039",
-		item: "Scientific Calculator",
-		renter: "Priya Sen",
-		owner: "Arif Hossain",
-		startDate: "Apr 25, 2024",
-		endDate: "Apr 30, 2024",
-		status: "COMPLETED",
-		amount: "৳75",
-	},
-	{
-		id: "BK-2038",
-		item: "Projector – Epson",
-		renter: "Tanvir Ahmed",
-		owner: "Nusrat Jahan",
-		startDate: "Apr 22, 2024",
-		endDate: "Apr 24, 2024",
-		status: "COMPLETED",
-		amount: "৳600",
-	},
-	{
-		id: "BK-2037",
-		item: "JBL PartyBox 310",
-		renter: "Fahim Chowdhury",
-		owner: "Tanvir Ahmed",
-		startDate: "May 3, 2024",
-		endDate: "May 5, 2024",
-		status: "OVERDUE",
-		amount: "৳1600",
-	},
-	{
-		id: "BK-2036",
-		item: "Calculus Textbook",
-		renter: "Rafi Uddin",
-		owner: "Priya Sen",
-		startDate: "May 4, 2024",
-		endDate: "May 11, 2024",
-		status: "PENDING",
-		amount: "৳105",
-	},
-	{
-		id: "BK-2035",
-		item: "Organic Chemistry Set",
-		renter: "Nusrat Jahan",
-		owner: "Mehedi Islam",
-		startDate: "Apr 15, 2024",
-		endDate: "Apr 20, 2024",
-		status: "CANCELLED",
-		amount: "৳250",
-	},
-];
+import api from "@/lib/api";
 
 type FilterType =
 	| "ALL"
@@ -98,25 +27,51 @@ const STATUS_STYLES: Record<string, string> = {
 	COMPLETED: "bg-successLight text-success",
 	PENDING: "bg-surfaceVariant text-textSecondary",
 	CANCELLED: "bg-errorLight text-error",
+	REJECTED: "bg-errorLight text-error",
 };
 
 export default function AdminBookingsPage() {
 	const [search, setSearch] = useState("");
 	const [filter, setFilter] = useState<FilterType>("ALL");
 	const [overrideId, setOverrideId] = useState<string | null>(null);
+	const [bookings, setBookings] = useState<any[]>([]);
+	const [loading, setLoading] = useState(true);
 
-	const filtered = MOCK_BOOKINGS.filter((b) => {
+	const fetchBookings = async () => {
+		try {
+			setLoading(true);
+			const response = await api.get("/bookings");
+			setBookings(response.data);
+		} catch (err) {
+			console.error(err);
+		} finally {
+			setLoading(false);
+		}
+	};
+
+	useEffect(() => {
+		fetchBookings();
+	}, []);
+
+	const filtered = bookings.filter((b) => {
+		const searchStr = search.toLowerCase();
 		const matchSearch =
-			b.id.toLowerCase().includes(search.toLowerCase()) ||
-			b.item.toLowerCase().includes(search.toLowerCase()) ||
-			b.renter.toLowerCase().includes(search.toLowerCase());
+			b.bookingId?.toString().toLowerCase().includes(searchStr) ||
+			b.itemName?.toLowerCase().includes(searchStr) ||
+			b.renterName?.toLowerCase().includes(searchStr);
 		const matchFilter = filter === "ALL" || b.status === filter;
 		return matchSearch && matchFilter;
 	});
 
-	const overdueCount = MOCK_BOOKINGS.filter(
-		(b) => b.status === "OVERDUE",
-	).length;
+	const overdueCount = bookings.filter((b) => b.status === "OVERDUE").length;
+
+	if (loading) {
+		return (
+			<div className="flex flex-col items-center justify-center py-20">
+				<Loader2 className="w-10 h-10 text-primary animate-spin mb-4" />
+			</div>
+		);
+	}
 
 	return (
 		<div className="max-w-7xl mx-auto space-y-6">
@@ -247,26 +202,32 @@ export default function AdminBookingsPage() {
 						<tbody className="divide-y divide-borderLight">
 							{filtered.map((b) => (
 								<tr
-									key={b.id}
+									key={b.bookingId}
 									className={`hover:bg-surfaceVariant/40 transition-colors ${
 										b.status === "OVERDUE" ? "bg-warningLight/20" : ""
 									}`}>
 									<td className="px-5 py-3.5 font-mono text-xs font-bold text-textPrimary">
-										{b.id}
+										BK-{b.bookingId}
 									</td>
 									<td className="px-5 py-3.5">
-										<div className="font-medium text-textPrimary">{b.item}</div>
+										<div className="font-medium text-textPrimary">
+											{b.itemName}
+										</div>
 										<div className="text-xs text-textTertiary">
-											Owner: {b.owner}
+											Owner: {b.ownerName}
 										</div>
 									</td>
-									<td className="px-5 py-3.5 text-textSecondary">{b.renter}</td>
+									<td className="px-5 py-3.5 text-textSecondary">
+										{b.renterName}
+									</td>
 									<td className="px-5 py-3.5 text-xs text-textSecondary">
-										<div>{b.startDate}</div>
-										<div className="text-textTertiary">→ {b.endDate}</div>
+										<div>{new Date(b.startDate).toLocaleDateString()}</div>
+										<div className="text-textTertiary">
+											→ {new Date(b.endDate).toLocaleDateString()}
+										</div>
 									</td>
 									<td className="px-5 py-3.5 font-semibold text-textPrimary">
-										{b.amount}
+										৳{b.totalPrice}
 									</td>
 									<td className="px-5 py-3.5">
 										<span
@@ -277,7 +238,7 @@ export default function AdminBookingsPage() {
 									<td className="px-5 py-3.5">
 										<div className="flex items-center justify-end gap-2">
 											<button
-												onClick={() => setOverrideId(b.id)}
+												onClick={() => setOverrideId(b.bookingId)}
 												className="text-xs font-bold text-primary hover:underline">
 												Override
 											</button>

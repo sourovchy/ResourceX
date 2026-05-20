@@ -42,17 +42,13 @@ public class AdminServiceImpl implements AdminService {
         PendingUser pending = pendingUserRepository.findById(pendingId)
                 .orElseThrow(() -> new IllegalArgumentException("Pending user not found"));
 
-        if (!pending.isEmailVerified()) {
+        if (!Boolean.TRUE.equals(pending.getEmailVerified())) {
             throw new IllegalStateException("Email must be verified before approval");
         }
 
-        // Find or create University
-        String uniName = pending.getUniversity() != null ? pending.getUniversity() : "Unknown University";
-        University university = universityRepository.findByName(uniName)
-                .orElseGet(() -> universityRepository.save(University.builder()
-                        .name(uniName)
-                        .isVerified(false)
-                        .build()));
+        String university = pending.getUniversity() != null
+                ? pending.getUniversity()
+                : "Unknown University";
 
         User user = User.builder()
                 .studentId(pending.getStudentId())
@@ -61,8 +57,11 @@ public class AdminServiceImpl implements AdminService {
                 .password(pending.getPassword())
                 .phone(pending.getPhone())
                 .university(university)
+                .department(pending.getDepartment())
                 .trustScore(100)
-                .status(User.AccountStatus.ACTIVE)
+                .status(UserStatus.ACTIVE)
+                .emailVerified(true)
+                .phoneVerified(Boolean.TRUE.equals(pending.getPhoneVerified()))
                 .build();
 
         User savedUser = userRepository.save(user);
@@ -104,7 +103,7 @@ public class AdminServiceImpl implements AdminService {
                 .actorType(AuditLog.ActorType.SYSTEM)
                 .actionType("USER_REJECTION")
                 .entityType("PENDING_USER")
-                .entityId(pending.getId())
+                .entityId(pending.getPendingUserId())
                 .outcome(AuditLog.AuditOutcome.REJECTED)
                 .details("User " + pending.getEmail() + " rejected")
                 .build();
@@ -133,7 +132,7 @@ public class AdminServiceImpl implements AdminService {
 
     private PendingUserResponse mapToResponse(PendingUser pending) {
         return PendingUserResponse.builder()
-                .id(pending.getId())
+                .id(pending.getPendingUserId())
                 .studentId(pending.getStudentId())
                 .name(pending.getName())
                 .email(pending.getEmail())
@@ -142,8 +141,8 @@ public class AdminServiceImpl implements AdminService {
                 .department(pending.getDepartment())
                 .idCardDataUrl(pending.getIdCardDataUrl())
                 .status(pending.getStatus())
-                .emailVerified(pending.isEmailVerified())
-                .phoneVerified(pending.isPhoneVerified())
+                .emailVerified(Boolean.TRUE.equals(pending.getEmailVerified()))
+                .phoneVerified(Boolean.TRUE.equals(pending.getPhoneVerified()))
                 .createdAt(pending.getCreatedAt())
                 .build();
     }

@@ -1,8 +1,10 @@
 package com.thirdhand.campusvault.entity;
 
 public enum UserStatus {
+    ACTIVE,
     PENDING_VERIFICATION,
     PENDING_APPROVAL,
-    APPROVED,
-    REJECTED
+    REJECTED,
+    SUSPENDED,
+    BANNED
 }

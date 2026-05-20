@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import {
 	Clock,
@@ -9,76 +9,50 @@ import {
 	CheckCircle2,
 	XCircle,
 	ArrowRight,
+	Loader2,
 } from "lucide-react";
-
-const MOCK_HISTORY = [
-	{
-		id: "BK-001",
-		item: "Sony Alpha A7III",
-		owner: "John Doe",
-		startDate: "May 1, 2024",
-		endDate: "May 3, 2024",
-		amount: "৳1,500",
-		status: "COMPLETED",
-		rating: 5,
-		returnedOnTime: true,
-	},
-	{
-		id: "BK-002",
-		item: "Arduino Mega Kit",
-		owner: "Nusrat J.",
-		startDate: "Apr 25, 2024",
-		endDate: "Apr 28, 2024",
-		amount: "৳240",
-		status: "COMPLETED",
-		rating: 4,
-		returnedOnTime: true,
-	},
-	{
-		id: "BK-003",
-		item: "Calculus Textbook Vol 2",
-		owner: "Sam I.",
-		startDate: "Apr 15, 2024",
-		endDate: "Apr 22, 2024",
-		amount: "৳105",
-		status: "COMPLETED",
-		rating: 3,
-		returnedOnTime: false,
-	},
-	{
-		id: "BK-004",
-		item: "Projector – Epson",
-		owner: "Mike J.",
-		startDate: "Apr 1, 2024",
-		endDate: "Apr 5, 2024",
-		amount: "৳1,200",
-		status: "COMPLETED",
-		rating: 5,
-		returnedOnTime: true,
-	},
-	{
-		id: "BK-005",
-		item: "Wireless Microphone",
-		owner: "Emma W.",
-		startDate: "Mar 20, 2024",
-		endDate: "Mar 25, 2024",
-		amount: "৳600",
-		status: "COMPLETED",
-		rating: 4,
-		returnedOnTime: true,
-	},
-];
+import api from "@/lib/api";
 
 export default function HistoryPage() {
 	const [sortBy, setSortBy] = useState<"recent" | "oldest">("recent");
+	const [history, setHistory] = useState<any[]>([]);
+	const [loading, setLoading] = useState(true);
 
-	const sortedHistory = [...MOCK_HISTORY].sort((a, b) => {
-		const dateA = new Date(a.endDate);
-		const dateB = new Date(b.endDate);
+	useEffect(() => {
+		const fetchHistory = async () => {
+			try {
+				const response = await api.get("/bookings/my");
+				const completedBookings = response.data.filter(
+					(b: any) =>
+						b.status === "COMPLETED" ||
+						b.status === "CANCELLED" ||
+						b.status === "REJECTED",
+				);
+				setHistory(completedBookings);
+			} catch (err) {
+				console.error(err);
+			} finally {
+				setLoading(false);
+			}
+		};
+		fetchHistory();
+	}, []);
+
+	const sortedHistory = [...history].sort((a, b) => {
+		const dateA = new Date(a.endDate || a.startDate);
+		const dateB = new Date(b.endDate || b.startDate);
 		return sortBy === "recent"
 			? dateB.getTime() - dateA.getTime()
 			: dateA.getTime() - dateB.getTime();
 	});
+
+	if (loading) {
+		return (
+			<div className="flex justify-center py-20">
+				<Loader2 className="w-10 h-10 text-primary animate-spin" />
+			</div>
+		);
+	}
 
 	return (
 		<div className="max-w-5xl mx-auto space-y-6 pb-20">
@@ -88,7 +62,7 @@ export default function HistoryPage() {
 						Rental History
 					</h1>
 					<p className="text-textSecondary text-sm mt-1">
-						{MOCK_HISTORY.length} completed rentals
+						{history.length} completed rentals
 					</p>
 				</div>
 				<select
@@ -110,15 +84,17 @@ export default function HistoryPage() {
 								<div className="flex items-start justify-between mb-2">
 									<div>
 										<h3 className="font-semibold text-textPrimary">
-											{rental.item}
+											{rental.itemName}
 										</h3>
 										<p className="text-sm text-textSecondary">
-											from {rental.owner}
+											from {rental.ownerName}
 										</p>
 									</div>
 									<div className="text-right">
-										<p className="font-bold text-primary">{rental.amount}</p>
-										<p className="text-xs text-textTertiary mt-1">
+										<p className="font-bold text-primary">
+											৳{rental.totalPrice}
+										</p>
+										<p className="text-xs text-textTertiary mt-1 font-bold">
 											{rental.status}
 										</p>
 									</div>
@@ -127,20 +103,9 @@ export default function HistoryPage() {
 								<div className="flex items-center gap-4 text-sm text-textTertiary mt-3">
 									<span className="flex items-center gap-1">
 										<Calendar className="w-4 h-4" />
-										{rental.startDate} to {rental.endDate}
+										{new Date(rental.startDate).toLocaleDateString()} to{" "}
+										{new Date(rental.endDate).toLocaleDateString()}
 									</span>
-									{rental.returnedOnTime ? (
-										<span className="flex items-center gap-1 text-success">
-											<CheckCircle2 className="w-4 h-4" />
-											Returned on time
-										</span>
-									) : (
-										<span className="flex items-center gap-1 text-warning">
-											<Clock className="w-4 h-4" />
-											Late return
-										</span>
-									)}
-									<span className="text-amber-500">⭐ {rental.rating}/5</span>
 								</div>
 							</div>
 

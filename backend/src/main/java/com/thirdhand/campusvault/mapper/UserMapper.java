@@ -5,6 +5,9 @@ import com.thirdhand.campusvault.entity.User;
 
 public class UserMapper {
 
+    private UserMapper() {
+    }
+
     public static UserResponse toResponse(User user) {
 
         if (user == null) {
@@ -17,8 +20,12 @@ public class UserMapper {
                 .name(user.getName())
                 .email(user.getEmail())
                 .phone(user.getPhone())
+                .university(user.getUniversity())
+                .department(user.getDepartment())
                 .trustScore(user.getTrustScore())
-                .verified(true) // Users in the main table are approved/verified
+                .emailVerified(user.getEmailVerified())
+                .phoneVerified(user.getPhoneVerified())
+                .status(user.getStatus())
                 .build();
     }
 }

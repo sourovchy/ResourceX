@@ -10,6 +10,6 @@ public record OtpVerifyRequest(
         String email,
 
         @NotBlank(message = "OTP is required")
-        @Pattern(regexp = "\\d{6}", message = "OTP must be 6 digits")
+        @Pattern(regexp = "\\d{6}", message = "OTP must be exactly 6 digits")
         String otp
 ) {}

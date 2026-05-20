@@ -30,18 +30,26 @@ public class User {
     @Column(name = "password_hash", nullable = false)
     private String password;
 
+    @Column(nullable = false, unique = true)
     private String phone;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "university_id")
-    private University university;
+    // Temporary string field for easier registration flow
+    private String university;
+
+    private String department;
 
     @Builder.Default
     private Integer trustScore = 100;
 
     @Enumerated(EnumType.STRING)
     @Builder.Default
-    private AccountStatus status = AccountStatus.ACTIVE;
+    private UserStatus status = UserStatus.PENDING_VERIFICATION;
+
+    @Builder.Default
+    private Boolean emailVerified = false;
+
+    @Builder.Default
+    private Boolean phoneVerified = false;
 
     private LocalDateTime createdAt;
 
@@ -56,9 +64,5 @@ public class User {
     @PreUpdate
     public void onUpdate() {
         this.updatedAt = LocalDateTime.now();
-    }
-
-    public enum AccountStatus {
-        ACTIVE, SUSPENDED, BANNED
     }
 }
