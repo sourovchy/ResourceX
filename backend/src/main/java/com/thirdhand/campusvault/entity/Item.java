@@ -5,6 +5,8 @@ import lombok.*;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 
 @Entity
 @Table(name = "items")
@@ -40,6 +42,10 @@ public class Item {
     @Column(nullable = false)
     @Builder.Default
     private ItemStatus status = ItemStatus.AVAILABLE;
+
+    @OneToMany(mappedBy = "item", cascade = CascadeType.ALL, orphanRemoval = true)
+    @Builder.Default
+    private List<ItemImage> images = new ArrayList<>();
 
     private LocalDateTime createdAt;
 

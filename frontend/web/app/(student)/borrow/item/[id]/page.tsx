@@ -1,7 +1,8 @@
 "use client";
 
-import React from "react";
+import React, { useState, useEffect } from "react";
 import Link from "next/link";
+import api from "@/lib/api";
 import {
 	Star,
 	MapPin,
@@ -12,33 +13,63 @@ import {
 	ArrowLeft,
 	Heart,
 	MessageSquare,
+	Loader2,
 } from "lucide-react";
 
 export default function ItemDetailPage({ params }: { params: { id: string } }) {
-	// Mock item data based on ID matching one from the list above, or just a static one
-	const item = {
-		id: params.id,
-		title: "Sony Alpha A7III DSLR Camera",
-		category: "Electronics",
-		condition: "Excellent",
-		description:
-			"Professional mirrorless camera perfect for event photography or videography. Includes 28-70mm lens, 2 spare batteries, and a 64GB fast SD card. Please handle with extreme care and do not use in rainy conditions.",
-		pricePerDay: 500,
-		deposit: 5000,
-		rating: 4.8,
-		reviews: 14,
-		owner: {
-			name: "Arif Hossain",
-			trustScore: 105,
-			isVerified: true,
-			joined: "Jan 2024",
-			completedRentals: 42,
-		},
-		images: [
-			"https://images.unsplash.com/photo-1516035069371-29a1b244cc32?auto=format&fit=crop&q=80&w=800&h=500",
-			"https://images.unsplash.com/photo-1502920917128-1aa500764cbd?auto=format&fit=crop&q=80&w=800&h=500",
-		],
-	};
+	const [item, setItem] = useState<any>(null);
+	const [loading, setLoading] = useState(true);
+	const [error, setError] = useState<string | null>(null);
+
+	useEffect(() => {
+		const fetchItem = async () => {
+			try {
+				setLoading(true);
+				const response = await api.get(`/items/${params.id}`);
+				setItem(response.data);
+				setError(null);
+			} catch (err) {
+				console.error("Error fetching item details:", err);
+				setError("Failed to load item details. It may have been removed.");
+			} finally {
+				setLoading(false);
+			}
+		};
+
+		fetchItem();
+	}, [params.id]);
+
+	if (loading) {
+		return (
+			<div className="flex flex-col items-center justify-center py-20">
+				<Loader2 className="w-10 h-10 text-primary animate-spin mb-4" />
+				<p className="text-textSecondary font-medium">
+					Fetching gear details...
+				</p>
+			</div>
+		);
+	}
+
+	if (error || !item) {
+		return (
+			<div className="bg-errorLight/20 border border-errorLight p-8 rounded-2xl text-center max-w-2xl mx-auto">
+				<p className="text-errorDark font-bold mb-2">Item not found</p>
+				<p className="text-textSecondary text-sm mb-6">
+					{error || "The item you are looking for does not exist."}
+				</p>
+				<Link
+					href="/borrow"
+					className="inline-block px-6 py-2 bg-primary text-white rounded-xl font-bold shadow-sm">
+					Back to Browse
+				</Link>
+			</div>
+		);
+	}
+
+	const itemImage =
+		item.imageUrls?.[0] ||
+		"https://images.unsplash.com/photo-1586769852836-bc069f19e1b6?auto=format&fit=crop&q=80&w=800&h=500";
+	const allImages = item.imageUrls?.length > 0 ? item.imageUrls : [itemImage];
 
 	return (
 		<div className="max-w-4xl mx-auto space-y-6 pb-20">
@@ -52,9 +83,9 @@ export default function ItemDetailPage({ params }: { params: { id: string } }) {
 			<div className="grid grid-cols-1 md:grid-cols-2 gap-8">
 				{/* Images Area */}
 				<div className="space-y-4">
-					<div className="bg-surfaceVariant rounded-2xl overflow-hidden aspect-[4/3] border border-borderLight relative group">
+					<div className="bg-surfaceVariant rounded-2xl overflow-hidden aspect-[4/3] border border-borderLight relative group shadow-sm">
 						<img
-							src={item.images[0]}
+							src={itemImage}
 							alt={item.title}
 							className="w-full h-full object-cover"
 						/>
@@ -62,11 +93,11 @@ export default function ItemDetailPage({ params }: { params: { id: string } }) {
 							<Heart className="w-5 h-5" />
 						</button>
 					</div>
-					<div className="flex gap-4 overflow-x-auto pb-2">
-						{item.images.map((img, i) => (
+					<div className="flex gap-4 overflow-x-auto pb-2 scrollbar-none">
+						{allImages.map((img: string, i: number) => (
 							<div
 								key={i}
-								className={`w-20 h-20 rounded-xl overflow-hidden border-2 cursor-pointer ${i === 0 ? "border-primary" : "border-transparent opacity-70 hover:opacity-100"}`}>
+								className={`w-20 h-20 rounded-xl overflow-hidden border-2 cursor-pointer shrink-0 transition-all ${i === 0 ? "border-primary" : "border-transparent opacity-70 hover:opacity-100"}`}>
 								<img src={img} alt="" className="w-full h-full object-cover" />
 							</div>
 						))}
@@ -78,10 +109,10 @@ export default function ItemDetailPage({ params }: { params: { id: string } }) {
 					<div>
 						<div className="flex items-center gap-2 mb-2">
 							<span className="px-2.5 py-1 bg-primaryLight text-primary rounded-md text-[10px] font-bold uppercase tracking-wider">
-								{item.category}
+								{item.category || "General"}
 							</span>
 							<span className="px-2.5 py-1 bg-surfaceVariant text-textSecondary rounded-md text-[10px] font-bold uppercase tracking-wider">
-								Condition: {item.condition}
+								Condition: {item.itemCondition || "Good"}
 							</span>
 						</div>
 						<h1 className="text-2xl font-bold text-textPrimary leading-tight mb-2">
@@ -90,10 +121,8 @@ export default function ItemDetailPage({ params }: { params: { id: string } }) {
 						<div className="flex items-center gap-4 text-sm text-textSecondary">
 							<span className="flex items-center gap-1">
 								<Star className="w-4 h-4 text-warning fill-warning" />
-								<span className="font-bold text-textPrimary">
-									{item.rating}
-								</span>{" "}
-								({item.reviews} reviews)
+								<span className="font-bold text-textPrimary">4.5</span> (0
+								reviews)
 							</span>
 						</div>
 					</div>
@@ -105,7 +134,7 @@ export default function ItemDetailPage({ params }: { params: { id: string } }) {
 									Rental Price
 								</div>
 								<div className="text-3xl font-extrabold text-primary">
-									৳ {item.pricePerDay}
+									৳ {item.dailyRate}
 									<span className="text-sm text-textSecondary font-medium">
 										{" "}
 										/ day
@@ -116,13 +145,11 @@ export default function ItemDetailPage({ params }: { params: { id: string } }) {
 								<div className="text-sm font-semibold text-textSecondary mb-1">
 									Deposit
 								</div>
-								<div className="text-xl font-bold text-textPrimary">
-									৳ {item.deposit}
-								</div>
+								<div className="text-xl font-bold text-textPrimary">৳ 0</div>
 							</div>
 						</div>
 						<Link
-							href={`/borrow/book/${item.id}`}
+							href={`/borrow/book/${item.itemId}`}
 							className="block w-full py-3.5 bg-primary text-white text-center rounded-xl font-bold hover:bg-primaryDark transition-colors shadow-sm">
 							Book This Item
 						</Link>
@@ -139,31 +166,28 @@ export default function ItemDetailPage({ params }: { params: { id: string } }) {
 							Item Owner
 						</h2>
 						<Link
-							href={`/profile/${item.owner.name}`}
+							href={`/profile/${item.owner?.userId}`}
 							className="block bg-surface border border-borderLight rounded-xl p-4 flex items-center justify-between shadow-sm hover:shadow-md transition">
 							<div className="flex items-center gap-3">
 								<div className="w-12 h-12 bg-primaryLight text-primary rounded-full flex items-center justify-center font-extrabold text-lg">
-									{item.owner.name.charAt(0)}
+									{item.owner?.name?.charAt(0) || "U"}
 								</div>
 								<div>
 									<div className="font-bold text-textPrimary flex items-center gap-1.5">
-										{item.owner.name}
-										{item.owner.isVerified && (
+										{item.owner?.name || "Unknown Owner"}
+										{item.owner?.verified && (
 											<CheckCircle2 className="w-4 h-4 text-success" />
 										)}
 									</div>
 									<div className="text-xs text-textSecondary mt-0.5">
-										Joined {item.owner.joined}
+										Verified Campus Student
 									</div>
 								</div>
 							</div>
 							<div className="text-right flex flex-col items-end">
 								<div className="flex items-center gap-1.5 bg-successLight text-success px-2 py-1 rounded-md text-xs font-bold leading-none mb-1">
-									<Shield className="w-3.5 h-3.5" /> {item.owner.trustScore}{" "}
-									Trust
-								</div>
-								<div className="text-xs text-textSecondary font-medium">
-									{item.owner.completedRentals} Rentals
+									<Shield className="w-3.5 h-3.5" />{" "}
+									{item.owner?.trustScore || 100} Trust
 								</div>
 							</div>
 						</Link>
@@ -174,7 +198,7 @@ export default function ItemDetailPage({ params }: { params: { id: string } }) {
 							Description
 						</h3>
 						<p className="text-sm text-textSecondary leading-relaxed whitespace-pre-line">
-							{item.description}
+							{item.description || "No description provided for this item."}
 						</p>
 					</div>
 				</div>

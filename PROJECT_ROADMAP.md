@@ -12,8 +12,9 @@ This document tracks the granular development progress, identifying incomplete m
 - [ ] **Database Schema Fixes (Backend)**:
   - **Issue**: Hibernate `ddl-auto=update` is causing application startup crashes throwing Foreign Key incompatibility exceptions (`bookings_ibfk_1`, `FKc52o2b1jkxttngufqp3t7jr3h`, etc.) due to mismatch between BigInt vs Int columns or constraints.
   - **Action**: Fix Entity definitions to perfectly match the raw `schema.sql` standard, or clean the DB and rebuild it.
-- [ ] **Remove Mock Data (Frontend)**:
-  - **Issue**: Complete frontend feature pages like `/borrow` and `/my-bookings` are currently relying heavily on hardcoded `MOCK_ITEMS` and `MOCK_BOOKINGS`. Let's transition to using `lib/api.ts` `axios` instances to pull real data.
+- [x] **Remove Mock Data (Frontend)**:
+  - **Action**: Transitioned `/borrow`, `/my-bookings`, and `/borrow/item/[id]` pages from hardcoded `MOCK_ITEMS`/`MOCK_BOOKINGS` to real API calls using `lib/api.ts`.
+  - **Backend Support**: Implemented `ItemServiceImpl` and `BookingServiceImpl` stubs to fetch data from repositories.
 
 ---
 

@@ -1,76 +1,80 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Image from "next/image";
-import { Clock, ArrowRight } from "lucide-react";
+import { Clock, ArrowRight, Loader2 } from "lucide-react";
 import Link from "next/link";
+import api from "@/lib/api";
 
 type BookingStatus = "active" | "pending" | "completed" | "cancelled";
 
-const MOCK_BOOKINGS = [
-	{
-		id: "b1",
-		item: "Sony Alpha A7III",
-		owner: "Arif H.",
-		dates: "May 10 - May 12",
-		status: "active" as BookingStatus,
-		total: 1000,
-		image:
-			"https://images.unsplash.com/photo-1516035069371-29a1b244cc32?auto=format&fit=crop&q=80&w=200&h=150",
-	},
-	{
-		id: "b2",
-		item: "Arduino Mega 2560 Kit",
-		owner: "Nusrat J.",
-		dates: "May 15 - May 20",
-		status: "pending" as BookingStatus,
-		total: 250,
-		image:
-			"https://images.unsplash.com/photo-1555664424-778a1e5e1b48?auto=format&fit=crop&q=80&w=200&h=150",
-	},
-	{
-		id: "b3",
-		item: "Calculus Textbook Vol 2",
-		owner: "Sam I.",
-		dates: "Apr 1 - Apr 30",
-		status: "completed" as BookingStatus,
-		total: 300,
-		image:
-			"https://images.unsplash.com/photo-1544947950-fa07a98d237f?auto=format&fit=crop&q=80&w=200&h=150",
-	},
-];
-
-const STATUS_STYLES: Record<
-	BookingStatus,
-	{ label: string; className: string }
-> = {
-	active: {
-		label: "Active",
-		className: "bg-emerald-100 text-emerald-700",
-	},
-	pending: {
+const STATUS_STYLES: Record<string, { label: string; className: string }> = {
+	PENDING: {
 		label: "Pending",
 		className: "bg-yellow-100 text-yellow-700",
 	},
-	completed: {
+	APPROVED: {
+		label: "Active",
+		className: "bg-emerald-100 text-emerald-700",
+	},
+	ACTIVE: {
+		label: "Active",
+		className: "bg-emerald-100 text-emerald-700",
+	},
+	COMPLETED: {
 		label: "Completed",
 		className: "bg-successLight text-successDark border border-successLight",
 	},
-	cancelled: {
+	CANCELLED: {
 		label: "Cancelled",
 		className: "bg-errorLight text-errorDark border border-errorLight",
 	},
 };
 
 export default function MyBookingsPage() {
+	const [bookings, setBookings] = useState<any[]>([]);
+	const [loading, setLoading] = useState(true);
+	const [error, setError] = useState<string | null>(null);
 	const [activeTab, setActiveTab] = useState("All");
+
+	useEffect(() => {
+		const fetchBookings = async () => {
+			try {
+				setLoading(true);
+				const response = await api.get("/bookings");
+				setBookings(response.data);
+				setError(null);
+			} catch (err) {
+				console.error("Error fetching bookings:", err);
+				setError("Failed to load bookings.");
+			} finally {
+				setLoading(false);
+			}
+		};
+
+		fetchBookings();
+	}, []);
 
 	const filteredBookings =
 		activeTab === "All"
-			? MOCK_BOOKINGS
-			: MOCK_BOOKINGS.filter(
-				(b) => b.status.toLowerCase() === activeTab.toLowerCase()
-			);
+			? bookings
+			: bookings.filter((b) => {
+					const status = b.status?.toUpperCase();
+					if (activeTab === "Active")
+						return status === "ACTIVE" || status === "APPROVED";
+					return status === activeTab.toUpperCase();
+				});
+
+	if (loading) {
+		return (
+			<div className="flex flex-col items-center justify-center py-20">
+				<Loader2 className="w-10 h-10 text-primary animate-spin mb-4" />
+				<p className="text-textSecondary font-medium">
+					Loading your bookings...
+				</p>
+			</div>
+		);
+	}
 
 	return (
 		<div className="max-w-4xl mx-auto space-y-6">
@@ -80,21 +84,18 @@ export default function MyBookingsPage() {
 
 			{/* Tabs */}
 			<div className="flex border-b border-borderLight -mb-2">
-				{["All", "Active", "Pending", "Completed", "Cancelled"].map(
-					(tab) => (
-						<button
-							key={tab}
-							onClick={() => setActiveTab(tab)}
-							className={`px-4 py-3 text-sm font-semibold transition-colors ${
-								activeTab === tab
-									? "border-b-2 border-primary text-primary"
-									: "text-textSecondary hover:text-textPrimary"
-							}`}
-						>
-							{tab}
-						</button>
-					)
-				)}
+				{["All", "Active", "Pending", "Completed", "Cancelled"].map((tab) => (
+					<button
+						key={tab}
+						onClick={() => setActiveTab(tab)}
+						className={`px-4 py-3 text-sm font-semibold transition-colors ${
+							activeTab === tab
+								? "border-b-2 border-primary text-primary"
+								: "text-textSecondary hover:text-textPrimary"
+						}`}>
+						{tab}
+					</button>
+				))}
 			</div>
 
 			{/* Empty State */}
@@ -109,18 +110,31 @@ export default function MyBookingsPage() {
 			{/* Booking Cards */}
 			<div className="space-y-4 pt-2">
 				{filteredBookings.map((b) => {
-					const statusMeta = STATUS_STYLES[b.status];
+					const statusMeta = STATUS_STYLES[b.status] || {
+						label: b.status,
+						className: "bg-gray-100 text-gray-700",
+					};
+					const startDate = new Date(b.startDate).toLocaleDateString("en-US", {
+						month: "short",
+						day: "numeric",
+					});
+					const endDate = new Date(b.endDate).toLocaleDateString("en-US", {
+						month: "short",
+						day: "numeric",
+					});
 
 					return (
 						<div
-							key={b.id}
-							className="bg-surfaceVariant border border-borderLight rounded-2xl p-5 shadow-sm flex flex-col sm:flex-row items-start sm:items-center gap-5"
-						>
+							key={b.bookingId}
+							className="bg-surfaceVariant border border-borderLight rounded-2xl p-5 shadow-sm flex flex-col sm:flex-row items-start sm:items-center gap-5 animate-in slide-in-from-bottom-2 duration-300">
 							{/* Image */}
 							<div className="relative w-full sm:w-24 h-24 shrink-0">
 								<Image
-									src={b.image}
-									alt={`${b.item} booking item`}
+									src={
+										b.item?.imageUrls?.[0] ||
+										"https://images.unsplash.com/photo-1586769852836-bc069f19e1b6?auto=format&fit=crop&q=80&w=200&h=150"
+									}
+									alt={`${b.item?.title} booking item`}
 									fill
 									className="object-cover rounded-xl border border-borderLight"
 								/>
@@ -130,12 +144,11 @@ export default function MyBookingsPage() {
 							<div className="flex-1 w-full text-left">
 								<div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 mb-2">
 									<h3 className="font-bold text-textPrimary truncate text-lg">
-										{b.item}
+										{b.item?.title || "Unknown Item"}
 									</h3>
 
 									<span
-										className={`px-2.5 py-1 rounded-md text-xs font-bold whitespace-nowrap ${statusMeta.className}`}
-									>
+										className={`px-2.5 py-1 rounded-md text-xs font-bold whitespace-nowrap ${statusMeta.className}`}>
 										{statusMeta.label}
 									</span>
 								</div>
@@ -143,18 +156,17 @@ export default function MyBookingsPage() {
 								<div className="text-sm text-textSecondary space-y-1">
 									<div className="flex items-center gap-1.5">
 										<Clock className="w-4 h-4 text-primary" />
-										{b.dates}
+										{startDate} - {endDate}
 									</div>
 
 									<div className="flex items-center gap-1.5 mt-1">
 										From:
 										<strong className="text-textPrimary">
-											{b.owner}
+											{b.item?.owner?.name || "Campus Owner"}
 										</strong>
-										•
-										Total:
+										• Total:
 										<strong className="text-primary font-bold">
-											৳ {b.total}
+											৳ {b.totalPrice}
 										</strong>
 									</div>
 								</div>
@@ -162,23 +174,22 @@ export default function MyBookingsPage() {
 
 							{/* Actions */}
 							<div className="w-full sm:w-auto flex flex-col gap-2 shrink-0">
-								{b.status === "active" && (
+								{(b.status === "ACTIVE" || b.status === "APPROVED") && (
 									<button className="px-4 py-2 bg-successLight text-successDark border border-successLight rounded-xl text-sm font-bold w-full transition-colors hover:bg-success hover:text-white">
 										Confirm Return
 									</button>
 								)}
 
-								{b.status === "pending" && (
+								{b.status === "PENDING" && (
 									<button className="px-4 py-2 bg-errorLight text-errorDark border border-errorLight rounded-xl text-sm font-bold w-full transition-colors hover:bg-error hover:text-white">
 										Cancel Request
 									</button>
 								)}
 
-								{b.status === "completed" && (
+								{b.status === "COMPLETED" && (
 									<Link
-										href={`/borrow/review/${b.id}`}
-										className="px-4 py-2 bg-primaryLight text-primary border border-primaryLight rounded-xl text-sm font-bold w-full transition-colors hover:bg-primary hover:text-white flex justify-center items-center gap-1"
-									>
+										href={`/borrow/review/${b.bookingId}`}
+										className="px-4 py-2 bg-primaryLight text-primary border border-primaryLight rounded-xl text-sm font-bold w-full transition-colors hover:bg-primary hover:text-white flex justify-center items-center gap-1">
 										Leave Review
 										<ArrowRight className="w-3 h-3" />
 									</Link>

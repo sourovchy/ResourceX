@@ -50,12 +50,16 @@ public class ItemServiceImpl implements ItemService {
 
     @Override
     public ItemResponse getItemById(Long itemId) {
-        return new ItemResponse();
+        Item item = itemRepository.findById(itemId)
+                .orElseThrow(() -> new IllegalArgumentException("Item not found"));
+        return ItemMapper.toResponse(item);
     }
 
     @Override
     public List<ItemResponse> getAllItems() {
-        return List.of();
+        return itemRepository.findAll().stream()
+                .map(ItemMapper::toResponse)
+                .toList();
     }
 
     @Override
