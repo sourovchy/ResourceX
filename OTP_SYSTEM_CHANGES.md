@@ -11,7 +11,7 @@ I have implemented the following changes to the OTP (Email Verification) system 
 
 ### 2. Request Limit
 
-- **Max Requests**: Implemented a limit of **5 OTP requests per user** (`MAX_OTP_REQUESTS = 5`).
+- **Max Requests**: Implemented a limit of **5 OTP requests per user** (`MAX_OTP_REQUESTS = 3`).
 - **Tracking**: The system counts the number of `OtpToken` records associated with the user's email in the database.
 - **Enforcement**: If the limit is reached, further requests are blocked with the message: _"Maximum OTP request limit reached (5). Please contact support."_
 

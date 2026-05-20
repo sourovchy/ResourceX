@@ -26,4 +26,8 @@ public class RegisterRequest {
 
     @NotBlank
     private String phone;
+
+    private String university;
+    private String department;
+    private String idCardDataUrl;
 }

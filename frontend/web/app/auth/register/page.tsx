@@ -15,7 +15,6 @@ import {
 } from "lucide-react";
 import { AxiosError } from "axios";
 import api from "@/lib/api";
-import { saveApprovalRequest } from "@/lib/approvalRequests";
 
 type AuthResponse = {
 	message: string;
@@ -114,29 +113,22 @@ export default function RegisterPage() {
 		setLoading(true);
 
 		try {
-			const { data } = await api.post<AuthResponse>("/auth/register", {
+			await api.post<AuthResponse>("/auth/register", {
 				studentId: form.studentId.trim(),
 				name: form.name.trim(),
 				email: form.email.trim(),
 				password: form.password,
 				phone: `+880${form.phone}`,
-			});
-
-			localStorage.setItem("campusvault_token", data.token);
-			localStorage.setItem("campusvault_user", JSON.stringify(data.user));
-			saveApprovalRequest({
-				id: `REQ-${data.user.userId}`,
-				name: form.name.trim(),
-				email: form.email.trim(),
-				phone: `+880${form.phone}`,
-				studentId: form.studentId.trim(),
 				university: form.university.trim(),
 				department: form.department.trim(),
-				idCardFileName,
 				idCardDataUrl,
-				status: "PENDING",
-				submittedAt: new Date().toISOString(),
 			});
+
+			// Store email in local storage for the verify page
+			localStorage.setItem(
+				"campusvault_user",
+				JSON.stringify({ email: form.email.trim() }),
+			);
 
 			// Trigger OTP send to the registered email
 			try {

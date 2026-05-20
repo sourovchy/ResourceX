@@ -76,7 +76,7 @@ export default function EmailVerificationPage() {
 			}
 
 			localStorage.setItem("campusvault_email_verified", "true");
-			router.push("/auth/verify-phone");
+			router.push("/auth/pending-approval");
 		} catch (err: any) {
 			const msg =
 				err?.response?.data?.message || err?.message || "Verification failed";

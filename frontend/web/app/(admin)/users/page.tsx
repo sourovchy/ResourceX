@@ -1,12 +1,9 @@
 "use client";
+import api from "@/lib/api";
 import { useSearchParams } from "next/navigation";
 import React, { useEffect, useMemo, useState } from "react";
 
 import Link from "next/link";
-import {
-	formatSubmittedAt,
-	getApprovalRequests,
-} from "@/lib/approvalRequests";
 import {
 	Search,
 	CheckCircle2,
@@ -167,6 +164,13 @@ const INITIAL_USERS: AdminUser[] = [
 	},
 ];
 
+const STATUS_MAP: Record<string, UserStatus> = {
+	PENDING_VERIFICATION: "PENDING",
+	PENDING_APPROVAL: "PENDING",
+	APPROVED: "VERIFIED",
+	REJECTED: "REJECTED",
+};
+
 const STATUS_COLORS: Record<UserStatus, string> = {
 	VERIFIED: "bg-successLight text-success",
 	PENDING: "bg-warningLight text-warning",
@@ -204,56 +208,66 @@ function getTrustLabel(trustScore: number) {
 }
 
 export default function AdminUsersPage() {
-const searchParams = useSearchParams();
+	const searchParams = useSearchParams();
 
-const [search, setSearch] = useState("");
-const [filter, setFilter] = useState<FilterType>("ALL");
-const [users, setUsers] = useState<AdminUser[]>(INITIAL_USERS);
+	const [search, setSearch] = useState("");
+	const [filter, setFilter] = useState<FilterType>("ALL");
+	const [users, setUsers] = useState<AdminUser[]>([]);
+	const [loading, setLoading] = useState(true);
 
-useEffect(() => {
-	const urlFilter = searchParams.get("filter") as FilterType | null;
-	if (urlFilter && FILTERS.includes(urlFilter)) {
-		setFilter(urlFilter);
-	} else {
-		setFilter("ALL");
-	}
-}, [searchParams]);
+	useEffect(() => {
+		const urlFilter = searchParams.get("filter") as FilterType | null;
+		if (urlFilter && FILTERS.includes(urlFilter)) {
+			setFilter(urlFilter);
+		} else {
+			setFilter("ALL");
+		}
+	}, [searchParams]);
 
 	const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
 	const [reviewMode, setReviewMode] = useState<ReviewMode>(null);
 	const [decisionFeedback, setDecisionFeedback] = useState("");
 	const [suspensionPeriod, setSuspensionPeriod] = useState("7 days");
 
-	useEffect(() => {
-		const approvalUsers = getApprovalRequests().map((request) => ({
-			id: request.id,
-			name: request.name,
-			email: request.email,
-			phone: request.phone,
-			studentId: request.studentId,
-			university: request.university,
-			department: request.department,
-			idCardFileName: request.idCardFileName,
-			idCardDataUrl: request.idCardDataUrl,
-			status: request.status,
-			trustScore: 0,
-			bookings: 0,
-			registered: formatSubmittedAt(request.submittedAt),
-			lastActive: "Just now",
-			warningCount: 0,
-			verificationSubmitted: formatSubmittedAt(request.submittedAt),
-			documentCount: 1,
-			note: "Student submitted registration details and ID card.",
-		})) satisfies AdminUser[];
+	const fetchUsers = async () => {
+		setLoading(true);
+		try {
+			const res = await api.get("/admin/pending-users");
+			const data = res.data as any[];
 
-		if (approvalUsers.length === 0) {
-			return;
+			const mappedUsers: AdminUser[] = data.map((u) => ({
+				id: u.id.toString(),
+				name: u.name,
+				email: u.email,
+				phone: u.phone,
+				studentId: u.studentId,
+				university: u.university,
+				department: u.department,
+				idCardDataUrl: u.idCardDataUrl,
+				status: STATUS_MAP[u.status] || "PENDING",
+				trustScore: 0,
+				bookings: 0,
+				registered: new Date(u.createdAt).toLocaleDateString(),
+				lastActive: "N/A",
+				warningCount: 0,
+				verificationSubmitted: new Date(u.createdAt).toLocaleDateString(),
+				documentCount: u.idCardDataUrl ? 1 : 0,
+				note:
+					u.status === "PENDING_APPROVAL"
+						? "Verified, awaiting approval"
+						: "Awaiting verification",
+			}));
+
+			setUsers(mappedUsers);
+		} catch (err) {
+			console.error("Failed to fetch pending users:", err);
+		} finally {
+			setLoading(false);
 		}
+	};
 
-		setUsers((prev) => {
-			const existingIds = new Set(approvalUsers.map((user) => user.id));
-			return [...approvalUsers, ...prev.filter((user) => !existingIds.has(user.id))];
-		});
+	useEffect(() => {
+		fetchUsers();
 	}, []);
 
 	const filteredUsers = useMemo(() => {
@@ -288,76 +302,43 @@ useEffect(() => {
 		setSuspensionPeriod("7 days");
 	};
 
-	const updateUser = (userId: string, updater: (u: AdminUser) => AdminUser) => {
-		setUsers((prev) => prev.map((u) => (u.id === userId ? updater(u) : u)));
-	};
-
-	const approveUser = () => {
+	const approveUser = async () => {
 		if (!selectedUser) return;
 
-		updateUser(selectedUser.id, (u) => ({
-			...u,
-			status: "VERIFIED",
-			trustScore: Math.max(u.trustScore, 80),
-			note: decisionFeedback.trim()
-				? `Approved: ${decisionFeedback.trim()}`
-				: "Approved after verification review.",
-			suspensionReason: undefined,
-			suspensionPeriod: undefined,
-		}));
-
-		closeModal();
+		try {
+			await api.post(`/admin/approve/${selectedUser.id}`);
+			fetchUsers();
+			closeModal();
+		} catch (err) {
+			console.error("Failed to approve user:", err);
+			alert("Failed to approve user");
+		}
 	};
 
-	const rejectUser = () => {
+	const rejectUser = async () => {
 		if (!selectedUser) return;
 
-		updateUser(selectedUser.id, (u) => ({
-			...u,
-			status: "REJECTED",
-			trustScore: 0,
-			note: decisionFeedback.trim()
-				? `Rejected: ${decisionFeedback.trim()}`
-				: "Rejected due to mismatched or incomplete information.",
-			suspensionReason: undefined,
-			suspensionPeriod: undefined,
-		}));
-
-		closeModal();
+		try {
+			await api.post(`/admin/reject/${selectedUser.id}`);
+			fetchUsers();
+			closeModal();
+		} catch (err) {
+			console.error("Failed to reject user:", err);
+			alert("Failed to reject user");
+		}
 	};
 
 	const suspendUser = () => {
-		if (!selectedUser) return;
-
-		updateUser(selectedUser.id, (u) => ({
-			...u,
-			status: "SUSPENDED",
-			note: decisionFeedback.trim()
-				? `Suspended: ${decisionFeedback.trim()}`
-				: "Suspended by admin.",
-			suspensionReason: decisionFeedback.trim() || "Policy violation / misuse",
-			suspensionPeriod,
-		}));
-
+		// Placeholder for future implementation
 		closeModal();
 	};
 
 	const reactivateUser = (userId: string) => {
-		updateUser(userId, (u) => ({
-			...u,
-			status: "VERIFIED",
-			note: "Reactivated by admin.",
-			suspensionReason: undefined,
-			suspensionPeriod: undefined,
-		}));
+		// Placeholder for future implementation
 	};
 
 	const restoreForReview = (userId: string) => {
-		updateUser(userId, (u) => ({
-			...u,
-			status: "PENDING",
-			note: "Returned to review queue.",
-		}));
+		// Placeholder
 	};
 
 	return (
@@ -707,7 +688,7 @@ useEffect(() => {
 											</div>
 										</div>
 										<div>
-										<div className="text-xs text-textTertiary">Email</div>
+											<div className="text-xs text-textTertiary">Email</div>
 											<div className="font-medium text-textPrimary">
 												{selectedUser.email}
 											</div>
@@ -733,13 +714,17 @@ useEffect(() => {
 											</div>
 										</div>
 										<div>
-											<div className="text-xs text-textTertiary">University</div>
+											<div className="text-xs text-textTertiary">
+												University
+											</div>
 											<div className="font-medium text-textPrimary">
 												{selectedUser.university || "Not provided"}
 											</div>
 										</div>
 										<div>
-											<div className="text-xs text-textTertiary">Department</div>
+											<div className="text-xs text-textTertiary">
+												Department
+											</div>
 											<div className="font-medium text-textPrimary">
 												{selectedUser.department || "Not provided"}
 											</div>

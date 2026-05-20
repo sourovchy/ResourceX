@@ -4,7 +4,10 @@ import com.thirdhand.campusvault.dto.request.OtpRequest;
 import com.thirdhand.campusvault.dto.request.OtpVerifyRequest;
 import com.thirdhand.campusvault.entity.OtpStatus;
 import com.thirdhand.campusvault.entity.OtpToken;
+import com.thirdhand.campusvault.entity.PendingUser;
+import com.thirdhand.campusvault.entity.UserStatus;
 import com.thirdhand.campusvault.repository.OtpRepository;
+import com.thirdhand.campusvault.repository.PendingUserRepository;
 import com.thirdhand.campusvault.repository.UserRepository;
 import com.thirdhand.campusvault.service.EmailService;
 import com.thirdhand.campusvault.service.OtpService;
@@ -16,6 +19,7 @@ import java.security.SecureRandom;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
+import java.util.Optional;
 
 @Service
 public class OtpServiceImpl implements OtpService {
@@ -28,16 +32,19 @@ public class OtpServiceImpl implements OtpService {
 
     private final OtpRepository otpRepository;
     private final UserRepository userRepository;
+    private final PendingUserRepository pendingUserRepository;
     private final PasswordEncoder passwordEncoder;
     private final EmailService emailService;
     private final SecureRandom secureRandom = new SecureRandom();
 
     public OtpServiceImpl(OtpRepository otpRepository,
                           UserRepository userRepository,
+                          PendingUserRepository pendingUserRepository,
                           PasswordEncoder passwordEncoder,
                           EmailService emailService) {
         this.otpRepository = otpRepository;
         this.userRepository = userRepository;
+        this.pendingUserRepository = pendingUserRepository;
         this.passwordEncoder = passwordEncoder;
         this.emailService = emailService;
     }
@@ -49,21 +56,26 @@ public class OtpServiceImpl implements OtpService {
             String email = normalizeEmail(request.email());
             Instant now = Instant.now();
 
-            if (!userRepository.existsByEmailIgnoreCase(email)) {
-                throw new IllegalArgumentException("Invalid email");
+            // Check if already in permanent users
+            if (userRepository.existsByEmailIgnoreCase(email)) {
+                throw new IllegalStateException("Email is already verified and approved");
             }
 
-            // Check if already verified
-            userRepository.findByEmailIgnoreCase(email).ifPresent(user -> {
-                if (Boolean.TRUE.equals(user.getVerified())) {
-                    throw new IllegalStateException("Email is already verified");
-                }
-            });
+            // Must exist in pending users
+            Optional<PendingUser> pendingOpt = pendingUserRepository.findByEmailIgnoreCase(email);
+            if (pendingOpt.isEmpty()) {
+                throw new IllegalArgumentException("Invalid email. Please register first.");
+            }
+
+            PendingUser pendingUser = pendingOpt.get();
+            if (pendingUser.isEmailVerified()) {
+                throw new IllegalStateException("Email is already verified. Awaiting admin approval.");
+            }
 
             // Check max requests
             long requestCount = otpRepository.countByEmailIgnoreCase(email);
             if (requestCount >= MAX_OTP_REQUESTS) {
-                throw new IllegalStateException("Maximum OTP request limit reached (5). Please contact support.");
+                throw new IllegalStateException("Maximum OTP request limit reached (" + MAX_OTP_REQUESTS + "). Please contact support.");
             }
 
             List<OtpToken> activeTokens = otpRepository.findActiveForUpdate(email, OtpStatus.ACTIVE, now);
@@ -146,10 +158,11 @@ public class OtpServiceImpl implements OtpService {
             token.setUsedAt(now);
             otpRepository.save(token);
 
-            // Mark user as email-verified
-            userRepository.findByEmailIgnoreCase(email).ifPresent(user -> {
-                user.setVerified(true);
-                userRepository.save(user);
+            // Mark PendingUser as email-verified
+            pendingUserRepository.findByEmailIgnoreCase(email).ifPresent(pending -> {
+                pending.setEmailVerified(true);
+                pending.setStatus(UserStatus.PENDING_APPROVAL);
+                pendingUserRepository.save(pending);
             });
 
         } catch (IllegalArgumentException | IllegalStateException e) {
