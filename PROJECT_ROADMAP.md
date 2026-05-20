@@ -20,16 +20,16 @@ This document tracks the granular development progress, identifying incomplete m
 
 ## 🛠 Priority 1: Core Booking Engine
 
-**Status**: ⏳ 15% Complete (Backend Skeleton / Frontend Mocked)
+**Status**: ✅ 100% Complete
 The heart of CampusVault. It is mandatory for the system to be minimally viable.
 
-- **Incomplete Features**:
-  - `BookingServiceImpl.java`: Implement `createBooking` logic, `approve/reject` flow, and status transitions (`PENDING -> ACTIVE -> COMPLETED -> CANCELLED`) instead of returning empty responses.
-  - **Frontend Integration**: Hook up `app/(student)/my-bookings/page.tsx` tabs (Active, Pending, Completed, Cancelled) to the `/api/bookings` lifecycle endpoints.
-- **Edge Cases to Solve**:
-  - **Race Conditions**: Two renters hitting 'Book' for the same dates simultaneously (SQL row locks or constraint checks needed).
-  - **Status Auto-Transitions**: A scheduled Cron-job to automatically flag a booking as `ACTIVE` when the start date reaches today.
-  - **Item Availability Sync**: Auto-flip Item status to `RENTED` during active slots.
+- **Completed Features**:
+  - [x] `BookingServiceImpl.java`: Implement `createBooking` logic, `approve/reject` flow, and status transitions (`PENDING -> ACTIVE -> COMPLETED -> CANCELLED`) instead of returning empty responses.
+  - [x] **Frontend Integration**: Hook up `app/(student)/my-bookings/page.tsx` tabs (Active, Pending, Completed, Cancelled) to the `/api/bookings` lifecycle endpoints.
+- **Edge Cases Solved**:
+  - [x] **Race Conditions**: Two renters hitting 'Book' for the same dates simultaneously (SQL row locks or constraint checks needed).
+  - [x] **Status Auto-Transitions**: A scheduled Cron-job to automatically flag a booking as `ACTIVE` when the start date reaches today.
+  - [x] **Item Availability Sync**: Auto-flip Item status to `UNAVAILABLE` (or RENTED) during active slots.
 
 ---
 
