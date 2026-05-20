@@ -12,5 +12,4 @@ public interface ItemRepository extends JpaRepository<Item, Long> {
 
     List<Item> findByOwner(User owner);
 
-    List<Item> findByApprovedTrue();
 }

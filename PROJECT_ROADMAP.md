@@ -1,101 +1,103 @@
 # CampusVault Project Roadmap & Status (Detailed)
 
-This document tracks the granular development progress, identifying incomplete modules, missing logic, and unhandled edge cases required for a production-ready system.
-
-## 🏗 Backend Status: Module-by-Module
-
-### 1. Authentication & Security (`/security`, `/auth`)
-
-- **Status**: ✅ 85% Complete
-- **Incomplete Logic**:
-  - `AuthServiceImpl.java`: Missing password reset flow (token generation + email).
-  - `JwtService.java`: Needs token revocation/blacklist (Redis or DB) for logout security.
-- **Edge Cases**:
-  - **Email Recycle**: Handle cases where a deleted user's email is re-used.
-  - **Simultaneous Logins**: Policy on multiple active JWTs for the same user.
-  - **OTP Brute Force**: While request limits exist, we need to ensure the `attempts` count in `OtpToken` actually blocks verification after 5 failures.
-
-### 2. User & University Management (`/user`, `/university`)
-
-- **Status**: 🛠 60% Complete
-- **Incomplete Files**:
-  - `UserServiceImpl.java`: `updateProfile`, `changePassword`, and `getPublicProfile` are skeletal.
-  - `UniversityRepository.java`: Needs logic to validate email domains against allowed university domains.
-- **Edge Cases**:
-  - **Department Update**: Policy on whether a student can change their department after verification.
-  - **Multi-Uni Support**: Handling students with multiple institutional affiliations (if applicable).
-
-### 3. Item & Catalog (`/item`)
-
-- **Status**: 🛠 50% Complete
-- **Incomplete Files**:
-  - `ItemServiceImpl.java`: `getAllItems` (with filtering/search) and `deleteItem` (soft delete) are incomplete.
-  - `ItemMapper.java`: Needs to handle deep mapping for `ItemImage` lists.
-- **Edge Cases**:
-  - **Item Takedown Impact**: If an admin blocks an item, active bookings must be notified/suspended.
-  - **Duplicate Prevention**: Prevent users from spamming identical listings.
-
-### 4. Booking & Workflow (`/booking`)
-
-- **Status**: ⏳ 15% Complete
-- **Incomplete Files**:
-  - `BookingServiceImpl.java`: **CRITICAL SKELETON**. Needs `createBooking` with overlap check, `approve/reject` flow, and status transitions.
-- **Edge Cases**:
-  - **Race Conditions**: Two renters hitting 'Book' for the same dates simultaneously (SQL row locks needed).
-  - **Booking Duration**: Max/Min rental period enforcement.
-  - **Availability Sync**: Item status must auto-flip to `RENTED` during active booking slots.
-
-### 5. Payments & Disputes (`/payment`, `/dispute`)
-
-- **Status**: ⏳ 10% Complete
-- **Incomplete Files**:
-  - `PaymentServiceImpl.java`: Skeleton. Missing IPN/Webhook handlers for external gateways.
-  - `DisputeServiceImpl.java`: Skeleton. Missing staff resolution logic.
-- **Edge Cases**:
-  - **Payment Inconsistency**: Renter pays, but the gateway doesn't notify backend (Cron-based reconciliation needed).
-  - **Refund Fractions**: Handling partial refunds for early item returns.
+This document tracks the granular development progress, identifying incomplete modules, missing logic, and unhandled edge cases required for a production-ready system. The tasks are serialized strictly by **Implementation Priority**.
 
 ---
 
-## 🎨 Frontend Status: Integration Progress
+## 🔥 Priority 0: Critical System Fixes & Foundations
 
-### 1. Student Portal (`app/(student)`)
+**Status**: 🚨 Blocker
+**What needs to be done first before any further feature development.**
 
-- **Borrow Page**: Mostly UI mocks. Needs real search API integration.
-- **My Posts**: Creation is wired, but Dashboard stats (Earnings, Requests) are hardcoded.
-- **Inbox**: **PURE UI MOCK**. Needs WebSocket (STOMP/SockJS) or Polling service.
-- **Booking Flow**: The multi-step checkout/calendar component is not yet connected to the backend.
-
-### 2. Admin Portal (`app/(admin)`)
-
-- **User Management**: Fully functional (Approve/Reject).
-- **Item Moderation**: Wired to `blockItem` API.
-- **Analytics/Dashboard**: All charts use static data.
+- [ ] **Database Schema Fixes (Backend)**:
+  - **Issue**: Hibernate `ddl-auto=update` is causing application startup crashes throwing Foreign Key incompatibility exceptions (`bookings_ibfk_1`, `FKc52o2b1jkxttngufqp3t7jr3h`, etc.) due to mismatch between BigInt vs Int columns or constraints.
+  - **Action**: Fix Entity definitions to perfectly match the raw `schema.sql` standard, or clean the DB and rebuild it.
+- [ ] **Remove Mock Data (Frontend)**:
+  - **Issue**: Complete frontend feature pages like `/borrow` and `/my-bookings` are currently relying heavily on hardcoded `MOCK_ITEMS` and `MOCK_BOOKINGS`. Let's transition to using `lib/api.ts` `axios` instances to pull real data.
 
 ---
 
-## 🚨 Critical Edge Cases to Solve (Checklist)
+## 🛠 Priority 1: Core Booking Engine
 
-### System-Wide
+**Status**: ⏳ 15% Complete (Backend Skeleton / Frontend Mocked)
+The heart of CampusVault. It is mandatory for the system to be minimally viable.
 
-- [ ] **soft-delete**: Standardizing how we "delete" items and users without breaking foreign key relationships in `Bookings` and `Payments`.
-- [ ] **Image Orphanage**: If a user uploads an ID card but never finishes registration, we need a cleanup job for the storage layer.
-
-### Transactional
-
-- [ ] **Calendar Overlaps**: Logic to prevent `Booking B` if any date between `StartA` and `EndA` is taken.
-- [ ] **Status Locks**: Prevent an owner from deleting an item while it has `PENDING` payment or `ACTIVE` booking.
-
-### Security
-
-- [ ] **Role Escalation**: Ensure a `Student` cannot access `Admin` logs or trigger `blockItem` calls.
-- [ ] **ID Card Privacy**: Ensure ID card URLs are transient or protected by auth (signed URLs).
+- **Incomplete Features**:
+  - `BookingServiceImpl.java`: Implement `createBooking` logic, `approve/reject` flow, and status transitions (`PENDING -> ACTIVE -> COMPLETED -> CANCELLED`) instead of returning empty responses.
+  - **Frontend Integration**: Hook up `app/(student)/my-bookings/page.tsx` tabs (Active, Pending, Completed, Cancelled) to the `/api/bookings` lifecycle endpoints.
+- **Edge Cases to Solve**:
+  - **Race Conditions**: Two renters hitting 'Book' for the same dates simultaneously (SQL row locks or constraint checks needed).
+  - **Status Auto-Transitions**: A scheduled Cron-job to automatically flag a booking as `ACTIVE` when the start date reaches today.
+  - **Item Availability Sync**: Auto-flip Item status to `RENTED` during active slots.
 
 ---
 
-## 🏁 Deployment Ready Requirements
+## 📦 Priority 2: Item & Catalog System
 
-1. **Cloud Service Integration**: Replace local storage with S3/Cloudinary.
-2. **Environment Isolation**: Separate `.env` for production (DB credentials, API Keys).
-3. **API Documentation**: Generate Swagger (OpenAPI) docs for mobile/external consumers.
-4. **Error Boundaries**: Frontend global error handling for "Backend Down" scenarios.
+**Status**: 🛠 40% Complete
+Basic creation exists, but listing and modifying items is heavily incomplete.
+
+- **Incomplete Features**:
+  - `ItemServiceImpl.java`: Implement `getAllItems(category, searchQuery)` with dynamic filtering.
+  - Logic for `updateItem` and `deleteItem` stubs.
+  - **Frontend Integration**: Connect the "Browse Items" search bar and category pills in `BorrowPage.tsx` to the API.
+- **Edge Cases to Solve**:
+  - **Status Locks**: Prevent an owner from deleting an item (`soft-delete`) while it has `PENDING` payments or an `ACTIVE` booking.
+  - **Image Mapping**: `ItemMapper.java` needs deep mapping support to attach/detach images continuously.
+
+---
+
+## 💰 Priority 3: Payment & Dispute Engine
+
+**Status**: ⏳ 5% Complete (Skeletons Only)
+
+- **Missing Features**:
+  - `PaymentServiceImpl.java`: Missing Integration with a real payment gateway (SSLCommerz/Stripe). Missing Webhooks/IPN handlers to verify payment execution.
+  - `DisputeServiceImpl.java`: Missing staff resolution APIs and dispute logging logic.
+- **Edge Cases to Solve**:
+  - **Payment Reconciliation**: If a renter pays but the gateway doesn't notify the backend via Webhook, the DB will get out of sync. Needs a background worker sync.
+  - **Refund Fractions**: Handling partial logic if an item gets returned early due to being faulty.
+
+---
+
+## 🔐 Priority 4: Authentication & User Accounts
+
+**Status**: ✅ 75% Complete
+Login/Register is implemented, but profile operations and advanced security are missing.
+
+- **Incomplete / Missing Features**:
+  - `AuthServiceImpl.java`: Needs a 'Forgot Password' / Password reset flow logic out via email links.
+  - `UserServiceImpl.java`: `updateProfile`, `changePassword`, and `getPublicProfile` are empty skeletons.
+  - **Logout Security**: `JwtService.java` needs a token revocation/blacklist map (via Redis or DB check) as currently JWTs are valid infinitely until expiry.
+- **Edge Cases to Solve**:
+  - **OTP Brute Force**: Ensuring the `attempts` count in `OtpToken` actually blocks verification and invalidates correctly after `5` fails.
+  - **Orphaned Uploads**: Clean up `idCardDataUrl` files periodically if the student drops off at email verification and never finishes registration.
+
+---
+
+## 💬 Priority 5: Messaging & Real-Time Inbox
+
+**Status**: 🚧 0% Complete (UI Mock Only)
+
+- **Missing Features**:
+  - Backend needs a WebSocket implementation (using STOMP/SockJS or pure Socket.io) to support chat rooms per Booking.
+  - Frontend `Inbox` needs to connect to the backend WebSocket layer to facilitate Live Messaging between Owner and Renter.
+
+---
+
+## 📊 Priority 6: Admin Analytics & Trust Scores
+
+**Status**: 🛠 30% Complete
+
+- **Incomplete Features**:
+  - `AnalyticsController.java` is returning static outputs. Need analytical aggregation queries in JPA repositories to power the Admin Dashboard charts.
+- **Edge Cases to Solve**:
+  - **Role Escalation Preventions**: Ensuring Spring Security explicitly rejects regular `STUDENT` tokens from hitting any `/api/admin/**` endpoints.
+
+---
+
+## 🚀 Priority 7: Pre-Deployment & Cloud
+
+- [ ] **Storage Migration**: Migrate local multipart `File` uploads inside the Spring Boot container to AWS S3 or Cloudinary.
+- [ ] **Error Boundaries (Frontend)**: Catch random 500 error API responses gracefully rather than crashing Next.js.
+- [ ] **OpenAPI / Swagger Docs**: Generate out-of-the-box API endpoints manual map for mobile-dev consumption.
