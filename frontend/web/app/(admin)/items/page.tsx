@@ -1,96 +1,62 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Link from "next/link";
-import { Search, XCircle, Eye, Package } from "lucide-react";
+import { Search, XCircle, Eye, Package, Loader2 } from "lucide-react";
+import api from "@/lib/api";
 
-const MOCK_ITEMS = [
-	{
-		id: "IT-101",
-		title: "DSLR Camera Kit – Sony A7III",
-		owner: "Sumaiya Begum",
-		category: "Electronics",
-		price: "৳500/day",
-		status: "ACTIVE",
-		submitted: "May 4, 2024",
-	},
-	{
-		id: "IT-102",
-		title: "Scientific Calculator – Casio fx-991EX",
-		owner: "Arif Hossain",
-		category: "Electronics",
-		price: "৳20/day",
-		status: "ACTIVE",
-		submitted: "Apr 20, 2024",
-	},
-	{
-		id: "IT-103",
-		title: "Arduino Mega Kit",
-		owner: "Rafi Uddin",
-		category: "Lab Equipment",
-		price: "৳80/day",
-		status: "ACTIVE",
-		submitted: "May 3, 2024",
-	},
-	{
-		id: "IT-104",
-		title: "Calculus Textbook Vol 2",
-		owner: "Priya Sen",
-		category: "Books",
-		price: "৳15/day",
-		status: "ACTIVE",
-		submitted: "Mar 28, 2024",
-	},
-	{
-		id: "IT-105",
-		title: "JBL PartyBox 310",
-		owner: "Tanvir Ahmed",
-		category: "Audio/Visual",
-		price: "৳800/day",
-		status: "ACTIVE",
-		submitted: "Apr 10, 2024",
-	},
-	{
-		id: "IT-106",
-		title: "Projector – Epson EB-X51",
-		owner: "Nusrat Jahan",
-		category: "Electronics",
-		price: "৳300/day",
-		status: "ACTIVE",
-		submitted: "May 5, 2024",
-	},
-	{
-		id: "IT-107",
-		title: "Organic Chemistry Set",
-		owner: "Mehedi Islam",
-		category: "Lab Equipment",
-		price: "৳50/day",
-		status: "ACTIVE",
-		submitted: "Feb 14, 2024",
-	},
-];
-
-type FilterType = "ALL" | "ACTIVE";
+type FilterType = "ALL" | "AVAILABLE" | "UNAVAILABLE" | "BLOCKED" | "DELETED";
 
 const STATUS_COLORS: Record<string, string> = {
 	ACTIVE: "bg-successLight text-success",
 };
 
 export default function AdminItemsPage() {
+	const [items, setItems] = useState<any[]>([]);
+	const [loading, setLoading] = useState(true);
 	const [search, setSearch] = useState("");
 	const [filter, setFilter] = useState<FilterType>("ALL");
 	const [removeId, setRemoveId] = useState<string | null>(null);
 	const [removeReason, setRemoveReason] = useState("");
 
-	const filtered = MOCK_ITEMS.filter((item) => {
+	const fetchItems = async () => {
+		try {
+			setLoading(true);
+			const response = await api.get("/items");
+			setItems(response.data);
+		} catch (err) {
+			console.error(err);
+		} finally {
+			setLoading(false);
+		}
+	};
+
+	useEffect(() => {
+		fetchItems();
+	}, []);
+
+	const filtered = items.filter((item) => {
+		const titleStr = item.title?.toLowerCase() || "";
+		const ownerStr = item.owner?.name?.toLowerCase() || "";
+		const catStr = item.category?.toLowerCase() || "";
+		const searchStr = search.toLowerCase();
+
 		const matchSearch =
-			item.title.toLowerCase().includes(search.toLowerCase()) ||
-			item.owner.toLowerCase().includes(search.toLowerCase()) ||
-			item.category.toLowerCase().includes(search.toLowerCase());
+			titleStr.includes(searchStr) ||
+			ownerStr.includes(searchStr) ||
+			catStr.includes(searchStr);
 
 		const matchFilter = filter === "ALL" || item.status === filter;
 		return matchSearch && matchFilter;
 	});
+
+	if (loading) {
+		return (
+			<div className="flex flex-col items-center justify-center py-20">
+				<Loader2 className="w-10 h-10 text-primary animate-spin mb-4" />
+			</div>
+		);
+	}
 
 	return (
 		<div className="max-w-7xl mx-auto space-y-6">
@@ -106,7 +72,7 @@ export default function AdminItemsPage() {
 				<div className="flex items-center gap-2 bg-surface border border-borderLight px-3 py-2 rounded-xl shadow-sm text-sm text-textSecondary">
 					<Package className="w-4 h-4" />
 					<span className="font-bold text-textPrimary">
-						{MOCK_ITEMS.length}
+						{items.length}
 					</span>{" "}
 					items
 				</div>
@@ -125,7 +91,15 @@ export default function AdminItemsPage() {
 					/>
 				</div>
 				<div className="flex flex-wrap gap-2 shrink-0">
-					{(["ALL", "ACTIVE"] as FilterType[]).map((f) => (
+					{(
+						[
+							"ALL",
+							"AVAILABLE",
+							"UNAVAILABLE",
+							"BLOCKED",
+							"DELETED",
+						] as FilterType[]
+					).map((f) => (
 						<button
 							key={f}
 							onClick={() => setFilter(f)}
@@ -166,9 +140,19 @@ export default function AdminItemsPage() {
 								Cancel
 							</button>
 							<button
-								onClick={() => {
-									setRemoveId(null);
-									setRemoveReason("");
+								onClick={async () => {
+									if (!removeId) return;
+									try {
+										await api.post(
+											`/admin/block-item/${removeId}?reason=${encodeURIComponent(removeReason)}`,
+										);
+										fetchItems();
+										setRemoveId(null);
+										setRemoveReason("");
+									} catch (err) {
+										console.error(err);
+										alert("Failed to remove item");
+									}
 								}}
 								className="flex-1 py-2.5 rounded-xl bg-error text-white font-bold text-sm hover:opacity-90 transition">
 								Confirm Remove
@@ -210,18 +194,18 @@ export default function AdminItemsPage() {
 						<tbody className="divide-y divide-borderLight">
 							{filtered.map((item) => (
 								<tr
-									key={item.id}
+									key={item.itemId}
 									className="hover:bg-surfaceVariant/40 transition-colors">
 									<td className="px-5 py-3.5">
 										<div className="font-semibold text-textPrimary">
 											{item.title}
 										</div>
 										<div className="text-xs text-textTertiary font-mono">
-											{item.id}
+											{item.itemId}
 										</div>
 									</td>
 									<td className="px-5 py-3.5 text-textSecondary">
-										{item.owner}
+										{item.owner?.name}
 									</td>
 									<td className="px-5 py-3.5">
 										<span className="text-xs font-semibold bg-primaryLight text-primary px-2.5 py-1 rounded-full">
@@ -229,26 +213,28 @@ export default function AdminItemsPage() {
 										</span>
 									</td>
 									<td className="px-5 py-3.5 text-textSecondary font-medium">
-										{item.price}
+										৳{item.dailyRate}/day
 									</td>
 									<td className="px-5 py-3.5">
 										<span
-											className={`text-xs font-bold px-2.5 py-1 rounded-full ${STATUS_COLORS[item.status]}`}>
+											className={`text-xs font-bold px-2.5 py-1 rounded-full ${item.status === "AVAILABLE" ? "bg-successLight text-success" : "bg-surfaceVariant text-textSecondary"}`}>
 											{item.status}
 										</span>
 									</td>
 									<td className="px-5 py-3.5 text-textTertiary text-xs">
-										{item.submitted}
+										{item.createdAt
+											? new Date(item.createdAt).toLocaleDateString()
+											: "N/A"}
 									</td>
 									<td className="px-5 py-3.5">
 										<div className="flex items-center justify-end gap-2">
 											<button
-												onClick={() => setRemoveId(item.id)}
+												onClick={() => setRemoveId(item.itemId)}
 												className="flex items-center gap-1 px-2.5 py-1.5 bg-errorLight text-error rounded-lg text-xs font-bold hover:bg-error/20 transition">
 												<XCircle className="w-3.5 h-3.5" /> Remove
 											</button>
 											<Link
-												href={`items/${item.id}`}
+												href={`/admin/items/${item.itemId}`}
 												className="flex items-center gap-1 px-2.5 py-1.5 bg-surfaceVariant text-textSecondary rounded-lg text-xs font-bold hover:bg-borderLight transition">
 												<Eye className="w-3.5 h-3.5" /> View
 											</Link>
