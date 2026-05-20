@@ -8,6 +8,8 @@ import com.thirdhand.campusvault.entity.User;
 import com.thirdhand.campusvault.mapper.ItemMapper;
 import com.thirdhand.campusvault.repository.ItemRepository;
 import com.thirdhand.campusvault.repository.UserRepository;
+import com.thirdhand.campusvault.repository.BookingRepository;
+import com.thirdhand.campusvault.entity.Booking;
 import com.thirdhand.campusvault.service.ItemService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -21,6 +23,7 @@ public class ItemServiceImpl implements ItemService {
 
     private final ItemRepository itemRepository;
     private final UserRepository userRepository;
+    private final BookingRepository bookingRepository;
 
     @Override
     @Transactional
@@ -40,12 +43,26 @@ public class ItemServiceImpl implements ItemService {
                 .build();
 
         Item saved = itemRepository.save(item);
+        ItemMapper.mapImages(saved, request.getImageUrls());
+        saved = itemRepository.save(saved);
+        
         return ItemMapper.toResponse(saved);
     }
 
     @Override
+    @Transactional
     public ItemResponse updateItem(Long itemId, UpdateItemRequest request) {
-        return new ItemResponse();
+        Item item = itemRepository.findById(itemId)
+                .orElseThrow(() -> new IllegalArgumentException("Item not found"));
+        
+        if (item.getStatus() == Item.ItemStatus.DELETED) {
+            throw new IllegalStateException("Cannot update a deleted item");
+        }
+        
+        ItemMapper.updateEntity(item, request);
+        
+        Item saved = itemRepository.save(item);
+        return ItemMapper.toResponse(saved);
     }
 
     @Override
@@ -56,14 +73,34 @@ public class ItemServiceImpl implements ItemService {
     }
 
     @Override
-    public List<ItemResponse> getAllItems() {
-        return itemRepository.findAll().stream()
+    public List<ItemResponse> getAllItems(String category, String searchQuery) {
+        return itemRepository.findItemsWithFilters(
+                category == null || category.isEmpty() || category.equalsIgnoreCase("All") ? null : category,
+                searchQuery == null || searchQuery.isEmpty() ? null : searchQuery
+        ).stream()
                 .map(ItemMapper::toResponse)
                 .toList();
     }
 
     @Override
+    @Transactional
     public void deleteItem(Long itemId) {
-
+        Item item = itemRepository.findById(itemId)
+                .orElseThrow(() -> new IllegalArgumentException("Item not found"));
+        
+        List<Booking> bookings = bookingRepository.findByItem(item);
+        
+        boolean isLocked = bookings.stream().anyMatch(b -> 
+            b.getStatus() == Booking.BookingStatus.PENDING || 
+            b.getStatus() == Booking.BookingStatus.APPROVED || 
+            b.getStatus() == Booking.BookingStatus.ACTIVE
+        );
+        
+        if (isLocked) {
+            throw new IllegalStateException("Cannot delete item with active or pending bookings");
+        }
+        
+        item.setStatus(Item.ItemStatus.DELETED);
+        itemRepository.save(item);
     }
 }

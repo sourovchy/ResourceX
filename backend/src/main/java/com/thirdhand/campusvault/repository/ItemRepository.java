@@ -21,4 +21,10 @@ public interface ItemRepository extends JpaRepository<Item, Long> {
     @Query("SELECT i FROM Item i WHERE i.itemId = :itemId")
     Optional<Item> findByIdWithLock(@Param("itemId") Long itemId);
 
+    @Query("SELECT i FROM Item i WHERE " +
+           "(:category IS NULL OR i.category = :category) AND " +
+           "(:searchQuery IS NULL OR LOWER(i.title) LIKE LOWER(CONCAT('%', :searchQuery, '%')) OR LOWER(i.description) LIKE LOWER(CONCAT('%', :searchQuery, '%'))) AND " +
+           "(i.status != com.thirdhand.campusvault.entity.Item.ItemStatus.DELETED)")
+    List<Item> findItemsWithFilters(@Param("category") String category, @Param("searchQuery") String searchQuery);
+
 }

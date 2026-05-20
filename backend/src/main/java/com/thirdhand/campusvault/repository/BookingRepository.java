@@ -18,6 +18,8 @@ public interface BookingRepository extends JpaRepository<Booking, Long> {
 
     List<Booking> findByItemOwner(User owner);
 
+    List<Booking> findByItem(Item item);
+
     @Query("SELECT b FROM Booking b WHERE b.item = :item " +
            "AND b.status NOT IN (com.thirdhand.campusvault.entity.Booking.BookingStatus.CANCELLED, com.thirdhand.campusvault.entity.Booking.BookingStatus.REJECTED) " +
            "AND (:startDate <= b.endDate AND :endDate >= b.startDate)")

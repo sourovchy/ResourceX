@@ -25,8 +25,11 @@ public class ItemController {
     }
 
     @GetMapping
-    public List<ItemResponse> getAllItems() {
-        return itemService.getAllItems();
+    public List<ItemResponse> getAllItems(
+            @RequestParam(required = false) String category,
+            @RequestParam(required = false) String searchQuery
+    ) {
+        return itemService.getAllItems(category, searchQuery);
     }
 
     @GetMapping("/{itemId}")

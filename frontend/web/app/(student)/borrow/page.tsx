@@ -22,12 +22,31 @@ export default function BorrowPage() {
 	const [error, setError] = useState<string | null>(null);
 	const [activeCategory, setActiveCategory] = useState("All");
 	const [searchQuery, setSearchQuery] = useState("");
+	const [categories, setCategories] = useState<string[]>(["All"]);
+
+	useEffect(() => {
+		api
+			.get("/items")
+			.then((res) => {
+				if (res.data && Array.isArray(res.data)) {
+					const cats = Array.from(
+						new Set(res.data.map((i: any) => i.category).filter(Boolean)),
+					) as string[];
+					setCategories(["All", ...cats]);
+				}
+			})
+			.catch(console.error);
+	}, []);
 
 	useEffect(() => {
 		const fetchItems = async () => {
 			try {
 				setLoading(true);
-				const response = await api.get("/items");
+				const params = new URLSearchParams();
+				if (activeCategory !== "All") params.append("category", activeCategory);
+				if (searchQuery) params.append("searchQuery", searchQuery);
+
+				const response = await api.get(`/items?${params.toString()}`);
 				setItems(response.data);
 				setError(null);
 			} catch (err) {
@@ -38,22 +57,14 @@ export default function BorrowPage() {
 			}
 		};
 
-		fetchItems();
-	}, []);
+		const timeout = setTimeout(() => {
+			fetchItems();
+		}, 300); // debounce API calls
 
-	const filteredItems = items.filter((item) => {
-		const matchesCategory =
-			activeCategory === "All" || item.category === activeCategory;
-		const matchesSearch =
-			!searchQuery ||
-			item.title.toLowerCase().includes(searchQuery.toLowerCase());
-		return matchesCategory && matchesSearch;
-	});
+		return () => clearTimeout(timeout);
+	}, [activeCategory, searchQuery]);
 
-	const CATEGORIES = [
-		"All",
-		...Array.from(new Set(items.map((i) => i.category).filter(Boolean))),
-	] as string[];
+	const filteredItems = items;
 
 	if (loading) {
 		return (
@@ -111,7 +122,7 @@ export default function BorrowPage() {
 
 			{/* Categories */}
 			<div className="flex gap-2 overflow-x-auto pb-2 scrollbar-none">
-				{CATEGORIES.map((cat) => (
+				{categories.map((cat) => (
 					<button
 						key={cat}
 						onClick={() => setActiveCategory(cat)}
@@ -158,19 +169,4 @@ export default function BorrowPage() {
 			)}
 		</div>
 	);
-}
-
-// Re-usable components below (temporary - these should be moved to shared if used elsewhere)
-interface MOCK_ITEMSType {
-	id: string;
-	title: string;
-	category: string;
-	condition: string;
-	rating: number;
-	reviews: number;
-	pricePerDay: number;
-	deposit: number;
-	owner: string;
-	trustScore: number;
-	image: string;
 }

@@ -5,6 +5,7 @@ import jakarta.validation.constraints.NotNull;
 import lombok.*;
 
 import java.math.BigDecimal;
+import java.util.List;
 
 @Getter
 @Setter
@@ -28,4 +29,6 @@ public class CreateItemRequest {
     private BigDecimal dailyRate;
 
     private Long ownerId;
+
+    private List<String> imageUrls;
 }

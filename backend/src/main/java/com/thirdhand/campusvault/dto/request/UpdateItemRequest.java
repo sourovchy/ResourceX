@@ -3,6 +3,7 @@ package com.thirdhand.campusvault.dto.request;
 import lombok.*;
 
 import java.math.BigDecimal;
+import java.util.List;
 
 @Getter
 @Setter
@@ -22,4 +23,6 @@ public class UpdateItemRequest {
     private BigDecimal dailyRate;
 
     private String status;
+
+    private List<String> imageUrls;
 }

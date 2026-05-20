@@ -63,6 +63,6 @@ public class Item {
     }
 
     public enum ItemStatus {
-        AVAILABLE, UNAVAILABLE, BLOCKED
+        AVAILABLE, UNAVAILABLE, BLOCKED, DELETED
     }
 }
