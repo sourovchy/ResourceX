@@ -12,4 +12,12 @@ public interface BookingService {
     BookingResponse getBookingById(Long bookingId);
 
     List<BookingResponse> getAllBookings();
+
+    BookingResponse approveBooking(Long bookingId);
+
+    BookingResponse rejectBooking(Long bookingId);
+
+    BookingResponse cancelBooking(Long bookingId);
+
+    BookingResponse completeBooking(Long bookingId);
 }

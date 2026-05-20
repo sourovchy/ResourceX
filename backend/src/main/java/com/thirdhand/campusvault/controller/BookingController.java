@@ -34,4 +34,24 @@ public class BookingController {
     ) {
         return bookingService.getBookingById(bookingId);
     }
+
+    @PatchMapping("/{bookingId}/approve")
+    public BookingResponse approveBooking(@PathVariable Long bookingId) {
+        return bookingService.approveBooking(bookingId);
+    }
+
+    @PatchMapping("/{bookingId}/reject")
+    public BookingResponse rejectBooking(@PathVariable Long bookingId) {
+        return bookingService.rejectBooking(bookingId);
+    }
+
+    @PatchMapping("/{bookingId}/cancel")
+    public BookingResponse cancelBooking(@PathVariable Long bookingId) {
+        return bookingService.cancelBooking(bookingId);
+    }
+
+    @PatchMapping("/{bookingId}/complete")
+    public BookingResponse completeBooking(@PathVariable Long bookingId) {
+        return bookingService.completeBooking(bookingId);
+    }
 }

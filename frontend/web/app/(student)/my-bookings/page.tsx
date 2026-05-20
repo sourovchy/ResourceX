@@ -230,7 +230,7 @@ export default function MyBookingsPage() {
 									<div>
 										From{" "}
 										<strong className="text-textPrimary">
-											{booking.item?.owner?.name || "Campus Owner"}
+											{booking.item?.owner?.name || "Unknown Owner"}
 										</strong>
 									</div>
 
