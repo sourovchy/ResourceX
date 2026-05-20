@@ -35,4 +35,6 @@ public interface OtpRepository extends JpaRepository<OtpToken, Long> {
                         @Param("expiredStatus") OtpStatus expiredStatus,
                         @Param("activeStatus") OtpStatus activeStatus,
                         @Param("now") Instant now);
+
+    long countByEmailIgnoreCase(String email);
 }

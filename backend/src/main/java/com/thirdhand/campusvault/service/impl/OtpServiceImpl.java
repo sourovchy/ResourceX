@@ -23,7 +23,8 @@ public class OtpServiceImpl implements OtpService {
     private static final int OTP_LENGTH = 6;
     private static final int MAX_ATTEMPTS = 5;
     private static final long OTP_TTL_MINUTES = 3;
-    private static final long RESEND_COOLDOWN_SECONDS = 60;
+    private static final long RESEND_COOLDOWN_SECONDS = 300; // 5 minutes
+    private static final int MAX_OTP_REQUESTS = 3;
 
     private final OtpRepository otpRepository;
     private final UserRepository userRepository;
@@ -52,6 +53,19 @@ public class OtpServiceImpl implements OtpService {
                 throw new IllegalArgumentException("Invalid email");
             }
 
+            // Check if already verified
+            userRepository.findByEmailIgnoreCase(email).ifPresent(user -> {
+                if (Boolean.TRUE.equals(user.getVerified())) {
+                    throw new IllegalStateException("Email is already verified");
+                }
+            });
+
+            // Check max requests
+            long requestCount = otpRepository.countByEmailIgnoreCase(email);
+            if (requestCount >= MAX_OTP_REQUESTS) {
+                throw new IllegalStateException("Maximum OTP request limit reached (5). Please contact support.");
+            }
+
             List<OtpToken> activeTokens = otpRepository.findActiveForUpdate(email, OtpStatus.ACTIVE, now);
 
             if (!activeTokens.isEmpty()) {
@@ -59,7 +73,10 @@ public class OtpServiceImpl implements OtpService {
 
                 if (latest.getLastSentAt() != null &&
                         latest.getLastSentAt().plusSeconds(RESEND_COOLDOWN_SECONDS).isAfter(now)) {
-                    throw new IllegalStateException("Please wait before requesting another OTP");
+                    long secondsRemaining = ChronoUnit.SECONDS.between(now, latest.getLastSentAt().plusSeconds(RESEND_COOLDOWN_SECONDS));
+                    long minutes = secondsRemaining / 60;
+                    long seconds = secondsRemaining % 60;
+                    throw new IllegalStateException(String.format("Please wait %d minutes and %d seconds before requesting another OTP", minutes, seconds));
                 }
 
                 latest.setStatus(OtpStatus.EXPIRED);

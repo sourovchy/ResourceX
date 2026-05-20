@@ -6,8 +6,8 @@ import { ThemeProvider } from "@/context/ThemeContext";
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-	title: "CampusVault",
-	description: "Campus Resource Renting Platform",
+	title: "ResourceX",	
+	description: "Cross-Campus Resource Sharing Platform",
 };
 
 export default function RootLayout({

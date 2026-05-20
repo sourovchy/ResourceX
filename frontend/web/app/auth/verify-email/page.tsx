@@ -19,19 +19,38 @@ export default function EmailVerificationPage() {
 	const [message, setMessage] = useState("");
 	const [loading, setLoading] = useState(false);
 	const [resending, setResending] = useState(false);
+	const [timer, setTimer] = useState(0);
 
 	useEffect(() => {
 		const rawUser = localStorage.getItem("campusvault_user");
 
-		if (!rawUser) return;
+		if (rawUser) {
+			try {
+				const user = JSON.parse(rawUser) as StoredUser;
+				if (user.email) setEmail(user.email);
+			} catch {
+				setEmail("your student email");
+			}
+		}
 
-		try {
-			const user = JSON.parse(rawUser) as StoredUser;
-			if (user.email) setEmail(user.email);
-		} catch {
-			setEmail("your student email");
+		// Check if there's a stored last send time
+		const lastSend = localStorage.getItem("campusvault_otp_last_send");
+		if (lastSend) {
+			const diff = Math.floor((Date.now() - parseInt(lastSend)) / 1000);
+			if (diff < 300) {
+				setTimer(300 - diff);
+			}
 		}
 	}, []);
+
+	useEffect(() => {
+		if (timer > 0) {
+			const interval = setInterval(() => {
+				setTimer((prev) => prev - 1);
+			}, 1000);
+			return () => clearInterval(interval);
+		}
+	}, [timer]);
 
 	const handleSubmit = async (e: React.FormEvent) => {
 		e.preventDefault();
@@ -68,6 +87,8 @@ export default function EmailVerificationPage() {
 	};
 
 	const handleResend = async () => {
+		if (timer > 0) return;
+
 		setError("");
 		setMessage("");
 		setResending(true);
@@ -83,10 +104,18 @@ export default function EmailVerificationPage() {
 			}
 
 			setMessage("A new email code has been sent to " + email);
+			setTimer(300);
+			localStorage.setItem("campusvault_otp_last_send", Date.now().toString());
 		} catch (err: any) {
 			const msg =
 				err?.response?.data?.message || err?.message || "Failed to resend code";
 			setError(msg);
+
+			// If the error is due to cooldown, try to extract time from message if the backend sent it
+			// Or just set a default if the backend says we are in cooldown
+			if (err?.response?.status === 429) {
+				setTimer(300); // Default to 5 mins if we hit rate limit
+			}
 		} finally {
 			setResending(false);
 		}
@@ -156,10 +185,18 @@ export default function EmailVerificationPage() {
 						<button
 							type="button"
 							onClick={handleResend}
-							disabled={resending}
+							disabled={resending || timer > 0}
 							className="inline-flex items-center gap-2 font-semibold text-primary hover:text-primaryDark disabled:opacity-70">
-							<RefreshCw className="w-4 h-4" />
-							{resending ? "Sending..." : "Resend code"}
+							<RefreshCw
+								className={`w-4 h-4 ${resending ? "animate-spin" : ""}`}
+							/>
+							{resending
+								? "Sending..."
+								: timer > 0
+									? `Resend in ${Math.floor(timer / 60)}:${(timer % 60)
+											.toString()
+											.padStart(2, "0")}`
+									: "Resend code"}
 						</button>
 
 						<Link
