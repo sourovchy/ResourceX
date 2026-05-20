@@ -1,96 +1,101 @@
-# CampusVault Project Roadmap & Status
+# CampusVault Project Roadmap & Status (Detailed)
 
-This document outlines the current state of the CampusVault project and the steps required to make it production-ready.
+This document tracks the granular development progress, identifying incomplete modules, missing logic, and unhandled edge cases required for a production-ready system.
 
-## Project Structure Overview
+## 🏗 Backend Status: Module-by-Module
 
-### Backend (`/backend`)
+### 1. Authentication & Security (`/security`, `/auth`)
 
-- **Core Strategy**: Spring Boot with JPA, MySQL, and JWT Security.
-- **Key Modules**:
-  - `entity/`: Database models matching the new schema.
-  - `repository/`: Data access layer.
-  - `service/`: Business logic (many are currently skeletons).
-  - `controller/`: REST endpoints.
-  - `security/`: JWT authentication and authorization.
+- **Status**: ✅ 85% Complete
+- **Incomplete Logic**:
+  - `AuthServiceImpl.java`: Missing password reset flow (token generation + email).
+  - `JwtService.java`: Needs token revocation/blacklist (Redis or DB) for logout security.
+- **Edge Cases**:
+  - **Email Recycle**: Handle cases where a deleted user's email is re-used.
+  - **Simultaneous Logins**: Policy on multiple active JWTs for the same user.
+  - **OTP Brute Force**: While request limits exist, we need to ensure the `attempts` count in `OtpToken` actually blocks verification after 5 failures.
 
-### Frontend (`/frontend/web`)
+### 2. User & University Management (`/user`, `/university`)
 
-- **Core Technology**: Next.js 14+ (App Router), TailwindCSS (Custom Design System).
-- **Key Directories**:
-  - `app/(student)`: Student portal features (Borrow, My Posts, Inbox).
-  - `app/(admin)`: Admin management panel.
-  - `app/auth`: Authentication flows (Login, Register, verification).
-  - `components/`: Reusable UI components.
+- **Status**: 🛠 60% Complete
+- **Incomplete Files**:
+  - `UserServiceImpl.java`: `updateProfile`, `changePassword`, and `getPublicProfile` are skeletal.
+  - `UniversityRepository.java`: Needs logic to validate email domains against allowed university domains.
+- **Edge Cases**:
+  - **Department Update**: Policy on whether a student can change their department after verification.
+  - **Multi-Uni Support**: Handling students with multiple institutional affiliations (if applicable).
 
----
+### 3. Item & Catalog (`/item`)
 
-## Current Status & Progress
+- **Status**: 🛠 50% Complete
+- **Incomplete Files**:
+  - `ItemServiceImpl.java`: `getAllItems` (with filtering/search) and `deleteItem` (soft delete) are incomplete.
+  - `ItemMapper.java`: Needs to handle deep mapping for `ItemImage` lists.
+- **Edge Cases**:
+  - **Item Takedown Impact**: If an admin blocks an item, active bookings must be notified/suspended.
+  - **Duplicate Prevention**: Prevent users from spamming identical listings.
 
-### 1. Authentication & Identity ✅ (80% Complete)
+### 4. Booking & Workflow (`/booking`)
 
-- [x] User Registration with Email Verification (OTP).
-- [x] Multi-step Approval Flow (Pending users table).
-- [x] Admin Approval/Rejection logic.
-- [x] JWT Login.
-- [ ] Profile editing and password reset.
-- [ ] University-specific domain validation.
+- **Status**: ⏳ 15% Complete
+- **Incomplete Files**:
+  - `BookingServiceImpl.java`: **CRITICAL SKELETON**. Needs `createBooking` with overlap check, `approve/reject` flow, and status transitions.
+- **Edge Cases**:
+  - **Race Conditions**: Two renters hitting 'Book' for the same dates simultaneously (SQL row locks needed).
+  - **Booking Duration**: Max/Min rental period enforcement.
+  - **Availability Sync**: Item status must auto-flip to `RENTED` during active booking slots.
 
-### 2. Item Management 🛠 (40% Complete)
+### 5. Payments & Disputes (`/payment`, `/dispute`)
 
-- [x] Schema sync (Auto-approval enabled).
-- [x] Admin "Take down" logic (Backend ready).
-- [x] Frontend "My Posts" UI.
-- [ ] **TODO**: Implement real backend logic for `ItemService` (currently skeletons).
-- [ ] **TODO**: Image upload integration (Cloudinary or local storage).
-- [ ] **TODO**: Search and Category filtering logic.
-
-### 3. Booking & Workflow ⏳ (20% Complete)
-
-- [x] Schema defined.
-- [ ] **TODO**: Booking request flow (Renter request -> Owner approve).
-- [ ] **TODO**: Calendar conflict management.
-- [ ] **TODO**: Real-time availability status updates (`AVAILABLE` -> `RENTED`).
-
-### 4. Payments & Trust ⏳ (10% Complete)
-
-- [x] Schema defined.
-- [ ] **TODO**: SSLCommerz or Stripe integration skeleton.
-- [ ] **TODO**: Trust score calculation logic (based on reviews/penalties).
-- [ ] **TODO**: Penalty issuance system.
-
-### 5. Communication (Inbox) 🛠 (30% Complete)
-
-- [x] Frontend UI.
-- [ ] **TODO**: Backend WebSocket or polling-based messaging API.
+- **Status**: ⏳ 10% Complete
+- **Incomplete Files**:
+  - `PaymentServiceImpl.java`: Skeleton. Missing IPN/Webhook handlers for external gateways.
+  - `DisputeServiceImpl.java`: Skeleton. Missing staff resolution logic.
+- **Edge Cases**:
+  - **Payment Inconsistency**: Renter pays, but the gateway doesn't notify backend (Cron-based reconciliation needed).
+  - **Refund Fractions**: Handling partial refunds for early item returns.
 
 ---
 
-## Deployment Checklist (Phase by Phase)
+## 🎨 Frontend Status: Integration Progress
 
-### Phase 1: Core Functionality (Next Steps)
+### 1. Student Portal (`app/(student)`)
 
-1. **[Backend]** Complete `ItemServiceImpl` and `BookingServiceImpl`.
-2. **[Frontend]** Connect Item Creation form to backend.
-3. **[Backend]** Implement `FileStorageService` for ID cards and Item images.
-4. **[Backend]** Implement Audit Logging for all major actions.
+- **Borrow Page**: Mostly UI mocks. Needs real search API integration.
+- **My Posts**: Creation is wired, but Dashboard stats (Earnings, Requests) are hardcoded.
+- **Inbox**: **PURE UI MOCK**. Needs WebSocket (STOMP/SockJS) or Polling service.
+- **Booking Flow**: The multi-step checkout/calendar component is not yet connected to the backend.
 
-### Phase 2: Refinement
+### 2. Admin Portal (`app/(admin)`)
 
-1. **[Security]** Add Rate Limiting and CSRF protection.
-2. **[Testing]** Unit tests for `AuthService` and `BookingService`.
-3. **[Frontend]** Implement real stats for Admin/Student dashboards.
-
-### Phase 3: Production Prep
-
-1. **[DevOps]** Set up Docker Compose or CI/CD pipelines.
-2. **[Database]** Finalize seed data for universities and categories.
-3. **[Monitoring]** Integrate basic logging (Sentry or similar).
+- **User Management**: Fully functional (Approve/Reject).
+- **Item Moderation**: Wired to `blockItem` API.
+- **Analytics/Dashboard**: All charts use static data.
 
 ---
 
-## Ongoing Improvements
+## 🚨 Critical Edge Cases to Solve (Checklist)
 
-- **Null Safety**: Address remaining lint warnings in backend service layer.
-- **Edge Cases**: Handle "Item Deleted while booked" or "User Banned while having active rentals".
-- **Aesthetics**: Continue polishing micro-animations and loading states in the frontend.
+### System-Wide
+
+- [ ] **soft-delete**: Standardizing how we "delete" items and users without breaking foreign key relationships in `Bookings` and `Payments`.
+- [ ] **Image Orphanage**: If a user uploads an ID card but never finishes registration, we need a cleanup job for the storage layer.
+
+### Transactional
+
+- [ ] **Calendar Overlaps**: Logic to prevent `Booking B` if any date between `StartA` and `EndA` is taken.
+- [ ] **Status Locks**: Prevent an owner from deleting an item while it has `PENDING` payment or `ACTIVE` booking.
+
+### Security
+
+- [ ] **Role Escalation**: Ensure a `Student` cannot access `Admin` logs or trigger `blockItem` calls.
+- [ ] **ID Card Privacy**: Ensure ID card URLs are transient or protected by auth (signed URLs).
+
+---
+
+## 🏁 Deployment Ready Requirements
+
+1. **Cloud Service Integration**: Replace local storage with S3/Cloudinary.
+2. **Environment Isolation**: Separate `.env` for production (DB credentials, API Keys).
+3. **API Documentation**: Generate Swagger (OpenAPI) docs for mobile/external consumers.
+4. **Error Boundaries**: Frontend global error handling for "Backend Down" scenarios.
