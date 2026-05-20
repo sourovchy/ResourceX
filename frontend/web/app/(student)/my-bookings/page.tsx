@@ -1,12 +1,18 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import Image from "next/image";
-import { Clock, ArrowRight, Loader2 } from "lucide-react";
 import Link from "next/link";
+import { ArrowRight, Clock, Loader2 } from "lucide-react";
 import api from "@/lib/api";
 
-type BookingStatus = "active" | "pending" | "completed" | "cancelled";
+type BookingStatus =
+	| "PENDING"
+	| "APPROVED"
+	| "ACTIVE"
+	| "COMPLETED"
+	| "CANCELLED"
+	| "REJECTED";
 
 const STATUS_STYLES: Record<string, { label: string; className: string }> = {
 	PENDING: {
@@ -14,8 +20,8 @@ const STATUS_STYLES: Record<string, { label: string; className: string }> = {
 		className: "bg-yellow-100 text-yellow-700",
 	},
 	APPROVED: {
-		label: "Active",
-		className: "bg-emerald-100 text-emerald-700",
+		label: "Approved",
+		className: "bg-blue-100 text-blue-700",
 	},
 	ACTIVE: {
 		label: "Active",
@@ -29,6 +35,10 @@ const STATUS_STYLES: Record<string, { label: string; className: string }> = {
 		label: "Cancelled",
 		className: "bg-errorLight text-errorDark border border-errorLight",
 	},
+	REJECTED: {
+		label: "Rejected",
+		className: "bg-red-100 text-red-700",
+	},
 };
 
 export default function MyBookingsPage() {
@@ -36,39 +46,79 @@ export default function MyBookingsPage() {
 	const [loading, setLoading] = useState(true);
 	const [error, setError] = useState<string | null>(null);
 	const [activeTab, setActiveTab] = useState("All");
+	const [actionLoading, setActionLoading] = useState<number | null>(null);
+
+	const fetchBookings = async () => {
+		try {
+			setLoading(true);
+
+			const response = await api.get("/bookings");
+
+			setBookings(response.data || []);
+			setError(null);
+		} catch (err) {
+			console.error(err);
+			setError("Failed to load bookings");
+		} finally {
+			setLoading(false);
+		}
+	};
 
 	useEffect(() => {
-		const fetchBookings = async () => {
-			try {
-				setLoading(true);
-				const response = await api.get("/bookings");
-				setBookings(response.data);
-				setError(null);
-			} catch (err) {
-				console.error("Error fetching bookings:", err);
-				setError("Failed to load bookings.");
-			} finally {
-				setLoading(false);
-			}
-		};
-
 		fetchBookings();
 	}, []);
 
-	const filteredBookings =
-		activeTab === "All"
-			? bookings
-			: bookings.filter((b) => {
-					const status = b.status?.toUpperCase();
-					if (activeTab === "Active")
-						return status === "ACTIVE" || status === "APPROVED";
-					return status === activeTab.toUpperCase();
-				});
+	const filteredBookings = useMemo(() => {
+		if (activeTab === "All") {
+			return bookings;
+		}
+
+		return bookings.filter((booking) => {
+			const status = booking.status;
+
+			if (activeTab === "Active") {
+				return status === "ACTIVE" || status === "APPROVED";
+			}
+
+			return status === activeTab.toUpperCase();
+		});
+	}, [bookings, activeTab]);
+
+	const cancelBooking = async (bookingId: number) => {
+		try {
+			setActionLoading(bookingId);
+
+			await api.patch(`/bookings/${bookingId}/cancel`);
+
+			await fetchBookings();
+		} catch (err) {
+			console.error(err);
+			alert("Failed to cancel booking");
+		} finally {
+			setActionLoading(null);
+		}
+	};
+
+	const confirmReturn = async (bookingId: number) => {
+		try {
+			setActionLoading(bookingId);
+
+			await api.patch(`/bookings/${bookingId}/complete`);
+
+			await fetchBookings();
+		} catch (err) {
+			console.error(err);
+			alert("Failed to confirm return");
+		} finally {
+			setActionLoading(null);
+		}
+	};
 
 	if (loading) {
 		return (
 			<div className="flex flex-col items-center justify-center py-20">
-				<Loader2 className="w-10 h-10 text-primary animate-spin mb-4" />
+				<Loader2 className="w-10 h-10 animate-spin text-primary mb-4" />
+
 				<p className="text-textSecondary font-medium">
 					Loading your bookings...
 				</p>
@@ -78,17 +128,15 @@ export default function MyBookingsPage() {
 
 	return (
 		<div className="max-w-4xl mx-auto space-y-6">
-			<h1 className="text-2xl font-bold text-textPrimary tracking-tight">
-				My Bookings
-			</h1>
+			<h1 className="text-2xl font-bold text-textPrimary">My Bookings</h1>
 
 			{/* Tabs */}
-			<div className="flex border-b border-borderLight -mb-2">
+			<div className="flex border-b border-borderLight overflow-x-auto">
 				{["All", "Active", "Pending", "Completed", "Cancelled"].map((tab) => (
 					<button
 						key={tab}
 						onClick={() => setActiveTab(tab)}
-						className={`px-4 py-3 text-sm font-semibold transition-colors ${
+						className={`px-4 py-3 text-sm font-semibold whitespace-nowrap transition-colors ${
 							activeTab === tab
 								? "border-b-2 border-primary text-primary"
 								: "text-textSecondary hover:text-textPrimary"
@@ -98,98 +146,128 @@ export default function MyBookingsPage() {
 				))}
 			</div>
 
-			{/* Empty State */}
-			{filteredBookings.length === 0 && (
-				<p className="text-center text-textSecondary py-10">
-					{activeTab === "All"
-						? "No bookings found"
-						: `You have no ${activeTab.toLowerCase()} bookings`}
-				</p>
+			{/* Error */}
+			{error && (
+				<div className="bg-errorLight text-errorDark px-4 py-3 rounded-xl">
+					{error}
+				</div>
 			)}
 
-			{/* Booking Cards */}
-			<div className="space-y-4 pt-2">
-				{filteredBookings.map((b) => {
-					const statusMeta = STATUS_STYLES[b.status] || {
-						label: b.status,
+			{/* Empty */}
+			{filteredBookings.length === 0 && (
+				<div className="text-center py-16 text-textSecondary">
+					{activeTab === "All"
+						? "No bookings found"
+						: `No ${activeTab.toLowerCase()} bookings found`}
+				</div>
+			)}
+
+			{/* Booking List */}
+			<div className="space-y-4">
+				{filteredBookings.map((booking) => {
+					const statusMeta = STATUS_STYLES[booking.status as BookingStatus] || {
+						label: booking.status,
 						className: "bg-gray-100 text-gray-700",
 					};
-					const startDate = new Date(b.startDate).toLocaleDateString("en-US", {
-						month: "short",
-						day: "numeric",
-					});
-					const endDate = new Date(b.endDate).toLocaleDateString("en-US", {
-						month: "short",
-						day: "numeric",
-					});
+
+					const startDate = new Date(booking.startDate).toLocaleDateString(
+						"en-US",
+						{
+							month: "short",
+							day: "numeric",
+						},
+					);
+
+					const endDate = new Date(booking.endDate).toLocaleDateString(
+						"en-US",
+						{
+							month: "short",
+							day: "numeric",
+						},
+					);
+
+					const isProcessing = actionLoading === booking.bookingId;
 
 					return (
 						<div
-							key={b.bookingId}
-							className="bg-surfaceVariant border border-borderLight rounded-2xl p-5 shadow-sm flex flex-col sm:flex-row items-start sm:items-center gap-5 animate-in slide-in-from-bottom-2 duration-300">
+							key={booking.bookingId}
+							className="bg-surfaceVariant border border-borderLight rounded-2xl p-5 shadow-sm flex flex-col sm:flex-row gap-5">
 							{/* Image */}
 							<div className="relative w-full sm:w-24 h-24 shrink-0">
 								<Image
 									src={
-										b.item?.imageUrls?.[0] ||
+										booking.item?.imageUrls?.[0] ||
 										"https://images.unsplash.com/photo-1586769852836-bc069f19e1b6?auto=format&fit=crop&q=80&w=200&h=150"
 									}
-									alt={`${b.item?.title} booking item`}
+									alt={booking.item?.title || "Item"}
 									fill
 									className="object-cover rounded-xl border border-borderLight"
 								/>
 							</div>
 
 							{/* Info */}
-							<div className="flex-1 w-full text-left">
-								<div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 mb-2">
-									<h3 className="font-bold text-textPrimary truncate text-lg">
-										{b.item?.title || "Unknown Item"}
-									</h3>
+							<div className="flex-1">
+								<div className="flex flex-wrap items-center gap-3 mb-2">
+									<h2 className="text-lg font-bold text-textPrimary">
+										{booking.item?.title || "Unknown Item"}
+									</h2>
 
 									<span
-										className={`px-2.5 py-1 rounded-md text-xs font-bold whitespace-nowrap ${statusMeta.className}`}>
+										className={`px-2.5 py-1 rounded-md text-xs font-bold ${statusMeta.className}`}>
 										{statusMeta.label}
 									</span>
 								</div>
 
-								<div className="text-sm text-textSecondary space-y-1">
-									<div className="flex items-center gap-1.5">
+								<div className="space-y-1 text-sm text-textSecondary">
+									<div className="flex items-center gap-2">
 										<Clock className="w-4 h-4 text-primary" />
-										{startDate} - {endDate}
+
+										<span>
+											{startDate} - {endDate}
+										</span>
 									</div>
 
-									<div className="flex items-center gap-1.5 mt-1">
-										From:
+									<div>
+										From{" "}
 										<strong className="text-textPrimary">
-											{b.item?.owner?.name || "Campus Owner"}
+											{booking.item?.owner?.name || "Campus Owner"}
 										</strong>
-										• Total:
-										<strong className="text-primary font-bold">
-											৳ {b.totalPrice}
+									</div>
+
+									<div>
+										Total:{" "}
+										<strong className="text-primary">
+											৳ {booking.totalPrice}
 										</strong>
 									</div>
 								</div>
 							</div>
 
 							{/* Actions */}
-							<div className="w-full sm:w-auto flex flex-col gap-2 shrink-0">
-								{(b.status === "ACTIVE" || b.status === "APPROVED") && (
-									<button className="px-4 py-2 bg-successLight text-successDark border border-successLight rounded-xl text-sm font-bold w-full transition-colors hover:bg-success hover:text-white">
-										Confirm Return
+							<div className="flex flex-col gap-2 w-full sm:w-auto">
+								{(booking.status === "ACTIVE" ||
+									booking.status === "APPROVED") && (
+									<button
+										disabled={isProcessing}
+										onClick={() => confirmReturn(booking.bookingId)}
+										className="px-4 py-2 rounded-xl text-sm font-bold bg-successLight text-successDark border border-successLight hover:bg-success hover:text-white transition-colors disabled:opacity-50">
+										{isProcessing ? "Processing..." : "Confirm Return"}
 									</button>
 								)}
 
-								{b.status === "PENDING" && (
-									<button className="px-4 py-2 bg-errorLight text-errorDark border border-errorLight rounded-xl text-sm font-bold w-full transition-colors hover:bg-error hover:text-white">
-										Cancel Request
+								{booking.status === "PENDING" && (
+									<button
+										disabled={isProcessing}
+										onClick={() => cancelBooking(booking.bookingId)}
+										className="px-4 py-2 rounded-xl text-sm font-bold bg-errorLight text-errorDark border border-errorLight hover:bg-error hover:text-white transition-colors disabled:opacity-50">
+										{isProcessing ? "Cancelling..." : "Cancel Request"}
 									</button>
 								)}
 
-								{b.status === "COMPLETED" && (
+								{booking.status === "COMPLETED" && (
 									<Link
-										href={`/borrow/review/${b.bookingId}`}
-										className="px-4 py-2 bg-primaryLight text-primary border border-primaryLight rounded-xl text-sm font-bold w-full transition-colors hover:bg-primary hover:text-white flex justify-center items-center gap-1">
+										href={`/borrow/review/${booking.bookingId}`}
+										className="px-4 py-2 rounded-xl text-sm font-bold bg-primaryLight text-primary border border-primaryLight hover:bg-primary hover:text-white transition-colors flex items-center justify-center gap-1">
 										Leave Review
 										<ArrowRight className="w-3 h-3" />
 									</Link>
