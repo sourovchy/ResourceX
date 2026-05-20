@@ -2,16 +2,14 @@ package com.thirdhand.campusvault.service.impl;
 
 import com.thirdhand.campusvault.dto.response.DashboardStatsResponse;
 import com.thirdhand.campusvault.dto.response.PendingUserResponse;
-import com.thirdhand.campusvault.entity.PendingUser;
-import com.thirdhand.campusvault.entity.User;
-import com.thirdhand.campusvault.entity.UserStatus;
-import com.thirdhand.campusvault.repository.PendingUserRepository;
-import com.thirdhand.campusvault.repository.UserRepository;
+import com.thirdhand.campusvault.entity.*;
+import com.thirdhand.campusvault.repository.*;
 import com.thirdhand.campusvault.service.AdminService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -21,6 +19,9 @@ public class AdminServiceImpl implements AdminService {
 
     private final PendingUserRepository pendingUserRepository;
     private final UserRepository userRepository;
+    private final UniversityRepository universityRepository;
+    private final StudentVerificationRepository studentVerificationRepository;
+    private final AuditLogRepository auditLogRepository;
 
     @Override
     public DashboardStatsResponse getDashboardStats() {
@@ -44,17 +45,47 @@ public class AdminServiceImpl implements AdminService {
             throw new IllegalStateException("Email must be verified before approval");
         }
 
+        // Find or create University
+        String uniName = pending.getUniversity() != null ? pending.getUniversity() : "Unknown University";
+        University university = universityRepository.findByName(uniName)
+                .orElseGet(() -> universityRepository.save(University.builder()
+                        .name(uniName)
+                        .isVerified(false)
+                        .build()));
+
         User user = User.builder()
                 .studentId(pending.getStudentId())
                 .name(pending.getName())
                 .email(pending.getEmail())
                 .password(pending.getPassword())
                 .phone(pending.getPhone())
+                .university(university)
                 .trustScore(100)
-                .verified(true)
+                .status(User.AccountStatus.ACTIVE)
                 .build();
 
-        userRepository.save(user);
+        User savedUser = userRepository.save(user);
+
+        // Create Verification record
+        StudentVerification verification = StudentVerification.builder()
+                .user(savedUser)
+                .idCardImage(pending.getIdCardDataUrl()) // Assuming URL is used as image path/data
+                .status(StudentVerification.VerificationStatus.VERIFIED)
+                .reviewedAt(LocalDateTime.now())
+                .build();
+        studentVerificationRepository.save(verification);
+
+        // Create Audit Log
+        AuditLog log = AuditLog.builder()
+                .actorType(AuditLog.ActorType.SYSTEM) // For now, system auto-approves or admin via API
+                .actionType("USER_APPROVAL")
+                .entityType("USER")
+                .entityId(savedUser.getUserId())
+                .outcome(AuditLog.AuditOutcome.APPROVED)
+                .details("User " + savedUser.getEmail() + " approved from pending state")
+                .build();
+        auditLogRepository.save(log);
+
         pendingUserRepository.delete(pending);
     }
 
@@ -66,6 +97,17 @@ public class AdminServiceImpl implements AdminService {
         
         pending.setStatus(UserStatus.REJECTED);
         pendingUserRepository.save(pending);
+
+        // Create Audit Log for rejection
+        AuditLog log = AuditLog.builder()
+                .actorType(AuditLog.ActorType.SYSTEM)
+                .actionType("USER_REJECTION")
+                .entityType("PENDING_USER")
+                .entityId(pending.getId())
+                .outcome(AuditLog.AuditOutcome.REJECTED)
+                .details("User " + pending.getEmail() + " rejected")
+                .build();
+        auditLogRepository.save(log);
     }
 
     private PendingUserResponse mapToResponse(PendingUser pending) {

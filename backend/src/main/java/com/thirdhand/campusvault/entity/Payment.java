@@ -7,7 +7,7 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "payments")
+@Table(name = "Payments")
 @Getter
 @Setter
 @NoArgsConstructor
@@ -19,25 +19,33 @@ public class Payment {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long paymentId;
 
-    @ManyToOne
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "booking_id", nullable = false)
     private Booking booking;
 
     @Column(nullable = false)
     private BigDecimal amount;
-    
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
     @Builder.Default
-    private String status = "PENDING";
+    private PaymentStatus status = PaymentStatus.PENDING;
 
-    @Column(unique = true)
-    private String transactionId;
+    private String method;
 
-    private LocalDateTime paymentDate;
+    @Column(name = "transaction_ref", unique = true)
+    private String transactionRef;
+
+    private LocalDateTime paidAt;
 
     private LocalDateTime createdAt;
 
     @PrePersist
     public void onCreate() {
         this.createdAt = LocalDateTime.now();
+    }
+
+    public enum PaymentStatus {
+        PENDING, SUCCESS, FAILED, REFUNDED
     }
 }

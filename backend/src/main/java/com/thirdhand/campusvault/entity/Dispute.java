@@ -6,7 +6,7 @@ import lombok.*;
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "disputes")
+@Table(name = "Disputes")
 @Getter
 @Setter
 @NoArgsConstructor
@@ -18,30 +18,35 @@ public class Dispute {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long disputeId;
 
-    @ManyToOne
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "booking_id", nullable = false)
     private Booking booking;
 
-    @ManyToOne
-    @JoinColumn(name = "reporter_id", nullable = false)
-    private User reporter;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "raised_by", nullable = false)
+    private User raisedBy;
 
+    @Enumerated(EnumType.STRING)
     @Column(nullable = false)
-    private String reason;
-
-    @Column(columnDefinition = "TEXT")
-    private String description;
-    
     @Builder.Default
-    private String status = "OPEN";
+    private DisputeStatus status = DisputeStatus.OPEN;
+
+    @Column(nullable = false, columnDefinition = "TEXT")
+    private String reason;
 
     @Column(columnDefinition = "TEXT")
     private String resolution;
 
     private LocalDateTime createdAt;
 
+    private LocalDateTime resolvedAt;
+
     @PrePersist
     public void onCreate() {
         this.createdAt = LocalDateTime.now();
+    }
+
+    public enum DisputeStatus {
+        OPEN, UNDER_REVIEW, RESOLVED, CLOSED
     }
 }

@@ -16,7 +16,7 @@ public class ItemMapper {
                 .title(item.getTitle())
                 .description(item.getDescription())
                 .dailyRate(item.getDailyRate())
-                .status(item.getStatus())
+                .status(item.getStatus() != null ? item.getStatus().name() : null)
                 .owner(UserMapper.toResponse(item.getOwner()))
                 .build();
     }

@@ -6,7 +6,7 @@ import lombok.*;
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "universities")
+@Table(name = "Universities")
 @Getter
 @Setter
 @NoArgsConstructor
@@ -21,10 +21,12 @@ public class University {
     @Column(nullable = false, unique = true)
     private String name;
 
-    @Column(nullable = false, unique = true)
+    @Column(unique = true)
     private String domain;
- @Builder.Default
-    private Boolean verified = true;
+
+    @Column(name = "is_verified", nullable = false)
+    @Builder.Default
+    private boolean isVerified = false;
 
     private LocalDateTime createdAt;
 

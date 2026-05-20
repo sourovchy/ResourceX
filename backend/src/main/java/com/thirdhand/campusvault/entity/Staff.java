@@ -6,20 +6,17 @@ import lombok.*;
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "Users")
+@Table(name = "Staff")
 @Getter
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class User {
+public class Staff {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long userId;
-
-    @Column(nullable = false, unique = true)
-    private String studentId;
+    private Long staffId;
 
     @Column(nullable = false)
     private String name;
@@ -30,18 +27,14 @@ public class User {
     @Column(name = "password_hash", nullable = false)
     private String password;
 
-    private String phone;
-
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "university_id")
-    private University university;
-
-    @Builder.Default
-    private Integer trustScore = 100;
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private StaffRole role;
 
     @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
     @Builder.Default
-    private AccountStatus status = AccountStatus.ACTIVE;
+    private StaffStatus status = StaffStatus.ACTIVE;
 
     private LocalDateTime createdAt;
 
@@ -58,7 +51,11 @@ public class User {
         this.updatedAt = LocalDateTime.now();
     }
 
-    public enum AccountStatus {
-        ACTIVE, SUSPENDED, BANNED
+    public enum StaffRole {
+        ADMIN, MODERATOR, SUPER_ADMIN
+    }
+
+    public enum StaffStatus {
+        ACTIVE, SUSPENDED
     }
 }

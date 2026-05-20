@@ -18,7 +18,7 @@ public class UserMapper {
                 .email(user.getEmail())
                 .phone(user.getPhone())
                 .trustScore(user.getTrustScore())
-                .verified(user.getVerified())
+                .verified(true) // Users in the main table are approved/verified
                 .build();
     }
 }

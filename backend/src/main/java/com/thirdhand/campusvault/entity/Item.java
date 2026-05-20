@@ -7,7 +7,7 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "items")
+@Table(name = "Items")
 @Getter
 @Setter
 @NoArgsConstructor
@@ -19,7 +19,7 @@ public class Item {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long itemId;
 
-    @ManyToOne
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "owner_id", nullable = false)
     private User owner;
 
@@ -29,20 +29,17 @@ public class Item {
     @Column(columnDefinition = "TEXT")
     private String description;
 
-    @Column(nullable = false)
     private String category;
 
-    @Column(nullable = false)
     private String itemCondition;
 
     @Column(nullable = false)
     private BigDecimal dailyRate;
-    
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
     @Builder.Default
-    private String status = "AVAILABLE";
-    
-    @Builder.Default
-    private Boolean approved = false;
+    private ItemStatus status = ItemStatus.AVAILABLE;
 
     private LocalDateTime createdAt;
 
@@ -57,5 +54,9 @@ public class Item {
     @PreUpdate
     public void onUpdate() {
         this.updatedAt = LocalDateTime.now();
+    }
+
+    public enum ItemStatus {
+        AVAILABLE, UNAVAILABLE, BLOCKED
     }
 }

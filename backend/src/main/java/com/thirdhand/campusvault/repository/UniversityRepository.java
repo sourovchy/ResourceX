@@ -12,4 +12,8 @@ public interface UniversityRepository extends JpaRepository<University, Long> {
     Optional<University> findByDomain(String domain);
 
     Boolean existsByDomain(String domain);
+
+    Optional<University> findByName(String name);
+
+    Boolean existsByName(String name);
 }

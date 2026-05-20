@@ -15,8 +15,8 @@ public class PaymentMapper {
                 .paymentId(payment.getPaymentId())
                 .bookingId(payment.getBooking().getBookingId())
                 .amount(payment.getAmount())
-                .status(payment.getStatus())
-                .paymentDate(payment.getPaymentDate())
+                .status(payment.getStatus() != null ? payment.getStatus().name() : null)
+                .paymentDate(payment.getPaidAt())
                 .build();
     }
 }

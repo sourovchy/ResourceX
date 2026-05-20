@@ -17,7 +17,7 @@ public class BookingMapper {
                 .renter(UserMapper.toResponse(booking.getRenter()))
                 .startDate(booking.getStartDate())
                 .endDate(booking.getEndDate())
-                .status(booking.getStatus())
+                .status(booking.getStatus() != null ? booking.getStatus().name() : null)
                 .totalPrice(booking.getTotalPrice())
                 .build();
     }

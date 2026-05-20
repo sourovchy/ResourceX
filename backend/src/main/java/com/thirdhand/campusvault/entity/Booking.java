@@ -8,7 +8,7 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "bookings")
+@Table(name = "Bookings")
 @Getter
 @Setter
 @NoArgsConstructor
@@ -20,11 +20,11 @@ public class Booking {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long bookingId;
 
-    @ManyToOne
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "item_id", nullable = false)
     private Item item;
 
-    @ManyToOne
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "renter_id", nullable = false)
     private User renter;
 
@@ -33,11 +33,22 @@ public class Booking {
 
     @Column(nullable = false)
     private LocalDate endDate;
-    @Builder.Default
-    private String status = "PENDING";
+
+    private LocalDate returnedDate;
 
     @Column(nullable = false)
     private BigDecimal totalPrice;
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    @Builder.Default
+    private BookingStatus status = BookingStatus.PENDING;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "approved_by")
+    private Staff approvedBy;
+
+    private LocalDateTime approvedAt;
 
     private LocalDateTime createdAt;
 
@@ -52,5 +63,9 @@ public class Booking {
     @PreUpdate
     public void onUpdate() {
         this.updatedAt = LocalDateTime.now();
+    }
+
+    public enum BookingStatus {
+        PENDING, APPROVED, REJECTED, COMPLETED, CANCELLED
     }
 }

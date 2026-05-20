@@ -7,7 +7,7 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "penalties")
+@Table(name = "Penalties")
 @Getter
 @Setter
 @NoArgsConstructor
@@ -19,24 +19,42 @@ public class Penalty {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long penaltyId;
 
-    @ManyToOne
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id", nullable = false)
     private User user;
 
-    @ManyToOne
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "booking_id")
     private Booking booking;
 
-    @Column(nullable = false)
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "dispute_id")
+    private Dispute dispute;
+
     private BigDecimal amount;
 
-    @Column(nullable = false)
+    @Column(nullable = false, columnDefinition = "TEXT")
     private String reason;
 
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    @Builder.Default
+    private PenaltyStatus status = PenaltyStatus.PENDING;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "issued_by", nullable = false)
+    private Staff issuedBy;
+
     private LocalDateTime createdAt;
+
+    private LocalDateTime appliedAt;
 
     @PrePersist
     public void onCreate() {
         this.createdAt = LocalDateTime.now();
+    }
+
+    public enum PenaltyStatus {
+        PENDING, APPLIED, WAIVED
     }
 }

@@ -6,7 +6,7 @@ import lombok.*;
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "item_images")
+@Table(name = "ItemImages")
 @Getter
 @Setter
 @NoArgsConstructor
@@ -18,7 +18,7 @@ public class ItemImage {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long imageId;
 
-    @ManyToOne
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "item_id", nullable = false)
     private Item item;
 

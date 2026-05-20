@@ -14,8 +14,8 @@ public class DisputeMapper {
         return DisputeResponse.builder()
                 .disputeId(dispute.getDisputeId())
                 .bookingId(dispute.getBooking().getBookingId())
-                .reporter(UserMapper.toResponse(dispute.getReporter()))
-                .status(dispute.getStatus())
+                .reporter(UserMapper.toResponse(dispute.getRaisedBy()))
+                .status(dispute.getStatus() != null ? dispute.getStatus().name() : null)
                 .createdAt(dispute.getCreatedAt())
                 .build();
     }
