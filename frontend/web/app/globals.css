@@ -41,9 +41,9 @@
 
 /* Dark Theme */
 .dark {
-	--color-primary: #2dd4bf;
+	--color-primary: #50bdd8;
 	--color-primaryLight: #103a36;
-	--color-primaryDark: #5eead4;
+	--color-primaryDark: #1db0d4;
 	--color-onPrimary: #041311;
 
 	--color-accent: #fbbf24;

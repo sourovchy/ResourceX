@@ -1,0 +1,56 @@
+package com.resourcex.resourcex.controller;
+
+import com.resourcex.resourcex.dto.request.CreateItemRequest;
+import com.resourcex.resourcex.dto.request.UpdateItemRequest;
+import com.resourcex.resourcex.dto.response.ItemResponse;
+import com.resourcex.resourcex.service.ItemService;
+import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
+
+@RestController
+@RequestMapping("/api/items")
+@RequiredArgsConstructor
+public class ItemController {
+
+    private final ItemService itemService;
+
+    @PostMapping
+    public ItemResponse createItem(
+            @Valid @RequestBody CreateItemRequest request
+    ) {
+        return itemService.createItem(request);
+    }
+
+    @GetMapping
+    public List<ItemResponse> getAllItems(
+            @RequestParam(required = false) String category,
+            @RequestParam(required = false) String searchQuery
+    ) {
+        return itemService.getAllItems(category, searchQuery);
+    }
+
+    @GetMapping("/{itemId}")
+    public ItemResponse getItemById(
+            @PathVariable Long itemId
+    ) {
+        return itemService.getItemById(itemId);
+    }
+
+    @PutMapping("/{itemId}")
+    public ItemResponse updateItem(
+            @PathVariable Long itemId,
+            @Valid @RequestBody UpdateItemRequest request
+    ) {
+        return itemService.updateItem(itemId, request);
+    }
+
+    @DeleteMapping("/{itemId}")
+    public void deleteItem(
+            @PathVariable Long itemId
+    ) {
+        itemService.deleteItem(itemId);
+    }
+}

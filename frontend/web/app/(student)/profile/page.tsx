@@ -58,7 +58,7 @@ export default function ProfilePage() {
 					</div>
 
 					{/* Trust Score Card */}
-					<div className="bg-gradient-to-br from-successDark to-success p-6 rounded-2xl shadow-sm text-white flex flex-col items-center text-center relative overflow-hidden">
+					<div className="bg-gradient-to-br from-primaryDark to-primary p-6 rounded-2xl shadow-sm text-white flex flex-col items-center text-center relative overflow-hidden">
 						<Shield className="absolute -right-4 -top-4 w-24 h-24 opacity-10" />
 						<div className="text-sm font-bold uppercase tracking-wider mb-2 opacity-90">
 							Trust Score
