@@ -8,6 +8,6 @@ public interface AdminService {
     DashboardStatsResponse getDashboardStats();
     List<PendingUserResponse> getPendingUsers();
     void approveUser(Long pendingId);
-    void rejectUser(Long pendingId);
+    void rejectUser(Long pendingId, String reason);
     void blockItem(Long itemId, String reason);
 }

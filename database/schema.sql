@@ -1,7 +1,9 @@
-CREATE DATABASE IF NOT EXISTS campusvault;
+DROP DATABASE IF EXISTS campusvault;
+CREATE DATABASE campusvault;
 USE campusvault;
 
--- CORE TABLES
+-- 1. CORE RELATIONSHIPS & USERS
+
 
 CREATE TABLE universities (
     university_id BIGINT AUTO_INCREMENT PRIMARY KEY,
@@ -13,54 +15,106 @@ CREATE TABLE universities (
 
 CREATE TABLE users (
     user_id        BIGINT AUTO_INCREMENT PRIMARY KEY,
-    student_id     VARCHAR(50) NOT NULL UNIQUE,
     name           VARCHAR(100) NOT NULL,
     email          VARCHAR(100) NOT NULL UNIQUE,
+    student_id     VARCHAR(50) NOT NULL UNIQUE,
+    phone          VARCHAR(20) NOT NULL UNIQUE,
     password_hash  VARCHAR(255) NOT NULL,
-    phone          VARCHAR(20),
-    university_id  BIGINT,
+    university     VARCHAR(150),
+    department     VARCHAR(100),
     trust_score    INT NOT NULL DEFAULT 100,
-    status         ENUM('ACTIVE', 'SUSPENDED', 'BANNED') NOT NULL DEFAULT 'ACTIVE',
+    status         ENUM('ACTIVE', 'PENDING_VERIFICATION', 'PENDING_APPROVAL', 'REJECTED', 'SUSPENDED', 'BANNED') NOT NULL DEFAULT 'ACTIVE',
+    email_verified BOOLEAN DEFAULT FALSE,
+    phone_verified BOOLEAN DEFAULT FALSE,
     created_at     TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    updated_at     TIMESTAMP NULL DEFAULT NULL ON UPDATE CURRENT_TIMESTAMP,
-    FOREIGN KEY (university_id) REFERENCES universities(university_id) ON DELETE SET NULL
+    updated_at     TIMESTAMP NULL DEFAULT NULL ON UPDATE CURRENT_TIMESTAMP
 );
 
 CREATE TABLE staff (
     staff_id       BIGINT AUTO_INCREMENT PRIMARY KEY,
     name           VARCHAR(100) NOT NULL,
     email          VARCHAR(100) NOT NULL UNIQUE,
-    password_hash  VARCHAR(255) NOT NULL,
     role           ENUM('ADMIN', 'MODERATOR', 'SUPER_ADMIN') NOT NULL,
     status         ENUM('ACTIVE', 'SUSPENDED') NOT NULL DEFAULT 'ACTIVE',
+    password_hash  VARCHAR(255) NOT NULL,
     created_at     TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at     TIMESTAMP NULL DEFAULT NULL ON UPDATE CURRENT_TIMESTAMP
+);
+
+CREATE TABLE roles (
+    role_id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    name    VARCHAR(50) NOT NULL UNIQUE
+);
+
+CREATE TABLE user_roles (
+    id      BIGINT AUTO_INCREMENT PRIMARY KEY,
+    user_id BIGINT NOT NULL,
+    role_id BIGINT NOT NULL,
+    UNIQUE KEY uk_user_roles_user_role (user_id, role_id),
+    FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE,
+    FOREIGN KEY (role_id) REFERENCES roles(role_id) ON DELETE CASCADE
+);
+
+-- 2. VERIFICATIONS & REGISTRATION REGISTRY
+
+
+CREATE TABLE pending_users (
+    id             BIGINT AUTO_INCREMENT PRIMARY KEY,
+    name           VARCHAR(100) NOT NULL,
+    email          VARCHAR(100) NOT NULL UNIQUE,
+    student_id     VARCHAR(50) NOT NULL UNIQUE,
+    phone          VARCHAR(20) NOT NULL UNIQUE,
+    university     VARCHAR(150),
+    department     VARCHAR(100),
+    status         VARCHAR(50),
+    email_verified BOOLEAN DEFAULT FALSE,
+    phone_verified BOOLEAN DEFAULT FALSE,
+    password_hash       VARCHAR(255) NOT NULL,
+    id_card_data_url LONGTEXT,
+    created_at     TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at     TIMESTAMP NULL DEFAULT NULL ON UPDATE CURRENT_TIMESTAMP
 );
 
 CREATE TABLE student_verifications (
     verification_id   BIGINT AUTO_INCREMENT PRIMARY KEY,
     user_id           BIGINT NOT NULL UNIQUE,
-    id_card_image     VARCHAR(255) NOT NULL,
     status            ENUM('PENDING', 'VERIFIED', 'REJECTED') NOT NULL DEFAULT 'PENDING',
     reviewed_by       BIGINT DEFAULT NULL,
-    reviewed_at       TIMESTAMP NULL DEFAULT NULL,
+    id_card_image     LONGTEXT NOT NULL,
     rejection_reason  TEXT,
+    reviewed_at       TIMESTAMP NULL DEFAULT NULL,
     created_at        TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE,
     FOREIGN KEY (reviewed_by) REFERENCES staff(staff_id) ON DELETE SET NULL
 );
 
--- ITEMS
+CREATE TABLE otp_tokens (
+    id            BIGINT AUTO_INCREMENT PRIMARY KEY,
+    email         VARCHAR(255) NOT NULL,
+    status        VARCHAR(50) NOT NULL DEFAULT 'PENDING',
+    attempt_count INT NOT NULL DEFAULT 0,
+    version       BIGINT DEFAULT 0,
+    otp_hash      VARCHAR(255) NOT NULL,
+    expires_at    TIMESTAMP NOT NULL,
+    verified_at   TIMESTAMP NULL DEFAULT NULL,
+    used_at       TIMESTAMP NULL DEFAULT NULL,
+    last_sent_at  TIMESTAMP NULL DEFAULT NULL,
+    created_at    TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    INDEX idx_otp_email_status (email, status),
+    INDEX idx_otp_expires_at (expires_at)
+);
+
+-- 3. ITEMS & INVENTORY
 
 CREATE TABLE items (
     item_id        BIGINT AUTO_INCREMENT PRIMARY KEY,
-    owner_id       BIGINT NOT NULL,
     title          VARCHAR(200) NOT NULL,
-    description    TEXT,
+    owner_id       BIGINT NOT NULL,
     category       VARCHAR(50),
     item_condition VARCHAR(50),
     daily_rate     DECIMAL(10,2) NOT NULL,
     status         ENUM('AVAILABLE', 'UNAVAILABLE', 'BLOCKED') NOT NULL DEFAULT 'AVAILABLE',
+    description    TEXT,
     created_at     TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at     TIMESTAMP NULL DEFAULT NULL ON UPDATE CURRENT_TIMESTAMP,
     FOREIGN KEY (owner_id) REFERENCES users(user_id) ON DELETE CASCADE
@@ -74,17 +128,17 @@ CREATE TABLE item_images (
     FOREIGN KEY (item_id) REFERENCES items(item_id) ON DELETE CASCADE
 );
 
--- BOOKINGS AND PAYMENTS
+-- 4. BOOKINGS & FINANCIALS
 
 CREATE TABLE bookings (
     booking_id     BIGINT AUTO_INCREMENT PRIMARY KEY,
     item_id        BIGINT NOT NULL,
     renter_id      BIGINT NOT NULL,
+    status         ENUM('PENDING', 'APPROVED', 'REJECTED', 'COMPLETED', 'CANCELLED') NOT NULL DEFAULT 'PENDING',
     start_date     DATE NOT NULL,
     end_date       DATE NOT NULL,
     returned_date  DATE DEFAULT NULL,
     total_price    DECIMAL(10,2) NOT NULL,
-    status         ENUM('PENDING', 'APPROVED', 'REJECTED', 'COMPLETED', 'CANCELLED') NOT NULL DEFAULT 'PENDING',
     approved_by    BIGINT DEFAULT NULL,
     approved_at    TIMESTAMP NULL DEFAULT NULL,
     created_at     TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -106,7 +160,7 @@ CREATE TABLE payments (
     FOREIGN KEY (booking_id) REFERENCES bookings(booking_id) ON DELETE CASCADE
 );
 
--- REVIEWS AND REPORTS
+-- 5. REVIEWS, REPORTS & LOGISTICS
 
 CREATE TABLE reviews (
     review_id     BIGINT AUTO_INCREMENT PRIMARY KEY,
@@ -126,16 +180,16 @@ CREATE TABLE reports (
     reporter_id   BIGINT NOT NULL,
     entity_type   ENUM('USER', 'ITEM', 'BOOKING') NOT NULL,
     entity_id     BIGINT NOT NULL,
-    reason        TEXT NOT NULL,
     status        ENUM('PENDING', 'REVIEWED', 'RESOLVED') NOT NULL DEFAULT 'PENDING',
     reviewed_by   BIGINT DEFAULT NULL,
+    reason        TEXT NOT NULL,
     reviewed_at   TIMESTAMP NULL DEFAULT NULL,
     created_at    TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (reporter_id) REFERENCES users(user_id) ON DELETE CASCADE,
     FOREIGN KEY (reviewed_by) REFERENCES staff(staff_id) ON DELETE SET NULL
 );
 
--- DISPUTES AND PENALTIES
+-- 6. DISPUTES, PENALTIES & TRUST TRACKERS
 
 CREATE TABLE disputes (
     dispute_id   BIGINT AUTO_INCREMENT PRIMARY KEY,
@@ -155,10 +209,10 @@ CREATE TABLE penalties (
     user_id      BIGINT NOT NULL,
     booking_id   BIGINT DEFAULT NULL,
     dispute_id   BIGINT DEFAULT NULL,
-    amount       DECIMAL(10,2) DEFAULT NULL,
-    reason       TEXT NOT NULL,
     status       ENUM('PENDING', 'APPLIED', 'WAIVED') NOT NULL DEFAULT 'PENDING',
+    amount       DECIMAL(10,2) DEFAULT NULL,
     issued_by    BIGINT NOT NULL,
+    reason       TEXT NOT NULL,
     created_at   TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     applied_at   TIMESTAMP NULL DEFAULT NULL,
     FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE,
@@ -167,16 +221,14 @@ CREATE TABLE penalties (
     FOREIGN KEY (issued_by) REFERENCES staff(staff_id) ON DELETE RESTRICT
 );
 
--- TRUST HISTORY
-
 CREATE TABLE trust_events (
     trust_event_id  BIGINT AUTO_INCREMENT PRIMARY KEY,
     user_id         BIGINT NOT NULL,
+    source_type     ENUM('PENALTY', 'REVIEW', 'DISPUTE', 'REPORT', 'SYSTEM', 'STAFF_ACTION') NOT NULL,
+    source_id       BIGINT DEFAULT NULL,
     change_amount   INT NOT NULL,
     old_score       INT NOT NULL,
     new_score       INT NOT NULL,
-    source_type     ENUM('PENALTY', 'REVIEW', 'DISPUTE', 'REPORT', 'SYSTEM', 'STAFF_ACTION') NOT NULL,
-    source_id       BIGINT DEFAULT NULL,
     reason          VARCHAR(255) NOT NULL,
     created_by      BIGINT DEFAULT NULL,
     created_at      TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -184,7 +236,7 @@ CREATE TABLE trust_events (
     FOREIGN KEY (created_by) REFERENCES staff(staff_id) ON DELETE SET NULL
 );
 
--- ONE AUDIT TABLE FOR ALL STAFF ACTIONS
+-- 7. AUDITING
 
 CREATE TABLE audit_logs (
     audit_id      BIGINT AUTO_INCREMENT PRIMARY KEY,
@@ -198,54 +250,10 @@ CREATE TABLE audit_logs (
     created_at    TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (actor_id) REFERENCES staff(staff_id) ON DELETE SET NULL
 );
-CREATE TABLE otp_tokens (
-    id BIGINT AUTO_INCREMENT PRIMARY KEY,
-    email VARCHAR(255) NOT NULL,
-    otp_hash VARCHAR(255) NOT NULL,
-    status VARCHAR(50) NOT NULL DEFAULT 'PENDING',
-    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    expires_at TIMESTAMP NOT NULL,
-    verified_at TIMESTAMP NULL DEFAULT NULL,
-    used_at TIMESTAMP NULL DEFAULT NULL,
-    attempt_count INT NOT NULL DEFAULT 0,
-    last_sent_at TIMESTAMP NULL DEFAULT NULL,
-    version BIGINT DEFAULT 0,
-    INDEX idx_otp_email_status (email, status),
-    INDEX idx_otp_expires_at (expires_at)
-);
 
-CREATE TABLE pending_users (
-    id BIGINT AUTO_INCREMENT PRIMARY KEY,
-    student_id VARCHAR(50) NOT NULL UNIQUE,
-    name VARCHAR(100) NOT NULL,
-    email VARCHAR(100) NOT NULL UNIQUE,
-    password VARCHAR(255) NOT NULL,
-    phone VARCHAR(20) NOT NULL UNIQUE,
-    university VARCHAR(150),
-    department VARCHAR(100),
-    id_card_data_url LONGTEXT,
-    status VARCHAR(50),
-    email_verified BOOLEAN DEFAULT FALSE,
-    phone_verified BOOLEAN DEFAULT FALSE,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP NULL DEFAULT NULL ON UPDATE CURRENT_TIMESTAMP
-);
+-- 8. PERFORMANCE INDEXES
 
-CREATE TABLE roles (
-    role_id BIGINT AUTO_INCREMENT PRIMARY KEY,
-    name VARCHAR(50) NOT NULL UNIQUE
-);
-
-CREATE TABLE user_roles (
-    id BIGINT AUTO_INCREMENT PRIMARY KEY,
-    user_id BIGINT NOT NULL,
-    role_id BIGINT NOT NULL,
-    FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE,
-    FOREIGN KEY (role_id) REFERENCES roles(role_id) ON DELETE CASCADE
-);
--- OPTIONAL HELPER INDEXES
-
-CREATE INDEX idx_users_university_id ON users(university_id);
+CREATE INDEX idx_users_university ON users(university);
 CREATE INDEX idx_items_owner_id ON items(owner_id);
 CREATE INDEX idx_items_status ON items(status);
 CREATE INDEX idx_bookings_item_id ON bookings(item_id);

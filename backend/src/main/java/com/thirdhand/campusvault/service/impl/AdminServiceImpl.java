@@ -3,8 +3,12 @@ package com.thirdhand.campusvault.service.impl;
 import com.thirdhand.campusvault.dto.response.DashboardStatsResponse;
 import com.thirdhand.campusvault.dto.response.PendingUserResponse;
 import com.thirdhand.campusvault.entity.*;
+import com.thirdhand.campusvault.exception.BadRequestException;
+import com.thirdhand.campusvault.exception.ConflictException;
+import com.thirdhand.campusvault.exception.ResourceNotFoundException;
 import com.thirdhand.campusvault.repository.*;
 import com.thirdhand.campusvault.service.AdminService;
+import com.thirdhand.campusvault.util.constants.RoleConstants;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -23,6 +27,8 @@ public class AdminServiceImpl implements AdminService {
     private final StudentVerificationRepository studentVerificationRepository;
     private final AuditLogRepository auditLogRepository;
     private final ItemRepository itemRepository;
+    private final RoleRepository roleRepository;
+    private final UserRoleRepository userRoleRepository;
 
     @Override
     public DashboardStatsResponse getDashboardStats() {
@@ -39,21 +45,35 @@ public class AdminServiceImpl implements AdminService {
     @Override
     @Transactional
     public void approveUser(Long pendingId) {
-        PendingUser pending = pendingUserRepository.findById(pendingId)
-                .orElseThrow(() -> new IllegalArgumentException("Pending user not found"));
+        PendingUser pending = pendingUserRepository.findByIdForUpdate(pendingId)
+                .orElseThrow(() -> new ResourceNotFoundException("Pending user not found"));
 
         if (!Boolean.TRUE.equals(pending.getEmailVerified())) {
-            throw new IllegalStateException("Email must be verified before approval");
+            throw new BadRequestException("Email must be verified before approval");
         }
 
-        String university = pending.getUniversity() != null
-                ? pending.getUniversity()
-                : "Unknown University";
+        if (pending.getStatus() != UserStatus.PENDING_APPROVAL) {
+            throw new ConflictException("Pending user is not awaiting approval");
+        }
+
+        assertUserDoesNotExist(pending);
+
+        Role defaultRole = roleRepository.findByName(RoleConstants.ROLE_USER)
+                .orElseGet(() -> roleRepository.save(
+                        Role.builder()
+                                .name(RoleConstants.ROLE_USER)
+                                .build()
+                ));
+
+        LocalDateTime reviewedAt = LocalDateTime.now();
+        String university = pending.getUniversity() != null && !pending.getUniversity().isBlank()
+                ? pending.getUniversity().trim()
+                : null;
 
         User user = User.builder()
                 .studentId(pending.getStudentId())
                 .name(pending.getName())
-                .email(pending.getEmail())
+                .email(pending.getEmail().trim().toLowerCase())
                 .password(pending.getPassword())
                 .phone(pending.getPhone())
                 .university(university)
@@ -66,23 +86,28 @@ public class AdminServiceImpl implements AdminService {
 
         User savedUser = userRepository.save(user);
 
-        // Create Verification record
+        userRoleRepository.save(
+                UserRole.builder()
+                        .user(savedUser)
+                        .role(defaultRole)
+                        .build()
+        );
+
         StudentVerification verification = StudentVerification.builder()
                 .user(savedUser)
-                .idCardImage(pending.getIdCardDataUrl()) // Assuming URL is used as image path/data
+                .idCardImage(pending.getIdCardDataUrl())
                 .status(StudentVerification.VerificationStatus.VERIFIED)
-                .reviewedAt(LocalDateTime.now())
+                .reviewedAt(reviewedAt)
                 .build();
         studentVerificationRepository.save(verification);
 
-        // Create Audit Log
         AuditLog log = AuditLog.builder()
-                .actorType(AuditLog.ActorType.SYSTEM) // For now, system auto-approves or admin via API
+                .actorType(AuditLog.ActorType.SYSTEM)
                 .actionType("USER_APPROVAL")
                 .entityType("USER")
                 .entityId(savedUser.getUserId())
                 .outcome(AuditLog.AuditOutcome.APPROVED)
-                .details("User " + savedUser.getEmail() + " approved from pending state")
+                .details("Migrated pending user " + pending.getEmail() + " to active user")
                 .build();
         auditLogRepository.save(log);
 
@@ -91,23 +116,30 @@ public class AdminServiceImpl implements AdminService {
 
     @Override
     @Transactional
-    public void rejectUser(Long pendingId) {
-        PendingUser pending = pendingUserRepository.findById(pendingId)
-                .orElseThrow(() -> new IllegalArgumentException("Pending user not found"));
-        
-        pending.setStatus(UserStatus.REJECTED);
-        pendingUserRepository.save(pending);
+    public void rejectUser(Long pendingId, String reason) {
+        PendingUser pending = pendingUserRepository.findByIdForUpdate(pendingId)
+                .orElseThrow(() -> new ResourceNotFoundException("Pending user not found"));
 
-        // Create Audit Log for rejection
+        if (pending.getStatus() != UserStatus.PENDING_VERIFICATION
+                && pending.getStatus() != UserStatus.PENDING_APPROVAL) {
+            throw new ConflictException("Pending user cannot be rejected in current status");
+        }
+
+        String rejectionReason = reason != null && !reason.isBlank()
+                ? reason.trim()
+                : "No rejection reason provided";
+
         AuditLog log = AuditLog.builder()
                 .actorType(AuditLog.ActorType.SYSTEM)
                 .actionType("USER_REJECTION")
                 .entityType("PENDING_USER")
                 .entityId(pending.getPendingUserId())
                 .outcome(AuditLog.AuditOutcome.REJECTED)
-                .details("User " + pending.getEmail() + " rejected")
+                .details("Rejected pending user " + pending.getEmail() + ". Reason: " + rejectionReason)
                 .build();
         auditLogRepository.save(log);
+
+        pendingUserRepository.delete(pending);
     }
 
     @Override
@@ -145,5 +177,19 @@ public class AdminServiceImpl implements AdminService {
                 .phoneVerified(Boolean.TRUE.equals(pending.getPhoneVerified()))
                 .createdAt(pending.getCreatedAt())
                 .build();
+    }
+
+    private void assertUserDoesNotExist(PendingUser pending) {
+        if (userRepository.existsByEmailIgnoreCase(pending.getEmail())) {
+            throw new ConflictException("Email already exists in users");
+        }
+
+        if (userRepository.existsByStudentId(pending.getStudentId())) {
+            throw new ConflictException("Student ID already exists in users");
+        }
+
+        if (userRepository.existsByPhone(pending.getPhone())) {
+            throw new ConflictException("Phone number already exists in users");
+        }
     }
 }

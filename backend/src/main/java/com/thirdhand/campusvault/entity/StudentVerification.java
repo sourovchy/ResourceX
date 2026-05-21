@@ -22,7 +22,8 @@ public class StudentVerification {
     @JoinColumn(name = "user_id", nullable = false, unique = true)
     private User user;
 
-    @Column(nullable = false)
+    @Lob
+    @Column(nullable = false, columnDefinition = "LONGTEXT")
     private String idCardImage;
 
     @Enumerated(EnumType.STRING)

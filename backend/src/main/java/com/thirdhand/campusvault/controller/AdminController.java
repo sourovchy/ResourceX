@@ -1,5 +1,6 @@
 package com.thirdhand.campusvault.controller;
 
+import com.thirdhand.campusvault.dto.request.RejectUserRequest;
 import com.thirdhand.campusvault.dto.response.DashboardStatsResponse;
 import com.thirdhand.campusvault.dto.response.PendingUserResponse;
 import com.thirdhand.campusvault.service.AdminService;
@@ -33,8 +34,12 @@ public class AdminController {
     }
 
     @PostMapping("/reject/{id}")
-    public ResponseEntity<Void> rejectUser(@PathVariable Long id) {
-        adminService.rejectUser(id);
+    public ResponseEntity<Void> rejectUser(
+            @PathVariable Long id,
+            @RequestBody(required = false) RejectUserRequest request
+    ) {
+        String reason = request != null ? request.getReason() : null;
+        adminService.rejectUser(id, reason);
         return ResponseEntity.ok().build();
     }
 
