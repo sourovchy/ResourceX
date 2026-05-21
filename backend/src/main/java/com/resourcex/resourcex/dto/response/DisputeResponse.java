@@ -19,5 +19,13 @@ public class DisputeResponse {
 
     private String status;
 
+    private String reason;
+
+    private String resolution;
+
+    private UserResponse resolvedBy;
+
     private LocalDateTime createdAt;
+
+    private LocalDateTime resolvedAt;
 }
