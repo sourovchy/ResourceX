@@ -13,10 +13,30 @@ public class DisputeMapper {
 
         return DisputeResponse.builder()
                 .disputeId(dispute.getDisputeId())
-                .bookingId(dispute.getBooking().getBookingId())
-                .reporter(UserMapper.toResponse(dispute.getRaisedBy()))
-                .status(dispute.getStatus() != null ? dispute.getStatus().name() : null)
+                .bookingId(
+                        dispute.getBooking() != null
+                                ? dispute.getBooking().getBookingId()
+                                : null
+                )
+                .reporter(
+                        dispute.getRaisedBy() != null
+                                ? UserMapper.toResponse(dispute.getRaisedBy())
+                                : null
+                )
+                .status(
+                        dispute.getStatus() != null
+                                ? dispute.getStatus().name()
+                                : null
+                )
+                .reason(dispute.getReason())
+                .resolution(dispute.getResolution())
+                .resolvedBy(
+                        dispute.getResolvedBy() != null && dispute.getResolvedBy().getUser() != null
+                                ? UserMapper.toResponse(dispute.getResolvedBy().getUser())
+                                : null
+                )
                 .createdAt(dispute.getCreatedAt())
+                .resolvedAt(dispute.getResolvedAt())
                 .build();
     }
 }

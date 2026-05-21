@@ -28,4 +28,5 @@ public class DisputeResponse {
     private LocalDateTime createdAt;
 
     private LocalDateTime resolvedAt;
+    private String description;
 }

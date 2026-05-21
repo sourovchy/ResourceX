@@ -40,6 +40,8 @@ public class Dispute {
 
     @Column(columnDefinition = "TEXT")
     private String resolution;
+    @Column(columnDefinition = "TEXT")
+    private String description;
 
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
