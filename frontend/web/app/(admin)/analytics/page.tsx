@@ -1,7 +1,6 @@
 "use client";
 
-import React, { useEffect, useMemo, useState } from "react";
-import axios, { AxiosError } from "axios";
+import React, { useEffect, useState } from "react";
 import {
 	BarChart3,
 	TrendingUp,
@@ -11,10 +10,7 @@ import {
 	Loader2,
 	RefreshCw,
 } from "lucide-react";
-
-type ApiError = {
-	message?: string;
-};
+import { analyticsService, AnalyticsResponse } from "../../../lib/services/analyticsService";
 
 type ChartItem = {
 	label: string;
@@ -32,29 +28,6 @@ type DonutSlice = {
 	pct: number;
 	color: string;
 };
-
-type AnalyticsResponse = {
-	summary?: {
-		totalRevenue?: number;
-		averageRentalPerDay?: number;
-		lateReturnRate?: number;
-		disputeRate?: number;
-	};
-	topItems?: ChartItem[];
-	monthlyRevenue?: ChartItem[];
-	lateReturns?: ChartBarItem[];
-	bookingRatio?: DonutSlice[];
-	categoryDistribution?: DonutSlice[];
-};
-
-const api = axios.create({
-	baseURL:
-		process.env.NEXT_PUBLIC_API_URL?.replace(/\/$/, "") ||
-		"http://localhost:8082",
-	headers: {
-		"Content-Type": "application/json",
-	},
-});
 
 const getTailwindColor = (colorClass: string) => {
 	const colors: Record<string, string> = {
@@ -263,29 +236,14 @@ export default function AdminAnalyticsPage() {
 	const [refreshing, setRefreshing] = useState(false);
 	const [error, setError] = useState("");
 
-	const authHeaders = useMemo(() => {
-		if (typeof window === "undefined") return {};
-		const token = localStorage.getItem("accessToken");
-		return token ? { Authorization: `Bearer ${token}` } : {};
-	}, []);
-
 	const loadAnalytics = async () => {
 		try {
 			setError("");
-
-			// Adjust this endpoint only if your backend controller uses a different mapping.
-			const { data } = await api.get<AnalyticsResponse>(
-				"/api/admin/analytics",
-				{
-					headers: authHeaders,
-				},
-			);
-
+			const data = await analyticsService.getAnalytics();
 			setAnalytics(data);
-		} catch (err) {
-			const axiosError = err as AxiosError<ApiError>;
+		} catch (err: any) {
 			setError(
-				axiosError.response?.data?.message ||
+				err?.response?.data?.message ||
 				"Failed to load analytics from the backend.",
 			);
 		}

@@ -1,6 +1,7 @@
 package com.resourcex.resourcex.mapper;
 
 import com.resourcex.resourcex.dto.response.DisputeResponse;
+import com.resourcex.resourcex.dto.response.UserResponse;
 import com.resourcex.resourcex.entity.Dispute;
 
 public class DisputeMapper {
@@ -31,8 +32,13 @@ public class DisputeMapper {
                 .reason(dispute.getReason())
                 .resolution(dispute.getResolution())
                 .resolvedBy(
-                        dispute.getResolvedBy() != null && dispute.getResolvedBy().getUser() != null
-                                ? UserMapper.toResponse(dispute.getResolvedBy().getUser())
+                        dispute.getResolvedBy() != null
+                                ? UserResponse.builder()
+                                        .userId(dispute.getResolvedBy().getStaffId())
+                                        .name(dispute.getResolvedBy().getName())
+                                        .email(dispute.getResolvedBy().getEmail())
+                                        .roles(java.util.List.of("ROLE_ADMIN"))
+                                        .build()
                                 : null
                 )
                 .createdAt(dispute.getCreatedAt())

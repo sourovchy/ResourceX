@@ -114,7 +114,7 @@ public class AuthServiceImpl implements AuthService {
                 .token(token)
                 .user(UserMapper.toResponse(
     user,
-    userRoleRepository.findByUser(user)
+    userRoleRepository.findAllByUser(user)
 ))
                 .roles(resolveRoles(user))
                 .build();
@@ -127,7 +127,7 @@ public class AuthServiceImpl implements AuthService {
         return CurrentUserResponse.builder()
                 .user(UserMapper.toResponse(
     user,
-    userRoleRepository.findByUser(user)
+    userRoleRepository.findAllByUser(user)
 ))
                 .roles(resolveRoles(user))
                 .build();

@@ -3,6 +3,9 @@ package com.resourcex.resourcex.dto.response;
 import com.resourcex.resourcex.entity.UserStatus;
 import lombok.*;
 
+import java.time.LocalDateTime;
+import java.util.List;
+
 @Getter
 @Setter
 @NoArgsConstructor

@@ -1,5 +1,6 @@
 package com.resourcex.resourcex.mapper;
 
+import com.resourcex.resourcex.dto.response.PenaltyResponse;
 import com.resourcex.resourcex.entity.Penalty;
 import org.springframework.stereotype.Component;
 
@@ -47,7 +48,7 @@ public class PenaltyMapper {
 
                 .issuedByStaffId(
                         penalty.getIssuedBy() != null
-                                ? penalty.getIssuedBy().getId()
+                                ? penalty.getIssuedBy().getStaffId()
                                 : null
                 )
 

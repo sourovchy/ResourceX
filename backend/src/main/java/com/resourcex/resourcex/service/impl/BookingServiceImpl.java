@@ -65,10 +65,7 @@ public class BookingServiceImpl implements BookingService {
         List<Booking> overlappingBookings = bookingRepository.findOverlappingBookings(
                 item,
                 request.getStartDate(),
-                request.getEndDate(),
-                List.of(Booking.BookingStatus.CANCELLED,
-                        Booking.BookingStatus.REJECTED,
-                        Booking.BookingStatus.COMPLETED)
+                request.getEndDate()
         );
 
         if (!overlappingBookings.isEmpty()) {
@@ -129,7 +126,7 @@ public class BookingServiceImpl implements BookingService {
     @Transactional(readOnly = true)
     public List<BookingResponse> getRequestsForMyListings() {
         // TODO: add support for status filtering, pagination, sorting
-        return bookingRepository.findByItemOwner(resolveCurrentUser()).stream()
+        return bookingRepository.findByItem_Owner(resolveCurrentUser()).stream()
                 .map(BookingMapper::toResponse)
                 .toList();
     }
