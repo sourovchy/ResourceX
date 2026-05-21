@@ -10,7 +10,10 @@ import com.resourcex.resourcex.repository.ItemRepository;
 import com.resourcex.resourcex.repository.UserRepository;
 import com.resourcex.resourcex.repository.BookingRepository;
 import com.resourcex.resourcex.entity.Booking;
+import com.resourcex.resourcex.exception.ForbiddenException;
 import com.resourcex.resourcex.service.ItemService;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -28,9 +31,7 @@ public class ItemServiceImpl implements ItemService {
     @Override
     @Transactional
     public ItemResponse createItem(CreateItemRequest request) {
-        // In a real app, get currentUser from SecurityContext
-        User owner = userRepository.findById(request.getOwnerId())
-                .orElseThrow(() -> new IllegalArgumentException("Owner not found"));
+        User owner = resolveCurrentUser();
 
         Item item = Item.builder()
                 .title(request.getTitle())
@@ -54,6 +55,8 @@ public class ItemServiceImpl implements ItemService {
     public ItemResponse updateItem(Long itemId, UpdateItemRequest request) {
         Item item = itemRepository.findById(itemId)
                 .orElseThrow(() -> new IllegalArgumentException("Item not found"));
+
+        assertCanManageItem(item);
         
         if (item.getStatus() == Item.ItemStatus.DELETED) {
             throw new IllegalStateException("Cannot update a deleted item");
@@ -83,10 +86,21 @@ public class ItemServiceImpl implements ItemService {
     }
 
     @Override
+    public List<ItemResponse> getMyItems() {
+        User owner = resolveCurrentUser();
+        return itemRepository.findByOwner(owner).stream()
+                .filter(item -> item.getStatus() != Item.ItemStatus.DELETED)
+                .map(ItemMapper::toResponse)
+                .toList();
+    }
+
+    @Override
     @Transactional
     public void deleteItem(Long itemId) {
         Item item = itemRepository.findById(itemId)
                 .orElseThrow(() -> new IllegalArgumentException("Item not found"));
+
+        assertCanManageItem(item);
         
         List<Booking> bookings = bookingRepository.findByItem(item);
         
@@ -102,5 +116,27 @@ public class ItemServiceImpl implements ItemService {
         
         item.setStatus(Item.ItemStatus.DELETED);
         itemRepository.save(item);
+    }
+
+    private User resolveCurrentUser() {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+
+        if (authentication == null || authentication.getName() == null || authentication.getName().isBlank()) {
+            throw new IllegalStateException("Authenticated user not found");
+        }
+
+        return userRepository.findByEmailIgnoreCase(authentication.getName())
+                .orElseThrow(() -> new IllegalStateException("User not found"));
+    }
+
+    private void assertCanManageItem(Item item) {
+        User currentUser = resolveCurrentUser();
+        boolean owner = item.getOwner() != null && item.getOwner().getUserId().equals(currentUser.getUserId());
+        boolean admin = SecurityContextHolder.getContext().getAuthentication().getAuthorities().stream()
+                .anyMatch(authority -> "ROLE_ADMIN".equals(authority.getAuthority()));
+
+        if (!owner && !admin) {
+            throw new ForbiddenException("You can only manage your own listings");
+        }
     }
 }

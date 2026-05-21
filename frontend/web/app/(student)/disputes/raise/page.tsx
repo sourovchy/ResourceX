@@ -28,7 +28,7 @@ export default function RaiseDisputePage() {
 					Dispute Filed
 				</h1>
 				<p className="text-textSecondary">
-					Your dispute has been escalated to CampusVault administration. We will
+					Your dispute has been escalated to ResourceX administration. We will
 					review the evidence and contact you shortly. Rest assured, fairness is
 					our priority.
 				</p>

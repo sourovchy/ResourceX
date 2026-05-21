@@ -1,18 +1,18 @@
 import React from "react";
 import Link from "next/link";
-import { Star, Shield } from "lucide-react";
+import { ImageIcon, Shield, Star } from "lucide-react";
 
 interface ItemCardProps {
 	item: {
 		id: string;
 		title: string;
-		image: string;
+		image?: string;
 		category: string;
 		condition: string;
-		rating: number;
-		reviews: number;
+		rating?: number;
+		reviews?: number;
 		pricePerDay: number;
-		deposit: number;
+		deposit?: number;
 		owner: string;
 		trustScore: number;
 		href?: string; // optional custom href
@@ -40,11 +40,17 @@ const ItemCard = ({ item, href }: ItemCardProps) => {
 		>
 			{/* Image */}
 			<div className="relative h-48 w-full overflow-hidden">
-				<img
-					src={item.image}
-					alt={item.title}
-					className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-				/>
+				{item.image ? (
+					<img
+						src={item.image}
+						alt={item.title}
+						className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+					/>
+				) : (
+					<div className="w-full h-full bg-surfaceVariant flex items-center justify-center text-textTertiary">
+						<ImageIcon className="w-10 h-10" />
+					</div>
+				)}
 
 				{/* subtle overlay for readability */}
 				<div className="absolute inset-0 bg-black/10" />
@@ -77,11 +83,13 @@ const ItemCard = ({ item, href }: ItemCardProps) => {
 					{item.title}
 				</h3>
 
-				<div className="flex items-center gap-1.5 mt-2">
-					<Star className="w-3.5 h-3.5 text-warning fill-warning" />
-					<span className="text-sm font-bold">{item.rating}</span>
-					<span className="text-xs text-textTertiary">({item.reviews})</span>
-				</div>
+				{typeof item.rating === "number" && (
+					<div className="flex items-center gap-1.5 mt-2">
+						<Star className="w-3.5 h-3.5 text-warning fill-warning" />
+						<span className="text-sm font-bold">{item.rating}</span>
+						<span className="text-xs text-textTertiary">({item.reviews ?? 0})</span>
+					</div>
+				)}
 
 				<div className="mt-4 pt-4 border-t border-borderLight flex justify-between">
 					<div>
@@ -92,7 +100,9 @@ const ItemCard = ({ item, href }: ItemCardProps) => {
 					</div>
 					<div>
 						<div className="text-xs text-textSecondary uppercase">Deposit</div>
-						<div className="text-sm font-bold">৳ {item.deposit}</div>
+						<div className="text-sm font-bold">
+							{typeof item.deposit === "number" ? `৳ ${item.deposit}` : "N/A"}
+						</div>
 					</div>
 				</div>
 

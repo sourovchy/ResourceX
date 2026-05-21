@@ -1,15 +1,14 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import {
 	Search,
 	CalendarCheck,
 	AlertTriangle,
-	Eye,
-	ChevronDown,
-	X,
 	Loader2,
+	X,
+	RefreshCw,
 } from "lucide-react";
 import api from "@/lib/api";
 
@@ -19,7 +18,53 @@ type FilterType =
 	| "OVERDUE"
 	| "COMPLETED"
 	| "PENDING"
-	| "CANCELLED";
+	| "CANCELLED"
+	| "REJECTED";
+
+type BookingStatus =
+	| "ACTIVE"
+	| "OVERDUE"
+	| "COMPLETED"
+	| "PENDING"
+	| "CANCELLED"
+	| "REJECTED";
+
+interface BookingRow {
+	bookingId: string | number;
+	itemName: string;
+	ownerName: string;
+	renterName: string;
+	startDate: string;
+	endDate: string;
+	totalPrice: number;
+	status: BookingStatus;
+}
+
+interface BookingApiRow {
+	bookingId?: string | number;
+	id?: string | number;
+	itemName?: string;
+	item?: {
+		name?: string;
+	};
+	ownerName?: string;
+	owner?: {
+		name?: string;
+	};
+	renterName?: string;
+	renter?: {
+		name?: string;
+	};
+	startDate?: string;
+	endDate?: string;
+	bookingStartDate?: string;
+	bookingEndDate?: string;
+	totalPrice?: number | string;
+	amount?: number | string;
+	status?: string;
+	createdAt?: string;
+	updatedAt?: string;
+}
 
 const STATUS_STYLES: Record<string, string> = {
 	ACTIVE: "bg-primaryLight text-primary",
@@ -30,20 +75,91 @@ const STATUS_STYLES: Record<string, string> = {
 	REJECTED: "bg-errorLight text-error",
 };
 
+const FILTERS: FilterType[] = [
+	"ALL",
+	"ACTIVE",
+	"OVERDUE",
+	"COMPLETED",
+	"PENDING",
+	"CANCELLED",
+	"REJECTED",
+];
+
+const STATUS_OPTIONS: BookingStatus[] = [
+	"ACTIVE",
+	"OVERDUE",
+	"COMPLETED",
+	"PENDING",
+	"CANCELLED",
+	"REJECTED",
+];
+
+function normalizeStatus(status?: string): BookingStatus {
+	const value = (status ?? "PENDING").toUpperCase();
+	if (
+		value === "ACTIVE" ||
+		value === "OVERDUE" ||
+		value === "COMPLETED" ||
+		value === "PENDING" ||
+		value === "CANCELLED" ||
+		value === "REJECTED"
+	) {
+		return value;
+	}
+	return "PENDING";
+}
+
+function normalizeBooking(row: BookingApiRow): BookingRow {
+	return {
+		bookingId: row.bookingId ?? row.id ?? "",
+		itemName: row.itemName ?? row.item?.name ?? "Unknown item",
+		ownerName: row.ownerName ?? row.owner?.name ?? "Unknown owner",
+		renterName: row.renterName ?? row.renter?.name ?? "Unknown renter",
+		startDate: row.startDate ?? row.bookingStartDate ?? row.createdAt ?? "",
+		endDate: row.endDate ?? row.bookingEndDate ?? row.updatedAt ?? "",
+		totalPrice: Number(row.totalPrice ?? row.amount ?? 0),
+		status: normalizeStatus(row.status),
+	};
+}
+
+function formatDate(value: string) {
+	if (!value) return "-";
+	const date = new Date(value);
+	if (Number.isNaN(date.getTime())) return "-";
+	return date.toLocaleDateString();
+}
+
 export default function AdminBookingsPage() {
 	const [search, setSearch] = useState("");
 	const [filter, setFilter] = useState<FilterType>("ALL");
-	const [overrideId, setOverrideId] = useState<string | null>(null);
-	const [bookings, setBookings] = useState<any[]>([]);
+	const [overrideId, setOverrideId] = useState<string | number | null>(null);
+	const [overrideStatus, setOverrideStatus] = useState<BookingStatus>("ACTIVE");
+	const [bookings, setBookings] = useState<BookingRow[]>([]);
 	const [loading, setLoading] = useState(true);
+	const [submitting, setSubmitting] = useState(false);
+	const [error, setError] = useState<string | null>(null);
 
 	const fetchBookings = async () => {
 		try {
 			setLoading(true);
+			setError(null);
+
 			const response = await api.get("/bookings");
-			setBookings(response.data);
+			const raw = response.data;
+
+			const list: BookingApiRow[] = Array.isArray(raw)
+				? raw
+				: Array.isArray(raw?.data)
+					? raw.data
+					: Array.isArray(raw?.content)
+						? raw.content
+						: [];
+
+			setBookings(list.map(normalizeBooking));
 		} catch (err) {
 			console.error(err);
+			setError("Failed to load bookings. Please try again.");
+			setBookings([]);
 		} finally {
 			setLoading(false);
 		}
@@ -53,77 +169,122 @@ export default function AdminBookingsPage() {
 		fetchBookings();
 	}, []);
 
-	const filtered = bookings.filter((b) => {
-		const searchStr = search.toLowerCase();
-		const matchSearch =
-			b.bookingId?.toString().toLowerCase().includes(searchStr) ||
-			b.itemName?.toLowerCase().includes(searchStr) ||
-			b.renterName?.toLowerCase().includes(searchStr);
-		const matchFilter = filter === "ALL" || b.status === filter;
-		return matchSearch && matchFilter;
-	});
+	const filteredBookings = useMemo(() => {
+		const searchStr = search.trim().toLowerCase();
 
-	const overdueCount = bookings.filter((b) => b.status === "OVERDUE").length;
+		return bookings
+			.filter((b) => {
+				const matchSearch =
+					searchStr.length === 0 ||
+					b.bookingId.toString().toLowerCase().includes(searchStr) ||
+					b.itemName.toLowerCase().includes(searchStr) ||
+					b.renterName.toLowerCase().includes(searchStr) ||
+					b.ownerName.toLowerCase().includes(searchStr);
+
+				const matchFilter = filter === "ALL" || b.status === filter;
+				return matchSearch && matchFilter;
+			})
+			.sort((a, b) => {
+				const aTime = new Date(a.startDate || 0).getTime();
+				const bTime = new Date(b.startDate || 0).getTime();
+				return bTime - aTime;
+			});
+	}, [bookings, search, filter]);
+
+	const overdueCount = useMemo(
+		() => bookings.filter((b) => b.status === "OVERDUE").length,
+		[bookings],
+	);
+
+	const openOverrideModal = (booking: BookingRow) => {
+		setOverrideId(booking.bookingId);
+		setOverrideStatus(booking.status);
+	};
+
+	const applyOverride = async () => {
+		if (overrideId === null) return;
+
+		try {
+			setSubmitting(true);
+			await api.patch(`/bookings/${overrideId}/status`, {
+				status: overrideStatus,
+			});
+			await fetchBookings();
+			setOverrideId(null);
+		} catch (err) {
+			console.error(err);
+			setError("Could not update booking status.");
+		} finally {
+			setSubmitting(false);
+		}
+	};
 
 	if (loading) {
 		return (
 			<div className="flex flex-col items-center justify-center py-20">
-				<Loader2 className="w-10 h-10 text-primary animate-spin mb-4" />
+				<Loader2 className="h-10 w-10 animate-spin text-primary" />
 			</div>
 		);
 	}
 
 	return (
-		<div className="max-w-7xl mx-auto space-y-6">
-			<div className="flex items-center justify-between">
+		<div className="mx-auto max-w-7xl space-y-6">
+			<div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
 				<div>
 					<h1 className="text-2xl font-bold text-textPrimary">
 						Booking Monitor
 					</h1>
-					<p className="text-textSecondary text-sm mt-1">
-						Track all platform bookings and override statuses when needed.
+					<p className="mt-1 text-sm text-textSecondary">
+						Track all platform bookings and update statuses from the backend.
 					</p>
 				</div>
-				{overdueCount > 0 && (
-					<div className="flex items-center gap-2 bg-warningLight border border-warning/40 text-warning px-4 py-2 rounded-xl text-sm font-bold shadow-sm">
-						<AlertTriangle className="w-4 h-4" />
-						{overdueCount} Overdue
-					</div>
-				)}
+
+				<div className="flex items-center gap-3">
+					<button
+						onClick={fetchBookings}
+						className="inline-flex items-center gap-2 rounded-xl border border-outlineVariant bg-surface px-4 py-2 text-sm font-semibold text-textSecondary transition hover:bg-surfaceVariant">
+						<RefreshCw className="h-4 w-4" />
+						Refresh
+					</button>
+
+					{overdueCount > 0 && (
+						<div className="flex items-center gap-2 rounded-xl border border-warning/40 bg-warningLight px-4 py-2 text-sm font-bold text-warning shadow-sm">
+							<AlertTriangle className="h-4 w-4" />
+							{overdueCount} Overdue
+						</div>
+					)}
+				</div>
 			</div>
 
-			{/* Filters */}
-			<div className="flex flex-col sm:flex-row gap-3">
+			{error && (
+				<div className="rounded-xl border border-error/30 bg-errorLight px-4 py-3 text-sm font-medium text-error">
+					{error}
+				</div>
+			)}
+
+			<div className="flex flex-col gap-3 sm:flex-row">
 				<div className="relative flex-1">
-					<Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-textTertiary" />
+					<Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-textTertiary" />
 					<input
 						type="text"
 						value={search}
 						onChange={(e) => setSearch(e.target.value)}
-						placeholder="Search by booking ID, item, or renter..."
-						className="w-full pl-9 pr-4 py-2.5 bg-surface border border-outlineVariant rounded-xl focus:ring-2 focus:ring-primary focus:border-primary outline-none transition text-textPrimary text-sm"
+						placeholder="Search by booking ID, item, renter, or owner..."
+						className="w-full rounded-xl border border-outlineVariant bg-surface py-2.5 pl-9 pr-4 text-sm text-textPrimary outline-none transition focus:border-primary focus:ring-2 focus:ring-primary"
 					/>
 				</div>
+
 				<div className="flex flex-wrap gap-2">
-					{(
-						[
-							"ALL",
-							"ACTIVE",
-							"OVERDUE",
-							"COMPLETED",
-							"PENDING",
-							"CANCELLED",
-						] as FilterType[]
-					).map((f) => (
+					{FILTERS.map((f) => (
 						<button
 							key={f}
 							onClick={() => setFilter(f)}
-							className={`px-3 py-2 rounded-xl text-xs font-semibold transition border ${
+							className={`rounded-xl border px-3 py-2 text-xs font-semibold transition ${
 								filter === f
 									? f === "OVERDUE"
-										? "bg-warning text-white border-warning shadow"
-										: "bg-primary text-onPrimary border-primary shadow"
-									: "bg-surface border-outlineVariant text-textSecondary hover:bg-surfaceVariant"
+										? "border-warning bg-warning text-white shadow"
+										: "border-primary bg-primary text-onPrimary shadow"
+									: "border-outlineVariant bg-surface text-textSecondary hover:bg-surfaceVariant"
 							}`}>
 							{f}
 						</button>
@@ -131,126 +292,144 @@ export default function AdminBookingsPage() {
 				</div>
 			</div>
 
-			{/* Override Status Modal */}
-			{overrideId && (
-				<div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-					<div className="bg-surface border border-borderLight rounded-2xl shadow-2xl w-full max-w-sm p-6 space-y-4">
+			{overrideId !== null && (
+				<div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+					<div className="w-full max-w-sm space-y-4 rounded-2xl border border-borderLight bg-surface p-6 shadow-2xl">
 						<div className="flex items-center justify-between">
 							<h3 className="text-lg font-bold text-textPrimary">
 								Override Status
 							</h3>
 							<button onClick={() => setOverrideId(null)}>
-								<X className="w-5 h-5 text-textTertiary hover:text-textPrimary transition" />
+								<X className="h-5 w-5 text-textTertiary transition hover:text-textPrimary" />
 							</button>
 						</div>
+
 						<p className="text-sm text-textSecondary">
-							Select new status for booking{" "}
+							Select a new status for booking{" "}
 							<span className="font-bold text-textPrimary">{overrideId}</span>
 						</p>
-						<select className="w-full px-3 py-2.5 bg-surfaceVariant border border-outlineVariant rounded-xl text-sm text-textPrimary focus:ring-2 focus:ring-primary outline-none">
-							{["ACTIVE", "COMPLETED", "CANCELLED", "PENDING"].map((s) => (
+
+						<select
+							value={overrideStatus}
+							onChange={(e) =>
+								setOverrideStatus(e.target.value as BookingStatus)
+							}
+							className="w-full rounded-xl border border-outlineVariant bg-surfaceVariant px-3 py-2.5 text-sm text-textPrimary outline-none focus:ring-2 focus:ring-primary">
+							{STATUS_OPTIONS.map((s) => (
 								<option key={s} value={s}>
 									{s}
 								</option>
 							))}
 						</select>
+
 						<div className="flex gap-3">
 							<button
 								onClick={() => setOverrideId(null)}
-								className="flex-1 py-2.5 rounded-xl border border-outlineVariant text-textSecondary font-semibold text-sm hover:bg-surfaceVariant transition">
+								className="flex-1 rounded-xl border border-outlineVariant px-4 py-2.5 text-sm font-semibold text-textSecondary transition hover:bg-surfaceVariant">
 								Cancel
 							</button>
 							<button
-								onClick={() => setOverrideId(null)}
-								className="flex-1 py-2.5 rounded-xl bg-primary text-onPrimary font-bold text-sm hover:opacity-90 transition">
-								Apply Override
+								onClick={applyOverride}
+								disabled={submitting}
+								className="flex-1 rounded-xl bg-primary px-4 py-2.5 text-sm font-bold text-onPrimary transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60">
+								{submitting ? "Applying..." : "Apply Override"}
 							</button>
 						</div>
 					</div>
 				</div>
 			)}
 
-			{/* Table */}
-			<div className="bg-surface border border-borderLight rounded-2xl shadow-sm overflow-hidden">
+			<div className="overflow-hidden rounded-2xl border border-borderLight bg-surface shadow-sm">
 				<div className="overflow-x-auto">
 					<table className="w-full text-sm">
 						<thead>
-							<tr className="border-b border-borderLight bg-surfaceVariant/60">
-								<th className="px-5 py-3.5 text-left text-xs font-bold text-textTertiary uppercase tracking-wider">
-									Booking
-								</th>
-								<th className="px-5 py-3.5 text-left text-xs font-bold text-textTertiary uppercase tracking-wider">
-									Item
-								</th>
-								<th className="px-5 py-3.5 text-left text-xs font-bold text-textTertiary uppercase tracking-wider">
-									Renter
-								</th>
-								<th className="px-5 py-3.5 text-left text-xs font-bold text-textTertiary uppercase tracking-wider">
-									Dates
-								</th>
-								<th className="px-5 py-3.5 text-left text-xs font-bold text-textTertiary uppercase tracking-wider">
-									Amount
-								</th>
-								<th className="px-5 py-3.5 text-left text-xs font-bold text-textTertiary uppercase tracking-wider">
-									Status
-								</th>
-								<th className="px-5 py-3.5 text-right text-xs font-bold text-textTertiary uppercase tracking-wider">
-									Actions
-								</th>
-							</tr>
+						<tr className="border-b border-borderLight bg-surfaceVariant/60">
+							<th className="px-5 py-3.5 text-left text-xs font-bold uppercase tracking-wider text-textTertiary">
+								Booking
+							</th>
+							<th className="px-5 py-3.5 text-left text-xs font-bold uppercase tracking-wider text-textTertiary">
+								Item
+							</th>
+							<th className="px-5 py-3.5 text-left text-xs font-bold uppercase tracking-wider text-textTertiary">
+								Renter
+							</th>
+							<th className="px-5 py-3.5 text-left text-xs font-bold uppercase tracking-wider text-textTertiary">
+								Dates
+							</th>
+							<th className="px-5 py-3.5 text-left text-xs font-bold uppercase tracking-wider text-textTertiary">
+								Amount
+							</th>
+							<th className="px-5 py-3.5 text-left text-xs font-bold uppercase tracking-wider text-textTertiary">
+								Status
+							</th>
+							<th className="px-5 py-3.5 text-right text-xs font-bold uppercase tracking-wider text-textTertiary">
+								Actions
+							</th>
+						</tr>
 						</thead>
+
 						<tbody className="divide-y divide-borderLight">
-							{filtered.map((b) => (
-								<tr
-									key={b.bookingId}
-									className={`hover:bg-surfaceVariant/40 transition-colors ${
-										b.status === "OVERDUE" ? "bg-warningLight/20" : ""
-									}`}>
-									<td className="px-5 py-3.5 font-mono text-xs font-bold text-textPrimary">
-										BK-{b.bookingId}
-									</td>
-									<td className="px-5 py-3.5">
-										<div className="font-medium text-textPrimary">
-											{b.itemName}
-										</div>
-										<div className="text-xs text-textTertiary">
-											Owner: {b.ownerName}
-										</div>
-									</td>
-									<td className="px-5 py-3.5 text-textSecondary">
-										{b.renterName}
-									</td>
-									<td className="px-5 py-3.5 text-xs text-textSecondary">
-										<div>{new Date(b.startDate).toLocaleDateString()}</div>
-										<div className="text-textTertiary">
-											→ {new Date(b.endDate).toLocaleDateString()}
-										</div>
-									</td>
-									<td className="px-5 py-3.5 font-semibold text-textPrimary">
-										৳{b.totalPrice}
-									</td>
-									<td className="px-5 py-3.5">
+						{filteredBookings.map((b) => (
+							<tr
+								key={b.bookingId}
+								className={`transition-colors hover:bg-surfaceVariant/40 ${
+									b.status === "OVERDUE" ? "bg-warningLight/20" : ""
+								}`}>
+								<td className="px-5 py-3.5 font-mono text-xs font-bold text-textPrimary">
+									BK-{b.bookingId}
+								</td>
+
+								<td className="px-5 py-3.5">
+									<div className="font-medium text-textPrimary">
+										{b.itemName}
+									</div>
+									<div className="text-xs text-textTertiary">
+										Owner: {b.ownerName}
+									</div>
+								</td>
+
+								<td className="px-5 py-3.5 text-textSecondary">
+									{b.renterName}
+								</td>
+
+								<td className="px-5 py-3.5 text-xs text-textSecondary">
+									<div>{formatDate(b.startDate)}</div>
+									<div className="text-textTertiary">→ {formatDate(b.endDate)}</div>
+								</td>
+
+								<td className="px-5 py-3.5 font-semibold text-textPrimary">
+									৳{b.totalPrice}
+								</td>
+
+								<td className="px-5 py-3.5">
 										<span
-											className={`text-xs font-bold px-2.5 py-1 rounded-full ${STATUS_STYLES[b.status]}`}>
+											className={`rounded-full px-2.5 py-1 text-xs font-bold ${STATUS_STYLES[b.status]}`}>
 											{b.status}
 										</span>
-									</td>
-									<td className="px-5 py-3.5">
-										<div className="flex items-center justify-end gap-2">
-											<button
-												onClick={() => setOverrideId(b.bookingId)}
-												className="text-xs font-bold text-primary hover:underline">
-												Override
-											</button>
-										</div>
-									</td>
-								</tr>
-							))}
+								</td>
+
+								<td className="px-5 py-3.5">
+									<div className="flex items-center justify-end gap-3">
+										<Link
+											href={`/admin/bookings/${b.bookingId}`}
+											className="text-xs font-bold text-textSecondary transition hover:text-primary">
+											View
+										</Link>
+										<button
+											onClick={() => openOverrideModal(b)}
+											className="text-xs font-bold text-primary transition hover:underline">
+											Override
+										</button>
+									</div>
+								</td>
+							</tr>
+						))}
 						</tbody>
 					</table>
-					{filtered.length === 0 && (
+
+					{filteredBookings.length === 0 && (
 						<div className="py-16 text-center text-textTertiary">
-							<CalendarCheck className="w-8 h-8 mx-auto mb-2 opacity-40" />
+							<CalendarCheck className="mx-auto mb-2 h-8 w-8 opacity-40" />
 							No bookings match your filter.
 						</div>
 					)}

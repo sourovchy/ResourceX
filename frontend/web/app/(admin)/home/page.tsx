@@ -1,374 +1,203 @@
 "use client";
 
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useState } from "react";
 import Link from "next/link";
 import StatCard from "@/components/cards/StatCard";
-import {
-	ApprovalRequest,
-	formatSubmittedAt,
-	getApprovalRequests,
-} from "@/lib/approvalRequests";
+import api from "@/lib/api";
 import {
 	Users,
 	PackageOpen,
-	AlertTriangle,
 	ShieldAlert,
-	Package,
 	UserPlus,
-	CheckCircle2,
-	XCircle,
 	Clock,
 	ArrowRight,
-	TrendingUp,
-	Activity,
-	Wifi,
-	Server,
-	Database,
+	Loader2,
+	DollarSign,
 } from "lucide-react";
 
-type VerificationItem = {
-	id: string;
+type DashboardStats = {
+	totalUsers: number;
+	activeBookings: number;
+	revenue: number;
+	pendingApprovals: number;
+};
+
+type PendingUser = {
+	id: number | string;
 	name: string;
 	email: string;
-	phone?: string;
 	studentId: string;
 	university?: string;
 	department?: string;
-	idCardFileName?: string;
-	idCardDataUrl?: string;
-	submitted: string;
+	createdAt?: string;
 };
 
-const PENDING_VERIFICATIONS: VerificationItem[] = [
-	{
-		id: "U001",
-		name: "Arif Hossain",
-		email: "arif@uni.edu",
-		studentId: "20-44512",
-		submitted: "2h ago",
-	},
-	{
-		id: "U002",
-		name: "Priya Sen",
-		email: "priya@uni.edu",
-		studentId: "21-33102",
-		submitted: "4h ago",
-	},
-	{
-		id: "U003",
-		name: "Mehedi Islam",
-		email: "mehedi@uni.edu",
-		studentId: "22-10045",
-		submitted: "6h ago",
-	},
-	{
-		id: "U004",
-		name: "Tanvir Ahmed",
-		email: "tanvir@uni.edu",
-		studentId: "20-99871",
-		submitted: "1d ago",
-	},
-];
+type ApiListResponse<T> =
+	| T[]
+	| {
+	data?: T[];
+	content?: T[];
+};
 
-const RECENT_DISPUTES = [
-	{
-		id: "D001",
-		booking: "BK-2041",
-		raised: "Arif Hossain",
-		reason: "Item returned damaged – charger broken",
-		status: "OPEN",
-		time: "1h ago",
-	},
-	{
-		id: "D002",
-		booking: "BK-2039",
-		raised: "Priya Sen",
-		reason: "Owner did not hand over the item on time",
-		status: "OPEN",
-		time: "3h ago",
-	},
-	{
-		id: "D003",
-		booking: "BK-2035",
-		raised: "Mehedi Islam",
-		reason: "Deposit not returned after item return",
-		status: "RESOLVED",
-		time: "1d ago",
-	},
-];
-
-const HEALTH_ITEMS = [
-	{ label: "API Server", status: "Operational", icon: Server, ok: true },
-	{ label: "Database", status: "Operational", icon: Database, ok: true },
-	{ label: "CDN / Storage", status: "Degraded", icon: Wifi, ok: false },
-	{ label: "Email Service", status: "Operational", icon: Activity, ok: true },
-];
+function normalizeListResponse<T>(payload: ApiListResponse<T> | any): T[] {
+	if (Array.isArray(payload)) return payload;
+	if (Array.isArray(payload?.data)) return payload.data;
+	if (Array.isArray(payload?.content)) return payload.content;
+	return [];
+}
 
 export default function AdminHomePage() {
-	const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
-	const [approvalRequests, setApprovalRequests] = useState<ApprovalRequest[]>([]);
+	const [stats, setStats] = useState<DashboardStats | null>(null);
+	const [pendingUsers, setPendingUsers] = useState<PendingUser[]>([]);
+	const [loading, setLoading] = useState(true);
+	const [error, setError] = useState("");
 
 	useEffect(() => {
-		setApprovalRequests(getApprovalRequests());
+		let active = true;
+
+		async function loadDashboard() {
+			try {
+				setLoading(true);
+				setError("");
+
+				const [statsRes, pendingRes] = await Promise.all([
+					api.get<DashboardStats | { data?: DashboardStats }>("/admin/dashboard"),
+					api.get<ApiListResponse<PendingUser> | any>("/admin/pending-users"),
+				]);
+
+				if (!active) return;
+
+				const statsData = (statsRes.data as any)?.data ?? statsRes.data;
+				setStats(statsData as DashboardStats);
+
+				const pendingList = normalizeListResponse<PendingUser>(pendingRes.data);
+				setPendingUsers(pendingList);
+			} catch (err) {
+				console.error(err);
+				if (active) setError("Could not load admin dashboard data.");
+			} finally {
+				if (active) setLoading(false);
+			}
+		}
+
+		loadDashboard();
+
+		return () => {
+			active = false;
+		};
 	}, []);
 
-	const pendingVerifications = useMemo<VerificationItem[]>(() => {
-		const submittedRequests = approvalRequests
-			.filter((request) => request.status === "PENDING")
-			.map((request) => ({
-				id: request.id,
-				name: request.name,
-				email: request.email,
-				phone: request.phone,
-				studentId: request.studentId,
-				university: request.university,
-				department: request.department,
-				idCardFileName: request.idCardFileName,
-				idCardDataUrl: request.idCardDataUrl,
-				submitted: formatSubmittedAt(request.submittedAt),
-			}));
-
-		return [...submittedRequests, ...PENDING_VERIFICATIONS];
-	}, [approvalRequests]);
-
-	const selectedVerification =
-		pendingVerifications.find((item) => item.id === selectedUserId) ?? null;
+	if (loading) {
+		return (
+			<div className="flex min-h-[60vh] items-center justify-center text-textSecondary">
+				<Loader2 className="mr-2 h-5 w-5 animate-spin" />
+				Loading admin dashboard...
+			</div>
+		);
+	}
 
 	return (
-		<div className="max-w-7xl mx-auto space-y-8">
-			{/* Page header */}
+		<div className="space-y-8">
 			<div>
-				<h1 className="text-2xl font-bold text-textPrimary tracking-tight">
+				<h1 className="text-2xl font-bold tracking-tight text-textPrimary">
 					Overview
 				</h1>
-				<p className="text-textSecondary text-sm mt-1">
-					Monitor system metrics, pending tasks, and platform health.
+				<p className="mt-1 text-sm text-textSecondary">
+					Live platform metrics from the ResourceX database.
 				</p>
 			</div>
 
-			{/* Stat Cards */}
-			<div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-				<div className="rounded-2xl shadow-md">
-					<StatCard
-						icon={<Users className="w-5 h-5 text-blue-500" />}
-						title="Total Users"
-						value="1,428"
-						sub="+23 this week"
-						tint="bg-blue-50 dark:bg-blue-950/40"
-						iconColor="text-blue-500"
-					/>
+			{error && (
+				<div className="rounded-lg border border-error/50 bg-errorLight px-5 py-4 text-sm font-semibold text-error">
+					{error}
 				</div>
+			)}
 
-				<div className="rounded-2xl shadow-md">
-					<StatCard
-						icon={<PackageOpen className="w-5 h-5 text-primary" />}
-						title="Active Rentals"
-						value="214"
-						tint="bg-primaryLight"
-						iconColor="text-primary"
-					/>
-				</div>
-
-				<div className="rounded-2xl shadow-md">
-					<StatCard
-						icon={<AlertTriangle className="w-5 h-5 text-warning" />}
-						title="Overdue Rentals"
-						value="18"
-						sub="Needs attention"
-						tint="bg-warningLight"
-						iconColor="text-warning"
-					/>
-				</div>
-
-				<div className="rounded-2xl shadow-md">
-					<StatCard
-						icon={<ShieldAlert className="w-5 h-5 text-error" />}
-						title="Pending Disputes"
-						value="7"
-						tint="bg-errorLight"
-						iconColor="text-error"
-					/>
-				</div>
-
-				<div className="rounded-2xl shadow-md">
-					<StatCard
-						icon={<Package className="w-5 h-5 text-accent" />}
-						title="Total Items"
-						value="862"
-						tint="bg-accentLight"
-						iconColor="text-accent"
-					/>
-				</div>
-
-				<div className="rounded-2xl shadow-md">
-					<StatCard
-						icon={<UserPlus className="w-5 h-5 text-success" />}
-						title="New Today"
-						value="12"
-						sub="Registrations pending"
-						tint="bg-successLight"
-						iconColor="text-success"
-					/>
-				</div>
+			<div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
+				<StatCard
+					icon={<Users className="h-5 w-5 text-blue-500" />}
+					title="Total Users"
+					value={String(stats?.totalUsers ?? 0)}
+					tint="bg-blue-50 dark:bg-blue-950/40"
+					iconColor="text-blue-500"
+				/>
+				<StatCard
+					icon={<PackageOpen className="h-5 w-5 text-primary" />}
+					title="Active Rentals"
+					value={String(stats?.activeBookings ?? 0)}
+					tint="bg-primaryLight"
+					iconColor="text-primary"
+				/>
+				<StatCard
+					icon={<DollarSign className="h-5 w-5 text-success" />}
+					title="Revenue"
+					value={`৳${Number(stats?.revenue ?? 0).toLocaleString()}`}
+					tint="bg-successLight"
+					iconColor="text-success"
+				/>
+				<StatCard
+					icon={<UserPlus className="h-5 w-5 text-warning" />}
+					title="Pending Approvals"
+					value={String(stats?.pendingApprovals ?? pendingUsers.length)}
+					tint="bg-warningLight"
+					iconColor="text-warning"
+				/>
 			</div>
 
-			<div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-				{/* Pending Verifications */}
-				<div className="lg:col-span-2 bg-surface border border-borderLight rounded-2xl shadow-sm overflow-hidden">
-					<div className="flex items-center justify-between px-5 py-4 border-b border-borderLight">
-						<h2 className="font-bold text-textPrimary flex items-center gap-2">
-							<Clock className="w-4 h-4 text-warning" />
-							Pending Verifications
-						</h2>
-						<Link
-							href="/users?filter=PENDING"
-							className="text-xs font-semibold text-primary hover:underline flex items-center gap-1">
-							View all <ArrowRight className="w-3 h-3" />
-						</Link>
-					</div>
-
-					<div className="divide-y divide-borderLight">
-						{pendingVerifications.map((u) => (
-							<div
-								key={u.id}
-								className="flex items-center justify-between px-5 py-3.5 hover:bg-surfaceVariant/50 transition-colors">
-								<div className="flex items-center gap-3 min-w-0">
-									<div className="w-9 h-9 rounded-full bg-primaryLight flex items-center justify-center font-bold text-primary text-sm shrink-0">
-										{u.name[0]}
-									</div>
-									<div className="min-w-0">
-										<div className="text-sm font-semibold text-textPrimary truncate">
-											{u.name}
-										</div>
-										<div className="text-xs text-textTertiary">
-											{u.studentId} · {u.submitted}
-										</div>
-										<div className="text-xs text-textTertiary truncate max-w-xs">
-											{u.email}
-										</div>
-									</div>
-								</div>
-
-								<div className="flex items-center gap-2 shrink-0 ml-3">
-									<Link
-										href={`/users/${u.id}`}
-										className="flex items-center gap-1 px-3 py-1.5 bg-surfaceVariant text-textSecondary rounded-lg text-xs font-bold hover:bg-borderLight transition">
-										View
-									</Link>
-								</div>
-							</div>
-						))}
-					</div>
-				</div>
-
-
-			</div>
-
-			{/* Recent Disputes */}
-			<div className="bg-surface border border-borderLight rounded-2xl shadow-sm overflow-hidden">
-				<div className="flex items-center justify-between px-5 py-4 border-b border-borderLight">
-					<h2 className="font-bold text-textPrimary flex items-center gap-2">
-						<ShieldAlert className="w-4 h-4 text-error" />
-						Recent Disputes
+			<section className="overflow-hidden rounded-lg border border-borderLight bg-surface shadow-sm">
+				<div className="flex items-center justify-between border-b border-borderLight px-5 py-4">
+					<h2 className="flex items-center gap-2 font-bold text-textPrimary">
+						<Clock className="h-4 w-4 text-warning" />
+						Pending Approvals
 					</h2>
+
 					<Link
-						href="/disputesAdmin"
-						className="text-xs font-semibold text-primary hover:underline flex items-center gap-1">
-						View all <ArrowRight className="w-3 h-3" />
+						href="/users?filter=PENDING"
+						className="flex items-center gap-1 text-xs font-semibold text-primary hover:underline">
+						View all <ArrowRight className="h-3 w-3" />
 					</Link>
 				</div>
 
 				<div className="divide-y divide-borderLight">
-					{RECENT_DISPUTES.map((d) => (
-						<div
-							key={d.id}
-							className="flex items-center justify-between px-5 py-4 hover:bg-surfaceVariant/50 transition-colors">
-							<div className="flex items-center gap-4 min-w-0">
-								<div
-									className={`w-2.5 h-2.5 rounded-full shrink-0 ${
-										d.status === "OPEN" ? "bg-error" : "bg-success"
-									}`}
-								/>
-								<div className="min-w-0">
-									<div className="flex items-center gap-2">
-										<span className="text-sm font-bold text-textPrimary">
-											{d.booking}
-										</span>
-										<span className="text-xs text-textTertiary">
-											by {d.raised}
-										</span>
+					{pendingUsers.length === 0 ? (
+						<div className="p-6 text-sm text-textSecondary">
+							No pending approvals.
+						</div>
+					) : (
+						pendingUsers.slice(0, 6).map((user) => (
+							<div
+								key={user.id}
+								className="flex items-center justify-between px-5 py-4 transition-colors hover:bg-surfaceVariant/50">
+								<div className="flex min-w-0 items-center gap-3">
+									<div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primaryLight text-sm font-bold text-primary">
+										{user.name?.[0]?.toUpperCase() ?? "U"}
 									</div>
-									<p className="text-xs text-textSecondary mt-0.5 truncate max-w-md">
-										{d.reason}
-									</p>
+									<div className="min-w-0">
+										<div className="truncate text-sm font-semibold text-textPrimary">
+											{user.name}
+										</div>
+										<div className="truncate text-xs text-textTertiary">
+											{user.studentId} · {user.email}
+										</div>
+									</div>
 								</div>
-							</div>
 
-							<div className="flex items-center gap-3 shrink-0 ml-4">
-								<span className="text-xs text-textTertiary">{d.time}</span>
-								<span
-									className={`text-xs font-bold px-2.5 py-1 rounded-full ${
-										d.status === "OPEN"
-											? "bg-errorLight text-error"
-											: "bg-successLight text-success"
-									}`}>
-									{d.status}
-								</span>
-
-								{d.status === "OPEN" && (
-									<Link
-										href={`/disputesAdmin`}
-										className="text-xs font-bold text-primary hover:underline">
-										Resolve
-									</Link>
-								)}
+								<Link
+									href={`/users/${user.id}`}
+									className="text-xs font-bold text-primary hover:underline">
+									Review
+								</Link>
 							</div>
-						</div>
-					))}
+						))
+					)}
 				</div>
-			</div>
+			</section>
 
-			{/* Simple action indicator for selected verification */}
-			{selectedVerification && (
-				<div className="fixed bottom-4 right-4 bg-surface border border-borderLight shadow-lg rounded-2xl px-4 py-3 flex items-center gap-3">
-					<div className="flex items-start gap-3 max-w-lg">
-						<CheckCircle2 className="w-4 h-4 text-success" />
-						<div className="min-w-0 text-sm">
-							<div className="font-bold text-textPrimary">
-								{selectedVerification.name}
-							</div>
-							<div className="text-textSecondary">
-								{selectedVerification.studentId} · {selectedVerification.email}
-							</div>
-							{selectedVerification.phone && (
-								<div className="text-textSecondary">
-									{selectedVerification.phone} ·{" "}
-									{selectedVerification.department}
-								</div>
-							)}
-							{selectedVerification.university && (
-								<div className="text-textTertiary truncate">
-									{selectedVerification.university}
-								</div>
-							)}
-							{selectedVerification.idCardDataUrl && (
-								<img
-									src={selectedVerification.idCardDataUrl}
-									alt="Student ID card preview"
-									className="mt-2 h-24 w-full rounded-lg border border-borderLight object-contain bg-surfaceVariant"
-								/>
-							)}
-						</div>
-					</div>
-					<button
-						type="button"
-						onClick={() => setSelectedUserId(null)}
-						className="p-1 rounded-lg hover:bg-surfaceVariant transition"
-						aria-label="Close">
-						<XCircle className="w-4 h-4 text-textSecondary" />
-					</button>
-				</div>
-			)}
+			<section className="flex items-center gap-3 rounded-lg border border-borderLight bg-surface p-6 text-sm text-textSecondary">
+				<ShieldAlert className="h-5 w-5 text-primary" />
+				Admin pages are protected by frontend guards and backend role
+				authorization.
+			</section>
 		</div>
 	);
 }

@@ -30,17 +30,64 @@ public class SecurityConfig {
 
         http
                 .cors(cors -> cors.configurationSource(corsConfigurationSource))
+
                 .csrf(csrf -> csrf.disable())
+
                 .sessionManagement(session ->
                         session.sessionCreationPolicy(SessionCreationPolicy.STATELESS)
                 )
+
                 .authorizeHttpRequests(auth -> auth
+
+                        // Preflight requests
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
-                        .requestMatchers("/api/auth/**").permitAll()
+
+                        // Public auth endpoints
+                        .requestMatchers(
+                                "/api/auth/login",
+                                "/api/auth/register",
+                                "/api/auth/current-user"
+                        ).permitAll()
+
+                        // OTP endpoints
                         .requestMatchers("/api/otp/**").permitAll()
-                        .requestMatchers("/swagger-ui/**", "/v3/api-docs/**").permitAll()
+
+                        // Swagger
+                        .requestMatchers(
+                                "/swagger-ui/**",
+                                "/v3/api-docs/**",
+                                "/swagger-ui.html"
+                        ).permitAll()
+
+                        // Admin endpoints
+                        .requestMatchers("/api/admin/**").hasRole("ADMIN")
+
+                        // Analytics endpoints
+                        .requestMatchers("/api/analytics/**").hasRole("ADMIN")
+
+                        // User endpoints
+                        .requestMatchers("/api/users/**").authenticated()
+
+                        // Item endpoints
+                        .requestMatchers(HttpMethod.GET, "/api/items/**").authenticated()
+                        .requestMatchers("/api/items/**").hasAnyRole("USER", "ADMIN")
+
+                        // Booking endpoints
+                        .requestMatchers("/api/bookings/**").hasAnyRole("USER", "ADMIN")
+
+                        // Review endpoints
+                        .requestMatchers("/api/reviews/**").hasAnyRole("USER", "ADMIN")
+
+                        // Payment endpoints
+                        .requestMatchers("/api/payments/**").hasAnyRole("USER", "ADMIN")
+
+                        // Dispute endpoints
+                        .requestMatchers("/api/disputes/**").hasAnyRole("USER", "ADMIN")
+
+                        // Everything else
                         .anyRequest().authenticated()
                 )
+
                 .addFilterBefore(
                         jwtAuthenticationFilter,
                         UsernamePasswordAuthenticationFilter.class

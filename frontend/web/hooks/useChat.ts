@@ -4,13 +4,11 @@
 import { useState, useCallback, useEffect } from "react";
 import { Conversation, Message } from "@/types/chat";
 import { chatService } from "@/lib/services/chatService";
-import { DUMMY_MESSAGES } from "@/lib/mocks/dummyData";
 
 export function useChat() {
 	const [conversations, setConversations] = useState<Conversation[]>([]);
 	const [selectedId, setSelectedId] = useState<string | null>(null);
-	const [messages, setMessages] =
-		useState<Record<string, Message[]>>(DUMMY_MESSAGES);
+	const [messages, setMessages] = useState<Record<string, Message[]>>({});
 	const [blockedUsers, setBlockedUsers] = useState<Set<string>>(new Set());
 	const [searchQuery, setSearchQuery] = useState("");
 	const [loading, setLoading] = useState(true);
@@ -35,7 +33,9 @@ export function useChat() {
 
 	const selectConversation = useCallback((id: string) => {
 		setSelectedId(id);
-		// Mark as read
+		chatService.getMessages(id).then((data) => {
+			setMessages((prev) => ({ ...prev, [id]: data }));
+		});
 		setConversations((prev) =>
 			prev.map((c) => (c.id === id ? { ...c, unreadCount: 0 } : c)),
 		);

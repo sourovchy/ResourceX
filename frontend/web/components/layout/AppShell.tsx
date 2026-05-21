@@ -4,6 +4,7 @@ import React, { useMemo, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useTheme } from "@/context/ThemeContext";
+import { useAuth } from "@/context/AuthContext";
 import { Sun, Moon, Menu, LogOut, User } from "lucide-react";
 
 export default function AppShell({
@@ -17,6 +18,7 @@ export default function AppShell({
 }) {
 	const pathname = usePathname();
 	const { theme, toggleTheme } = useTheme();
+	const { user, logout } = useAuth();
 	const [collapsed, setCollapsed] = useState(true);
 
 	const isActive = (href: string) =>
@@ -37,11 +39,11 @@ export default function AppShell({
 				<div className="h-16 flex items-center px-6 mb-4">
 					<div className="flex items-center gap-3">
 						<div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center text-onPrimary font-bold shrink-0">
-							{role === "admin" ? "A" : "S"}
+								{role === "admin" ? "A" : "S"}
 						</div>
 						{!collapsed && (
 							<span className="font-bold text-lg tracking-tight transition-opacity duration-300">
-								{role === "admin" ? "AdminPanel" : "StudentApp"}
+								ResourceX
 							</span>
 						)}
 					</div>
@@ -83,13 +85,13 @@ export default function AppShell({
 
 				{/* Bottom Actions (Logout) */}
 				<div className="p-3 border-t border-divider">
-					<Link href={role === "admin" ? "/AdminLogin" : "/auth/login"}>
+					<button type="button" onClick={logout} className="w-full">
 						<div
 							className={`flex items-center gap-3 p-3 rounded-xl text-error hover:bg-errorLight transition-colors ${collapsed ? "justify-center" : ""}`}>
 							<LogOut className="w-5 h-5" />
 							{!collapsed && <span className="font-medium">Logout</span>}
 						</div>
-					</Link>
+					</button>
 				</div>
 			</aside>
 
@@ -130,6 +132,11 @@ export default function AppShell({
 							<div className="w-9 h-9 rounded-full bg-primary/10 border border-primary/20 text-primary flex items-center justify-center group-hover:ring-4 ring-primary/10 transition-all">
 								<User className="w-5 h-5" />
 							</div>
+							{!collapsed && user && (
+								<span className="text-sm font-medium text-textSecondary">
+									{user.name}
+								</span>
+							)}
 						</Link>
 					</div>
 				</header>

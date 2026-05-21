@@ -16,5 +16,7 @@ public interface ItemService {
 
     List<ItemResponse> getAllItems(String category, String searchQuery);
 
+    List<ItemResponse> getMyItems();
+
     void deleteItem(Long itemId);
 }

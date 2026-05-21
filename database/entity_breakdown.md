@@ -1,4 +1,4 @@
-# CampusVault — Complete Database Schema Breakdown
+# ResourceX — Complete Database Schema Breakdown
 
 > A peer-to-peer item rental platform for university students.
 
@@ -6,7 +6,7 @@
 
 ## Table of Contents
 
-1. [What is CampusVault?](#what-is-campusvault)
+1. [What is ResourceX?](#what-is-resourcex)
 2. [Entity Relationship Overview](#entity-relationship-overview)
 3. [Table-by-Table Breakdown](#table-by-table-breakdown)
    - [Universities](#1-universities)
@@ -34,9 +34,9 @@
 
 ---
 
-## What is CampusVault?
+## What is ResourceX?
 
-CampusVault is a campus marketplace where **university students can rent items** (laptops, cameras, books, etc.) from each other. The system handles:
+ResourceX is a campus marketplace where **university students can rent items** (laptops, cameras, books, etc.) from each other. The system handles:
 
 - User registration tied to a university
 - Item listing and availability
@@ -565,4 +565,4 @@ Possible improvements:
 
 ---
 
-*End of CampusVault Database Documentation*
+*End of ResourceX Database Documentation*

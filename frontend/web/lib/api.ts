@@ -1,4 +1,5 @@
 import axios from "axios";
+import { clearSession, getStoredToken } from "@/lib/auth";
 
 const api = axios.create({
 	baseURL: "http://localhost:8082/api",
@@ -21,7 +22,7 @@ api.interceptors.request.use((config) => {
 		return config;
 	}
 
-	const token = localStorage.getItem("campusvault_token");
+	const token = getStoredToken();
 
 	if (token && config.headers) {
 		config.headers.Authorization = `Bearer ${token}`;
@@ -29,5 +30,17 @@ api.interceptors.request.use((config) => {
 
 	return config;
 });
+
+api.interceptors.response.use(
+	(response) => response,
+	(error) => {
+		if (typeof window !== "undefined" && [401, 403].includes(error.response?.status)) {
+			clearSession();
+			window.location.href = "/auth/login";
+		}
+
+		return Promise.reject(error);
+	},
+);
 
 export default api;

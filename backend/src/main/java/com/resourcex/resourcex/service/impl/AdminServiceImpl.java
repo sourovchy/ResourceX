@@ -27,12 +27,22 @@ public class AdminServiceImpl implements AdminService {
     private final StudentVerificationRepository studentVerificationRepository;
     private final AuditLogRepository auditLogRepository;
     private final ItemRepository itemRepository;
+    private final BookingRepository bookingRepository;
+    private final PaymentRepository paymentRepository;
     private final RoleRepository roleRepository;
     private final UserRoleRepository userRoleRepository;
 
     @Override
     public DashboardStatsResponse getDashboardStats() {
-        return new DashboardStatsResponse();
+        long activeBookings = bookingRepository.countByStatus(Booking.BookingStatus.ACTIVE);
+        long approvedBookings = bookingRepository.countByStatus(Booking.BookingStatus.APPROVED);
+
+        return DashboardStatsResponse.builder()
+                .totalUsers(userRepository.count())
+                .activeBookings(activeBookings + approvedBookings)
+                .revenue(paymentRepository.sumSuccessfulRevenue().doubleValue())
+                .pendingApprovals(pendingUserRepository.countByStatus(UserStatus.PENDING_APPROVAL))
+                .build();
     }
 
     @Override

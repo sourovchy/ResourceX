@@ -5,11 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ArrowRight, MailCheck, RefreshCw } from "lucide-react";
 import api from "@/lib/api";
-
-type StoredUser = {
-	email?: string;
-	phone?: string;
-};
+import { OTP_LAST_SEND_KEY, PENDING_EMAIL_KEY } from "@/lib/auth";
 
 export default function EmailVerificationPage() {
 	const router = useRouter();
@@ -22,19 +18,12 @@ export default function EmailVerificationPage() {
 	const [timer, setTimer] = useState(0);
 
 	useEffect(() => {
-		const rawUser = localStorage.getItem("campusvault_user");
-
-		if (rawUser) {
-			try {
-				const user = JSON.parse(rawUser) as StoredUser;
-				if (user.email) setEmail(user.email);
-			} catch {
-				setEmail("your student email");
-			}
+		const pendingEmail = localStorage.getItem(PENDING_EMAIL_KEY);
+		if (pendingEmail) {
+			setEmail(pendingEmail);
 		}
 
-		// Check if there's a stored last send time
-		const lastSend = localStorage.getItem("campusvault_otp_last_send");
+		const lastSend = localStorage.getItem(OTP_LAST_SEND_KEY);
 		if (lastSend) {
 			const diff = Math.floor((Date.now() - parseInt(lastSend)) / 1000);
 			if (diff < 300) {
@@ -75,7 +64,7 @@ export default function EmailVerificationPage() {
 				throw new Error(data.message || "Invalid OTP");
 			}
 
-			localStorage.setItem("campusvault_email_verified", "true");
+			localStorage.removeItem(PENDING_EMAIL_KEY);
 			router.push("/auth/pending-approval");
 		} catch (err: any) {
 			const msg =
@@ -105,7 +94,7 @@ export default function EmailVerificationPage() {
 
 			setMessage("A new email code has been sent to " + email);
 			setTimer(300);
-			localStorage.setItem("campusvault_otp_last_send", Date.now().toString());
+			localStorage.setItem(OTP_LAST_SEND_KEY, Date.now().toString());
 		} catch (err: any) {
 			const msg =
 				err?.response?.data?.message || err?.message || "Failed to resend code";

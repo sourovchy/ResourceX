@@ -20,6 +20,8 @@ public interface BookingRepository extends JpaRepository<Booking, Long> {
 
     List<Booking> findByItem(Item item);
 
+    long countByStatus(Booking.BookingStatus status);
+
     @Query("SELECT b FROM Booking b WHERE b.item = :item " +
            "AND b.status NOT IN (com.resourcex.resourcex.entity.Booking.BookingStatus.CANCELLED, com.resourcex.resourcex.entity.Booking.BookingStatus.REJECTED) " +
            "AND (:startDate <= b.endDate AND :endDate >= b.startDate)")

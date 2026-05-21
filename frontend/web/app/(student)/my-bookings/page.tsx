@@ -52,7 +52,7 @@ export default function MyBookingsPage() {
 		try {
 			setLoading(true);
 
-			const response = await api.get("/bookings");
+			const response = await api.get("/bookings/me");
 
 			setBookings(response.data || []);
 			setError(null);
@@ -157,7 +157,7 @@ export default function MyBookingsPage() {
 			{filteredBookings.length === 0 && (
 				<div className="text-center py-16 text-textSecondary">
 					{activeTab === "All"
-						? "No bookings found"
+						? "No bookings available."
 						: `No ${activeTab.toLowerCase()} bookings found`}
 				</div>
 			)}

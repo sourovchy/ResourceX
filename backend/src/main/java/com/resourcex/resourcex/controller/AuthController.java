@@ -3,6 +3,7 @@ package com.resourcex.resourcex.controller;
 import com.resourcex.resourcex.dto.request.LoginRequest;
 import com.resourcex.resourcex.dto.request.RegisterRequest;
 import com.resourcex.resourcex.dto.response.AuthResponse;
+import com.resourcex.resourcex.dto.response.CurrentUserResponse;
 import com.resourcex.resourcex.service.AuthService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -29,5 +30,10 @@ public class AuthController {
     ) {
 
         return authService.login(request);
+    }
+
+    @GetMapping("/me")
+    public CurrentUserResponse me() {
+        return authService.getCurrentUser();
     }
 }

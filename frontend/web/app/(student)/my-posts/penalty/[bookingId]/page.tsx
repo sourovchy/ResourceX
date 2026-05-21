@@ -43,7 +43,7 @@ export default function PenaltyRequestPage() {
 					Penalty Request Submitted
 				</h1>
 				<p className="text-textSecondary">
-					CampusVault admins will review your request. The renter's deposit is
+					ResourceX admins will review your request. The renter's deposit is
 					held during this investigation.
 				</p>
 				<Link

@@ -1,191 +1,320 @@
 "use client";
 
-import React, { useState } from "react";
-import { Tag, Plus, Edit2, Trash2, X, CheckCircle2 } from "lucide-react";
+import React, { useEffect, useMemo, useState } from "react";
+import {
+	Tag,
+	Plus,
+	Edit2,
+	Trash2,
+	X,
+	Loader2,
+	RefreshCw,
+} from "lucide-react";
+import api from "@/lib/api";
 
-const INITIAL_CATEGORIES = [
-	{
-		id: "C001",
-		name: "Electronics",
-		description: "Cameras, laptops, gadgets and electronic devices.",
-		items: 142,
-	},
-	{
-		id: "C002",
-		name: "Books",
-		description: "Textbooks, reference books and academic materials.",
-		items: 89,
-	},
-	{
-		id: "C003",
-		name: "Lab Equipment",
-		description: "Scientific instruments, kits and lab tools.",
-		items: 67,
-	},
-	{
-		id: "C004",
-		name: "Audio/Visual",
-		description: "Speakers, microphones, projectors and AV gear.",
-		items: 54,
-	},
-	{
-		id: "C005",
-		name: "Sports & Activity",
-		description: "Sports gear, camping equipment and outdoor items.",
-		items: 38,
-	},
-	{
-		id: "C006",
-		name: "Stationery",
-		description: "Drawing tools, office supplies and art materials.",
-		items: 12,
-	},
-];
+interface Category {
+	id: string | number;
+	name: string;
+	description: string;
+	items: number;
+}
+
+interface CategoryApiResponse {
+	id?: string | number;
+	categoryId?: string | number;
+	name?: string;
+	description?: string;
+	itemCount?: number;
+	items?: number;
+	activeItems?: number;
+}
 
 export default function AdminCategoriesPage() {
-	const [categories, setCategories] = useState(INITIAL_CATEGORIES);
+	const [categories, setCategories] = useState<Category[]>([]);
+	const [loading, setLoading] = useState(true);
+	const [submitting, setSubmitting] = useState(false);
+	const [error, setError] = useState<string | null>(null);
+
 	const [showAddModal, setShowAddModal] = useState(false);
-	const [editId, setEditId] = useState<string | null>(null);
-	const [deleteId, setDeleteId] = useState<string | null>(null);
-	const [form, setForm] = useState({ name: "", description: "" });
+	const [editId, setEditId] = useState<string | number | null>(null);
+	const [deleteId, setDeleteId] = useState<string | number | null>(null);
 
-	const handleAdd = () => {
-		if (!form.name.trim()) return;
-		setCategories([
-			...categories,
-			{
-				id: `C${String(categories.length + 1).padStart(3, "0")}`,
-				name: form.name,
-				description: form.description,
-				items: 0,
-			},
-		]);
-		setForm({ name: "", description: "" });
+	const [form, setForm] = useState({
+		name: "",
+		description: "",
+	});
+
+	const normalizeCategory = (
+		data: CategoryApiResponse,
+	): Category => ({
+		id: data.id ?? data.categoryId ?? "",
+		name: data.name ?? "",
+		description: data.description ?? "",
+		items: Number(
+			data.itemCount ?? data.items ?? data.activeItems ?? 0,
+		),
+	});
+
+	const fetchCategories = async () => {
+		try {
+			setLoading(true);
+			setError(null);
+
+			const response = await api.get("/categories");
+
+			const raw = response.data;
+
+			const list = Array.isArray(raw)
+				? raw
+				: Array.isArray(raw?.data)
+					? raw.data
+					: Array.isArray(raw?.content)
+						? raw.content
+						: [];
+
+			setCategories(list.map(normalizeCategory));
+		} catch (err) {
+			console.error(err);
+			setError("Failed to load categories.");
+			setCategories([]);
+		} finally {
+			setLoading(false);
+		}
+	};
+
+	useEffect(() => {
+		fetchCategories();
+	}, []);
+
+	const resetForm = () => {
+		setForm({
+			name: "",
+			description: "",
+		});
+	};
+
+	const closeModal = () => {
 		setShowAddModal(false);
-	};
-
-	const handleEdit = () => {
-		setCategories(
-			categories.map((c) =>
-				c.id === editId
-					? { ...c, name: form.name, description: form.description }
-					: c,
-			),
-		);
 		setEditId(null);
-		setForm({ name: "", description: "" });
+		resetForm();
 	};
 
-	const startEdit = (c: (typeof categories)[0]) => {
-		setEditId(c.id);
-		setForm({ name: c.name, description: c.description });
+	const handleAdd = async () => {
+		if (!form.name.trim()) return;
+
+		try {
+			setSubmitting(true);
+
+			await api.post("/categories", {
+				name: form.name.trim(),
+				description: form.description.trim(),
+			});
+
+			await fetchCategories();
+			closeModal();
+		} catch (err) {
+			console.error(err);
+			setError("Failed to create category.");
+		} finally {
+			setSubmitting(false);
+		}
 	};
 
-	const handleDelete = (id: string) => {
-		setCategories(categories.filter((c) => c.id !== id));
-		setDeleteId(null);
+	const handleEdit = async () => {
+		if (!editId) return;
+
+		try {
+			setSubmitting(true);
+
+			await api.put(`/categories/${editId}`, {
+				name: form.name.trim(),
+				description: form.description.trim(),
+			});
+
+			await fetchCategories();
+			closeModal();
+		} catch (err) {
+			console.error(err);
+			setError("Failed to update category.");
+		} finally {
+			setSubmitting(false);
+		}
 	};
 
-	const deleteTarget = categories.find((c) => c.id === deleteId);
+	const startEdit = (category: Category) => {
+		setEditId(category.id);
+
+		setForm({
+			name: category.name,
+			description: category.description,
+		});
+	};
+
+	const handleDelete = async (id: string | number) => {
+		try {
+			setSubmitting(true);
+
+			await api.delete(`/categories/${id}`);
+
+			setCategories((prev) =>
+				prev.filter((c) => c.id !== id),
+			);
+
+			setDeleteId(null);
+		} catch (err) {
+			console.error(err);
+			setError(
+				"Category cannot be deleted. Remove related items first.",
+			);
+		} finally {
+			setSubmitting(false);
+		}
+	};
+
+	const deleteTarget = useMemo(
+		() => categories.find((c) => c.id === deleteId),
+		[categories, deleteId],
+	);
+
+	if (loading) {
+		return (
+			<div className="flex items-center justify-center py-20">
+				<Loader2 className="h-10 w-10 animate-spin text-primary" />
+			</div>
+		);
+	}
 
 	return (
-		<div className="max-w-4xl mx-auto space-y-6">
+		<div className="mx-auto max-w-4xl space-y-6">
 			<div className="flex items-center justify-between">
 				<div>
-					<h1 className="text-2xl font-bold text-textPrimary">Categories</h1>
-					<p className="text-textSecondary text-sm mt-1">
-						Manage item categories. Categories with active items cannot be
-						deleted.
+					<h1 className="text-2xl font-bold text-textPrimary">
+						Categories
+					</h1>
+
+					<p className="mt-1 text-sm text-textSecondary">
+						Manage item categories from the backend database.
 					</p>
 				</div>
-				<button
-					onClick={() => {
-						setShowAddModal(true);
-						setForm({ name: "", description: "" });
-					}}
-					className="flex items-center gap-2 px-4 py-2.5 bg-primary text-onPrimary rounded-xl text-sm font-bold hover:opacity-90 transition shadow">
-					<Plus className="w-4 h-4" /> Add Category
-				</button>
+
+				<div className="flex items-center gap-3">
+					<button
+						onClick={fetchCategories}
+						className="flex items-center gap-2 rounded-xl border border-outlineVariant bg-surface px-4 py-2.5 text-sm font-semibold text-textSecondary transition hover:bg-surfaceVariant">
+						<RefreshCw className="h-4 w-4" />
+						Refresh
+					</button>
+
+					<button
+						onClick={() => {
+							resetForm();
+							setShowAddModal(true);
+						}}
+						className="flex items-center gap-2 rounded-xl bg-primary px-4 py-2.5 text-sm font-bold text-onPrimary shadow transition hover:opacity-90">
+						<Plus className="h-4 w-4" />
+						Add Category
+					</button>
+				</div>
 			</div>
+
+			{error && (
+				<div className="rounded-xl border border-error/30 bg-errorLight px-4 py-3 text-sm font-medium text-error">
+					{error}
+				</div>
+			)}
 
 			{/* Add/Edit Modal */}
 			{(showAddModal || editId) && (
-				<div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-					<div className="bg-surface border border-borderLight rounded-2xl shadow-2xl w-full max-w-md p-6 space-y-4">
+				<div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+					<div className="w-full max-w-md space-y-4 rounded-2xl border border-borderLight bg-surface p-6 shadow-2xl">
 						<div className="flex items-center justify-between">
 							<h3 className="text-lg font-bold text-textPrimary">
 								{editId ? "Edit Category" : "New Category"}
 							</h3>
-							<button
-								onClick={() => {
-									setShowAddModal(false);
-									setEditId(null);
-								}}>
-								<X className="w-5 h-5 text-textTertiary hover:text-textPrimary transition" />
+
+							<button onClick={closeModal}>
+								<X className="h-5 w-5 text-textTertiary transition hover:text-textPrimary" />
 							</button>
 						</div>
+
 						<div>
-							<label className="text-xs font-bold text-textSecondary uppercase tracking-wider">
+							<label className="text-xs font-bold uppercase tracking-wider text-textSecondary">
 								Category Name
 							</label>
+
 							<input
 								type="text"
 								value={form.name}
-								onChange={(e) => setForm({ ...form, name: e.target.value })}
+								onChange={(e) =>
+									setForm((prev) => ({
+										...prev,
+										name: e.target.value,
+									}))
+								}
 								placeholder="e.g. Musical Instruments"
-								className="mt-1.5 w-full px-3 py-2.5 bg-surfaceVariant border border-outlineVariant rounded-xl text-textPrimary focus:ring-2 focus:ring-primary outline-none text-sm transition"
+								className="mt-1.5 w-full rounded-xl border border-outlineVariant bg-surfaceVariant px-3 py-2.5 text-sm text-textPrimary outline-none transition focus:ring-2 focus:ring-primary"
 							/>
 						</div>
+
 						<div>
-							<label className="text-xs font-bold text-textSecondary uppercase tracking-wider">
+							<label className="text-xs font-bold uppercase tracking-wider text-textSecondary">
 								Description
 							</label>
+
 							<textarea
+								rows={3}
 								value={form.description}
 								onChange={(e) =>
-									setForm({ ...form, description: e.target.value })
+									setForm((prev) => ({
+										...prev,
+										description: e.target.value,
+									}))
 								}
-								rows={3}
-								placeholder="Brief description of this category..."
-								className="mt-1.5 w-full px-3 py-2.5 bg-surfaceVariant border border-outlineVariant rounded-xl text-textPrimary focus:ring-2 focus:ring-primary outline-none text-sm resize-none transition"
+								placeholder="Brief description..."
+								className="mt-1.5 w-full resize-none rounded-xl border border-outlineVariant bg-surfaceVariant px-3 py-2.5 text-sm text-textPrimary outline-none transition focus:ring-2 focus:ring-primary"
 							/>
 						</div>
+
 						<div className="flex gap-3">
 							<button
-								onClick={() => {
-									setShowAddModal(false);
-									setEditId(null);
-								}}
-								className="flex-1 py-2.5 rounded-xl border border-outlineVariant text-textSecondary font-semibold text-sm hover:bg-surfaceVariant transition">
+								onClick={closeModal}
+								className="flex-1 rounded-xl border border-outlineVariant py-2.5 text-sm font-semibold text-textSecondary transition hover:bg-surfaceVariant">
 								Cancel
 							</button>
+
 							<button
 								onClick={editId ? handleEdit : handleAdd}
-								className="flex-1 py-2.5 rounded-xl bg-primary text-onPrimary font-bold text-sm hover:opacity-90 transition">
-								{editId ? "Save Changes" : "Create Category"}
+								disabled={submitting}
+								className="flex-1 rounded-xl bg-primary py-2.5 text-sm font-bold text-onPrimary transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60">
+								{submitting
+									? "Saving..."
+									: editId
+										? "Save Changes"
+										: "Create Category"}
 							</button>
 						</div>
 					</div>
 				</div>
 			)}
 
-			{/* Delete Confirm Modal */}
+			{/* Delete Modal */}
 			{deleteId && deleteTarget && (
-				<div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-					<div className="bg-surface border border-borderLight rounded-2xl shadow-2xl w-full max-w-sm p-6 space-y-4">
+				<div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+					<div className="w-full max-w-sm space-y-4 rounded-2xl border border-borderLight bg-surface p-6 shadow-2xl">
 						<div className="flex items-center justify-between">
 							<h3 className="text-lg font-bold text-textPrimary">
 								Delete Category
 							</h3>
+
 							<button onClick={() => setDeleteId(null)}>
-								<X className="w-5 h-5 text-textTertiary hover:text-textPrimary transition" />
+								<X className="h-5 w-5 text-textTertiary transition hover:text-textPrimary" />
 							</button>
 						</div>
+
 						{deleteTarget.items > 0 ? (
-							<div className="bg-errorLight border border-error/30 rounded-xl p-4 text-sm text-error">
+							<div className="rounded-xl border border-error/30 bg-errorLight p-4 text-sm text-error">
 								<strong>Cannot delete.</strong> This category has{" "}
-								{deleteTarget.items} active items. Reassign or remove those
-								items first.
+								{deleteTarget.items} active items.
 							</div>
 						) : (
 							<p className="text-sm text-textSecondary">
@@ -193,20 +322,23 @@ export default function AdminCategoriesPage() {
 								<strong className="text-textPrimary">
 									{deleteTarget.name}
 								</strong>
-								? This cannot be undone.
+								?
 							</p>
 						)}
+
 						<div className="flex gap-3">
 							<button
 								onClick={() => setDeleteId(null)}
-								className="flex-1 py-2.5 rounded-xl border border-outlineVariant text-textSecondary font-semibold text-sm hover:bg-surfaceVariant transition">
+								className="flex-1 rounded-xl border border-outlineVariant py-2.5 text-sm font-semibold text-textSecondary transition hover:bg-surfaceVariant">
 								{deleteTarget.items > 0 ? "Close" : "Cancel"}
 							</button>
+
 							{deleteTarget.items === 0 && (
 								<button
 									onClick={() => handleDelete(deleteId)}
-									className="flex-1 py-2.5 rounded-xl bg-error text-white font-bold text-sm hover:opacity-90 transition">
-									Delete
+									disabled={submitting}
+									className="flex-1 rounded-xl bg-error py-2.5 text-sm font-bold text-white transition hover:opacity-90 disabled:opacity-60">
+									{submitting ? "Deleting..." : "Delete"}
 								</button>
 							)}
 						</div>
@@ -215,47 +347,63 @@ export default function AdminCategoriesPage() {
 			)}
 
 			{/* Category List */}
-			<div className="bg-surface border border-borderLight rounded-2xl shadow-sm overflow-hidden">
-				<div className="divide-y divide-borderLight">
-					{categories.map((c) => (
-						<div
-							key={c.id}
-							className="flex items-center justify-between px-5 py-4 hover:bg-surfaceVariant/40 transition-colors">
-							<div className="flex items-center gap-4 min-w-0">
-								<div className="w-10 h-10 rounded-xl bg-primaryLight flex items-center justify-center shrink-0">
-									<Tag className="w-5 h-5 text-primary" />
-								</div>
-								<div className="min-w-0">
-									<div className="flex items-center gap-2">
-										<span className="font-bold text-textPrimary">{c.name}</span>
-										<span className="text-xs text-textTertiary px-2 py-0.5 bg-surfaceVariant rounded-full">
-											{c.items} items
-										</span>
+			<div className="overflow-hidden rounded-2xl border border-borderLight bg-surface shadow-sm">
+				{categories.length === 0 ? (
+					<div className="py-16 text-center text-textTertiary">
+						<Tag className="mx-auto mb-3 h-8 w-8 opacity-40" />
+						No categories found.
+					</div>
+				) : (
+					<div className="divide-y divide-borderLight">
+						{categories.map((category) => (
+							<div
+								key={category.id}
+								className="flex items-center justify-between px-5 py-4 transition-colors hover:bg-surfaceVariant/40">
+								<div className="flex min-w-0 items-center gap-4">
+									<div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primaryLight">
+										<Tag className="h-5 w-5 text-primary" />
 									</div>
-									<p className="text-xs text-textSecondary mt-0.5 truncate max-w-md">
-										{c.description}
-									</p>
+
+									<div className="min-w-0">
+										<div className="flex items-center gap-2">
+											<span className="font-bold text-textPrimary">
+												{category.name}
+											</span>
+
+											<span className="rounded-full bg-surfaceVariant px-2 py-0.5 text-xs text-textTertiary">
+												{category.items} items
+											</span>
+										</div>
+
+										<p className="mt-0.5 max-w-md truncate text-xs text-textSecondary">
+											{category.description}
+										</p>
+									</div>
+								</div>
+
+								<div className="ml-4 flex shrink-0 items-center gap-2">
+									<button
+										onClick={() => startEdit(category)}
+										className="flex items-center gap-1 rounded-lg bg-primaryLight px-2.5 py-1.5 text-xs font-bold text-primary transition hover:bg-primary/20">
+										<Edit2 className="h-3.5 w-3.5" />
+										Edit
+									</button>
+
+									<button
+										onClick={() => setDeleteId(category.id)}
+										className={`flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-xs font-bold transition ${
+											category.items > 0
+												? "cursor-not-allowed bg-surfaceVariant text-textTertiary"
+												: "bg-errorLight text-error hover:bg-error/20"
+										}`}>
+										<Trash2 className="h-3.5 w-3.5" />
+										Delete
+									</button>
 								</div>
 							</div>
-							<div className="flex items-center gap-2 shrink-0 ml-4">
-								<button
-									onClick={() => startEdit(c)}
-									className="flex items-center gap-1 px-2.5 py-1.5 bg-primaryLight text-primary rounded-lg text-xs font-bold hover:bg-primary/20 transition">
-									<Edit2 className="w-3.5 h-3.5" /> Edit
-								</button>
-								<button
-									onClick={() => setDeleteId(c.id)}
-									className={`flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-bold transition ${
-										c.items > 0
-											? "bg-surfaceVariant text-textTertiary cursor-not-allowed"
-											: "bg-errorLight text-error hover:bg-error/20"
-									}`}>
-									<Trash2 className="w-3.5 h-3.5" /> Delete
-								</button>
-							</div>
-						</div>
-					))}
-				</div>
+						))}
+					</div>
+				)}
 			</div>
 		</div>
 	);

@@ -12,11 +12,11 @@
 		<relativePath/>
 	</parent>
 
-	<groupId>com.thirdhand</groupId>
+	<groupId>com.resourcex</groupId>
 	<artifactId>backend</artifactId>
 	<version>0.0.1-SNAPSHOT</version>
-	<name>CampusVault</name>
-	<description>CampusVault Backend API</description>
+	<name>ResourceX</name>
+	<description>ResourceX Backend API</description>
 
 	<properties>
 		<java.version>21</java.version>

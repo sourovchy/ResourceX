@@ -1,250 +1,698 @@
 "use client";
 
-import React, { useState } from "react";
+import React, {
+	useEffect,
+	useMemo,
+	useState,
+} from "react";
+
 import TrustBadge from "@/components/TrustBadge";
-import { Star, TrendingUp, TrendingDown, Edit2, Search, X } from "lucide-react";
 
-const MOCK_USERS = [
-	{ id: "U001", name: "Arif Hossain", email: "arif@uni.edu", score: 105 },
-	{ id: "U002", name: "Priya Sen", email: "priya@uni.edu", score: 72 },
-	{ id: "U003", name: "Mehedi Islam", email: "mehedi@uni.edu", score: 60 },
-	{ id: "U004", name: "Tanvir Ahmed", email: "tanvir@uni.edu", score: 45 },
-	{ id: "U005", name: "Rafi Uddin", email: "rafi@uni.edu", score: 87 },
-	{ id: "U006", name: "Sumaiya Begum", email: "sumaiya@uni.edu", score: 120 },
-];
+import {
+	Star,
+	TrendingUp,
+	TrendingDown,
+	Edit2,
+	Search,
+	X,
+	Loader2,
+	RefreshCw,
+} from "lucide-react";
 
-const FULL_AUDIT_LOG = [
-	{
-		userId: "U006",
-		name: "Sumaiya Begum",
-		change: +10,
-		reason: "Successful rental × 2",
-		timestamp: "May 4, 2024 14:32",
-	},
-	{
-		userId: "U001",
-		name: "Arif Hossain",
-		change: -5,
-		reason: "Late return — 2 days overdue",
-		timestamp: "May 3, 2024 09:10",
-	},
-	{
-		userId: "U005",
-		name: "Rafi Uddin",
-		change: +5,
-		reason: "Positive review received",
-		timestamp: "May 2, 2024 16:44",
-	},
-	{
-		userId: "U002",
-		name: "Priya Sen",
-		change: -10,
-		reason: "Item returned damaged",
-		timestamp: "May 1, 2024 12:00",
-	},
-	{
-		userId: "U003",
-		name: "Mehedi Islam",
-		change: +5,
-		reason: "Admin bonus — verified student",
-		timestamp: "Apr 30, 2024 10:15",
-	},
-	{
-		userId: "U001",
-		name: "Arif Hossain",
-		change: +10,
-		reason: "Booking completed successfully",
-		timestamp: "Apr 28, 2024 17:30",
-	},
-	{
-		userId: "U004",
-		name: "Tanvir Ahmed",
-		change: -15,
-		reason: "Dispute resolved against renter",
-		timestamp: "Apr 25, 2024 11:00",
-	},
-];
+import api from "@/lib/api";
+
+interface UserTrust {
+	id: string | number;
+	name: string;
+	email: string;
+	score: number;
+}
+
+interface AuditLog {
+	id?: string | number;
+
+	userId: string | number;
+
+	name: string;
+
+	change: number;
+
+	reason: string;
+
+	timestamp: string;
+}
+
+interface UserApiResponse {
+	id?: string | number;
+	userId?: string | number;
+
+	name?: string;
+
+	email?: string;
+
+	score?: number | string;
+	trustScore?: number | string;
+}
+
+interface AuditApiResponse {
+	id?: string | number;
+
+	userId?: string | number;
+
+	name?: string;
+	userName?: string;
+
+	change?: number | string;
+	scoreChange?: number | string;
+
+	reason?: string;
+	description?: string;
+
+	timestamp?: string;
+	createdAt?: string;
+}
+
+function normalizeUser(
+	data: UserApiResponse,
+): UserTrust {
+	return {
+		id:
+			data.id ??
+			data.userId ??
+			"",
+
+		name:
+			data.name ??
+			"Unknown User",
+
+		email:
+			data.email ??
+			"",
+
+		score: Number(
+			data.score ??
+			data.trustScore ??
+			0,
+		),
+	};
+}
+
+function normalizeAudit(
+	data: AuditApiResponse,
+): AuditLog {
+	return {
+		id: data.id,
+
+		userId:
+			data.userId ?? "",
+
+		name:
+			data.name ??
+			data.userName ??
+			"Unknown User",
+
+		change: Number(
+			data.change ??
+			data.scoreChange ??
+			0,
+		),
+
+		reason:
+			data.reason ??
+			data.description ??
+			"No reason provided.",
+
+		timestamp:
+			data.timestamp ??
+			data.createdAt ??
+			new Date().toISOString(),
+	};
+}
+
+function formatDate(
+	value?: string,
+) {
+	if (!value) return "-";
+
+	const date = new Date(value);
+
+	if (
+		Number.isNaN(
+			date.getTime(),
+		)
+	) {
+		return "-";
+	}
+
+	return date.toLocaleString();
+}
 
 export default function AdminTrustScoresPage() {
-	const [search, setSearch] = useState("");
-	const [adjustUser, setAdjustUser] = useState<(typeof MOCK_USERS)[0] | null>(
-		null,
-	);
-	const [adjustVal, setAdjustVal] = useState("");
-	const [adjustReason, setAdjustReason] = useState("");
+	const [users, setUsers] =
+		useState<UserTrust[]>([]);
 
-	const filteredUsers = MOCK_USERS.filter(
-		(u) =>
-			u.name.toLowerCase().includes(search.toLowerCase()) ||
-			u.email.toLowerCase().includes(search.toLowerCase()),
-	);
+	const [auditLogs, setAuditLogs] =
+		useState<AuditLog[]>([]);
+
+	const [loading, setLoading] =
+		useState(true);
+
+	const [submitting, setSubmitting] =
+		useState(false);
+
+	const [error, setError] =
+		useState("");
+
+	const [search, setSearch] =
+		useState("");
+
+	const [adjustUser, setAdjustUser] =
+		useState<UserTrust | null>(
+			null,
+		);
+
+	const [adjustVal, setAdjustVal] =
+		useState("");
+
+	const [
+		adjustReason,
+		setAdjustReason,
+	] = useState("");
+
+	const fetchData =
+		async () => {
+			try {
+				setLoading(true);
+				setError("");
+
+				const [
+					usersRes,
+					auditRes,
+				] =
+					await Promise.all([
+						api.get(
+							"/admin/trust-scores/users",
+						),
+
+						api.get(
+							"/admin/trust-scores/audit-log",
+						),
+					]);
+
+				const usersRaw =
+					usersRes.data;
+
+				const auditRaw =
+					auditRes.data;
+
+				const usersList =
+					Array.isArray(
+						usersRaw,
+					)
+						? usersRaw
+						: Array.isArray(
+							usersRaw?.data,
+						)
+							? usersRaw.data
+							: Array.isArray(
+								usersRaw?.content,
+							)
+								? usersRaw.content
+								: [];
+
+				const auditList =
+					Array.isArray(
+						auditRaw,
+					)
+						? auditRaw
+						: Array.isArray(
+							auditRaw?.data,
+						)
+							? auditRaw.data
+							: Array.isArray(
+								auditRaw?.content,
+							)
+								? auditRaw.content
+								: [];
+
+				setUsers(
+					usersList.map(
+						normalizeUser,
+					),
+				);
+
+				setAuditLogs(
+					auditList.map(
+						normalizeAudit,
+					),
+				);
+			} catch (err) {
+				console.error(err);
+
+				setError(
+					"Failed to load trust score data.",
+				);
+
+				setUsers([]);
+				setAuditLogs([]);
+			} finally {
+				setLoading(false);
+			}
+		};
+
+	useEffect(() => {
+		fetchData();
+	}, []);
+
+	const filteredUsers =
+		useMemo(() => {
+			const searchStr =
+				search
+					.trim()
+					.toLowerCase();
+
+			return users.filter(
+				(u) =>
+					u.name
+						.toLowerCase()
+						.includes(
+							searchStr,
+						) ||
+					u.email
+						.toLowerCase()
+						.includes(
+							searchStr,
+						),
+			);
+		}, [users, search]);
+
+	const applyAdjustment =
+		async () => {
+			if (!adjustUser) return;
+
+			const amount =
+				Number(
+					adjustVal,
+				);
+
+			if (
+				Number.isNaN(
+					amount,
+				) ||
+				amount === 0
+			) {
+				setError(
+					"Enter a valid adjustment amount.",
+				);
+
+				return;
+			}
+
+			if (
+				!adjustReason.trim()
+			) {
+				setError(
+					"Please provide a reason.",
+				);
+
+				return;
+			}
+
+			try {
+				setSubmitting(true);
+				setError("");
+
+				await api.patch(
+					`/admin/trust-scores/${adjustUser.id}/adjust`,
+					{
+						change:
+						amount,
+
+						reason:
+							adjustReason.trim(),
+					},
+				);
+
+				await fetchData();
+
+				setAdjustUser(
+					null,
+				);
+
+				setAdjustVal(
+					"",
+				);
+
+				setAdjustReason(
+					"",
+				);
+			} catch (err) {
+				console.error(err);
+
+				setError(
+					"Failed to update trust score.",
+				);
+			} finally {
+				setSubmitting(false);
+			}
+		};
+
+	if (loading) {
+		return (
+			<div className="flex items-center justify-center py-20">
+				<Loader2 className="h-10 w-10 animate-spin text-primary" />
+			</div>
+		);
+	}
 
 	return (
-		<div className="max-w-5xl mx-auto space-y-6">
-			<div>
-				<h1 className="text-2xl font-bold text-textPrimary">Trust Scores</h1>
-				<p className="text-textSecondary text-sm mt-1">
-					Monitor and manually adjust student trust scores with full audit
-					trail.
-				</p>
+		<div className="mx-auto max-w-5xl space-y-6">
+			<div className="flex items-center justify-between">
+				<div>
+					<h1 className="text-2xl font-bold text-textPrimary">
+						Trust Scores
+					</h1>
+
+					<p className="mt-1 text-sm text-textSecondary">
+						Monitor and
+						manually adjust
+						trust scores with
+						full backend audit
+						logging.
+					</p>
+				</div>
+
+				<button
+					onClick={fetchData}
+					className="flex items-center gap-2 rounded-xl border border-outlineVariant bg-surface px-4 py-2 text-sm font-semibold text-textSecondary transition hover:bg-surfaceVariant">
+					<RefreshCw className="h-4 w-4" />
+					Refresh
+				</button>
 			</div>
+
+			{error && (
+				<div className="rounded-xl border border-error/40 bg-errorLight px-4 py-3 text-sm font-medium text-error">
+					{error}
+				</div>
+			)}
 
 			{/* Manual Override Modal */}
 			{adjustUser && (
-				<div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-					<div className="bg-surface border border-borderLight rounded-2xl shadow-2xl w-full max-w-md p-6 space-y-4">
+				<div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+					<div className="w-full max-w-md space-y-4 rounded-2xl border border-borderLight bg-surface p-6 shadow-2xl">
 						<div className="flex items-center justify-between">
 							<h3 className="text-lg font-bold text-textPrimary">
-								Adjust Trust Score
+								Adjust Trust
+								Score
 							</h3>
-							<button onClick={() => setAdjustUser(null)}>
-								<X className="w-5 h-5 text-textTertiary hover:text-textPrimary transition" />
+
+							<button
+								onClick={() =>
+									setAdjustUser(
+										null,
+									)
+								}>
+								<X className="h-5 w-5 text-textTertiary transition hover:text-textPrimary" />
 							</button>
 						</div>
-						<div className="flex items-center gap-3 bg-surfaceVariant rounded-xl p-3">
-							<div className="w-9 h-9 rounded-full bg-primaryLight flex items-center justify-center font-bold text-primary text-sm shrink-0">
-								{adjustUser.name[0]}
+
+						<div className="flex items-center gap-3 rounded-xl bg-surfaceVariant p-3">
+							<div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primaryLight text-sm font-bold text-primary">
+								{
+									adjustUser
+										.name[0]
+								}
 							</div>
+
 							<div>
 								<div className="text-sm font-bold text-textPrimary">
-									{adjustUser.name}
+									{
+										adjustUser.name
+									}
 								</div>
+
 								<div className="text-xs text-textTertiary">
-									Current score:{" "}
+									Current
+									score:{" "}
 									<span className="font-bold text-textPrimary">
-										{adjustUser.score}
+										{
+											adjustUser.score
+										}
 									</span>
 								</div>
 							</div>
 						</div>
+
 						<div>
-							<label className="text-xs font-bold text-textSecondary uppercase tracking-wider">
-								Adjustment value
+							<label className="text-xs font-bold uppercase tracking-wider text-textSecondary">
+								Adjustment
+								value
 							</label>
+
 							<input
 								type="number"
-								value={adjustVal}
-								onChange={(e) => setAdjustVal(e.target.value)}
+								value={
+									adjustVal
+								}
+								onChange={(e) =>
+									setAdjustVal(
+										e
+											.target
+											.value,
+									)
+								}
 								placeholder="+10 or -5"
-								className="mt-1.5 w-full px-3 py-2.5 bg-surfaceVariant border border-outlineVariant rounded-xl text-textPrimary focus:ring-2 focus:ring-primary outline-none text-sm transition"
+								className="mt-1.5 w-full rounded-xl border border-outlineVariant bg-surfaceVariant px-3 py-2.5 text-sm text-textPrimary outline-none transition focus:ring-2 focus:ring-primary"
 							/>
 						</div>
+
 						<div>
-							<label className="text-xs font-bold text-textSecondary uppercase tracking-wider">
+							<label className="text-xs font-bold uppercase tracking-wider text-textSecondary">
 								Reason
 							</label>
+
 							<input
 								type="text"
-								value={adjustReason}
-								onChange={(e) => setAdjustReason(e.target.value)}
-								placeholder="e.g. Manual override — dispute resolved in favour"
-								className="mt-1.5 w-full px-3 py-2.5 bg-surfaceVariant border border-outlineVariant rounded-xl text-textPrimary focus:ring-2 focus:ring-primary outline-none text-sm transition"
+								value={
+									adjustReason
+								}
+								onChange={(e) =>
+									setAdjustReason(
+										e
+											.target
+											.value,
+									)
+								}
+								placeholder="Explain the manual override..."
+								className="mt-1.5 w-full rounded-xl border border-outlineVariant bg-surfaceVariant px-3 py-2.5 text-sm text-textPrimary outline-none transition focus:ring-2 focus:ring-primary"
 							/>
 						</div>
+
 						<div className="flex gap-3">
 							<button
-								onClick={() => setAdjustUser(null)}
-								className="flex-1 py-2.5 rounded-xl border border-outlineVariant text-textSecondary font-semibold text-sm hover:bg-surfaceVariant transition">
+								onClick={() =>
+									setAdjustUser(
+										null,
+									)
+								}
+								className="flex-1 rounded-xl border border-outlineVariant py-2.5 text-sm font-semibold text-textSecondary transition hover:bg-surfaceVariant">
 								Cancel
 							</button>
+
 							<button
-								onClick={() => {
-									setAdjustUser(null);
-									setAdjustVal("");
-									setAdjustReason("");
-								}}
-								className="flex-1 py-2.5 rounded-xl bg-primary text-onPrimary font-bold text-sm hover:opacity-90 transition">
-								Apply & Log
+								onClick={
+									applyAdjustment
+								}
+								disabled={
+									submitting
+								}
+								className="flex-1 rounded-xl bg-primary py-2.5 text-sm font-bold text-onPrimary transition hover:opacity-90 disabled:opacity-60">
+								{submitting
+									? "Applying..."
+									: "Apply & Log"}
 							</button>
 						</div>
 					</div>
 				</div>
 			)}
 
-			<div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-				{/* Users trust score list */}
-				<div className="bg-surface border border-borderLight rounded-2xl shadow-sm overflow-hidden">
-					<div className="px-5 py-4 border-b border-borderLight flex items-center justify-between gap-3">
-						<h2 className="font-bold text-textPrimary flex items-center gap-2">
-							<Star className="w-4 h-4 text-success" />
+			<div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+				{/* Users */}
+				<div className="overflow-hidden rounded-2xl border border-borderLight bg-surface shadow-sm">
+					<div className="flex items-center justify-between gap-3 border-b border-borderLight px-5 py-4">
+						<h2 className="flex items-center gap-2 font-bold text-textPrimary">
+							<Star className="h-4 w-4 text-success" />
 							All Users
 						</h2>
+
 						<div className="relative">
-							<Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-textTertiary" />
+							<Search className="absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-textTertiary" />
+
 							<input
 								type="text"
-								value={search}
-								onChange={(e) => setSearch(e.target.value)}
+								value={
+									search
+								}
+								onChange={(e) =>
+									setSearch(
+										e
+											.target
+											.value,
+									)
+								}
 								placeholder="Search..."
-								className="pl-7 pr-3 py-1.5 bg-surfaceVariant border border-outlineVariant rounded-lg text-xs text-textPrimary focus:ring-2 focus:ring-primary outline-none transition w-40"
+								className="w-40 rounded-lg border border-outlineVariant bg-surfaceVariant py-1.5 pl-7 pr-3 text-xs text-textPrimary outline-none transition focus:ring-2 focus:ring-primary"
 							/>
 						</div>
 					</div>
+
 					<div className="divide-y divide-borderLight">
-						{filteredUsers.map((u) => (
-							<div
-								key={u.id}
-								className="flex items-center justify-between px-5 py-3.5 hover:bg-surfaceVariant/40 transition-colors">
-								<div className="flex items-center gap-3">
-									<div className="w-9 h-9 rounded-full bg-primaryLight flex items-center justify-center font-bold text-primary text-sm shrink-0">
-										{u.name[0]}
-									</div>
-									<div>
-										<div className="text-sm font-semibold text-textPrimary">
-											{u.name}
+						{filteredUsers.map(
+							(
+								u,
+							) => (
+								<div
+									key={
+										u.id
+									}
+									className="flex items-center justify-between px-5 py-3.5 transition-colors hover:bg-surfaceVariant/40">
+									<div className="flex items-center gap-3">
+										<div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primaryLight text-sm font-bold text-primary">
+											{
+												u
+													.name[0]
+											}
 										</div>
-										<div className="text-xs text-textTertiary">{u.email}</div>
+
+										<div>
+											<div className="text-sm font-semibold text-textPrimary">
+												{
+													u.name
+												}
+											</div>
+
+											<div className="text-xs text-textTertiary">
+												{
+													u.email
+												}
+											</div>
+										</div>
+									</div>
+
+									<div className="flex items-center gap-3">
+										<TrustBadge
+											score={
+												u.score
+											}
+											compact={
+												true
+											}
+										/>
+
+										<button
+											onClick={() => {
+												setAdjustUser(
+													u,
+												);
+
+												setAdjustVal(
+													"",
+												);
+
+												setAdjustReason(
+													"",
+												);
+											}}
+											className="flex items-center gap-1 rounded-lg bg-primaryLight px-2.5 py-1.5 text-xs font-bold text-primary transition hover:bg-primary/20">
+											<Edit2 className="h-3 w-3" />
+											Adjust
+										</button>
 									</div>
 								</div>
-								<div className="flex items-center gap-3">
-									<TrustBadge score={u.score} compact={true} />
-									<button
-										onClick={() => setAdjustUser(u)}
-										className="flex items-center gap-1 px-2.5 py-1.5 bg-primaryLight text-primary rounded-lg text-xs font-bold hover:bg-primary/20 transition">
-										<Edit2 className="w-3 h-3" /> Adjust
-									</button>
+							),
+						)}
+
+						{filteredUsers.length ===
+							0 && (
+								<div className="py-12 text-center text-sm text-textTertiary">
+									No users found.
 								</div>
-							</div>
-						))}
+							)}
 					</div>
 				</div>
 
 				{/* Audit Log */}
-				<div className="bg-surface border border-borderLight rounded-2xl shadow-sm overflow-hidden">
-					<div className="px-5 py-4 border-b border-borderLight">
-						<h2 className="font-bold text-textPrimary flex items-center gap-2">
+				<div className="overflow-hidden rounded-2xl border border-borderLight bg-surface shadow-sm">
+					<div className="border-b border-borderLight px-5 py-4">
+						<h2 className="font-bold text-textPrimary">
 							Audit Log
 						</h2>
 					</div>
-					<div className="divide-y divide-borderLight max-h-[480px] overflow-y-auto">
-						{FULL_AUDIT_LOG.map((log, i) => (
-							<div
-								key={i}
-								className="flex items-center justify-between px-5 py-3.5">
-								<div className="flex items-center gap-3 min-w-0">
-									{log.change > 0 ? (
-										<TrendingUp className="w-4 h-4 text-success shrink-0" />
-									) : (
-										<TrendingDown className="w-4 h-4 text-error shrink-0" />
-									)}
-									<div className="min-w-0">
-										<div className="text-xs font-bold text-textPrimary truncate">
-											{log.name}
-										</div>
-										<div className="text-xs text-textSecondary truncate">
-											{log.reason}
-										</div>
-										<div className="text-[10px] text-textTertiary mt-0.5">
-											{log.timestamp}
+
+					<div className="max-h-[480px] divide-y divide-borderLight overflow-y-auto">
+						{auditLogs.map(
+							(
+								log,
+								i,
+							) => (
+								<div
+									key={
+										log.id ??
+										i
+									}
+									className="flex items-center justify-between px-5 py-3.5">
+									<div className="flex min-w-0 items-center gap-3">
+										{log.change >
+										0 ? (
+											<TrendingUp className="h-4 w-4 shrink-0 text-success" />
+										) : (
+											<TrendingDown className="h-4 w-4 shrink-0 text-error" />
+										)}
+
+										<div className="min-w-0">
+											<div className="truncate text-xs font-bold text-textPrimary">
+												{
+													log.name
+												}
+											</div>
+
+											<div className="truncate text-xs text-textSecondary">
+												{
+													log.reason
+												}
+											</div>
+
+											<div className="mt-0.5 text-[10px] text-textTertiary">
+												{formatDate(
+													log.timestamp,
+												)}
+											</div>
 										</div>
 									</div>
+
+									<span
+										className={`ml-3 shrink-0 text-sm font-extrabold ${
+											log.change >
+											0
+												? "text-success"
+												: "text-error"
+										}`}>
+										{log.change >
+										0
+											? `+${log.change}`
+											: log.change}
+									</span>
 								</div>
-								<span
-									className={`text-sm font-extrabold shrink-0 ml-3 ${log.change > 0 ? "text-success" : "text-error"}`}>
-									{log.change > 0 ? `+${log.change}` : log.change}
-								</span>
-							</div>
-						))}
+							),
+						)}
+
+						{auditLogs.length ===
+							0 && (
+								<div className="py-12 text-center text-sm text-textTertiary">
+									No audit logs
+									found.
+								</div>
+							)}
 					</div>
 				</div>
 			</div>

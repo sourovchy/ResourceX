@@ -32,6 +32,11 @@ public class ItemController {
         return itemService.getAllItems(category, searchQuery);
     }
 
+    @GetMapping("/me")
+    public List<ItemResponse> getMyItems() {
+        return itemService.getMyItems();
+    }
+
     @GetMapping("/{itemId}")
     public ItemResponse getItemById(
             @PathVariable Long itemId

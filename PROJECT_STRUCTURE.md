@@ -36,8 +36,8 @@ backend/
     |-- main/
     |   |-- java/
     |   |   `-- com/
-    |   |       `-- thirdhand/
-    |   |           `-- campusvault/
+    |   |       `-- resourcex/
+    |   |           `-- resourcex/
     |   |               |-- CampusvaultApplication.java
     |   |               |-- config/
     |   |               |   |-- MailConfig.java
@@ -197,8 +197,8 @@ backend/
     `-- test/
         |-- java/
         |   `-- com/
-        |       `-- thirdhand/
-        |           `-- campusvault/
+        |       `-- resourcex/
+        |           `-- resourcex/
         |               `-- CampusvaultApplicationTests.java
         `-- resources/
             `-- application-test.properties

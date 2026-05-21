@@ -5,6 +5,7 @@ import com.resourcex.resourcex.dto.response.BookingResponse;
 import com.resourcex.resourcex.entity.Booking;
 import com.resourcex.resourcex.entity.Item;
 import com.resourcex.resourcex.entity.User;
+import com.resourcex.resourcex.exception.ForbiddenException;
 import com.resourcex.resourcex.mapper.BookingMapper;
 import com.resourcex.resourcex.repository.BookingRepository;
 import com.resourcex.resourcex.repository.ItemRepository;
@@ -80,13 +81,36 @@ public class BookingServiceImpl implements BookingService {
     public BookingResponse getBookingById(Long bookingId) {
         Booking booking = bookingRepository.findById(bookingId)
                 .orElseThrow(() -> new IllegalArgumentException("Booking not found"));
+        assertCanViewBooking(booking);
         return BookingMapper.toResponse(booking);
     }
 
     @Override
     @Transactional
     public List<BookingResponse> getAllBookings() {
-        return bookingRepository.findAll().stream()
+        if (isAdmin()) {
+            return bookingRepository.findAll().stream()
+                    .map(BookingMapper::toResponse)
+                    .toList();
+        }
+
+        return bookingRepository.findByRenter(resolveCurrentUser()).stream()
+                .map(BookingMapper::toResponse)
+                .toList();
+    }
+
+    @Override
+    @Transactional
+    public List<BookingResponse> getMyBookings() {
+        return bookingRepository.findByRenter(resolveCurrentUser()).stream()
+                .map(BookingMapper::toResponse)
+                .toList();
+    }
+
+    @Override
+    @Transactional
+    public List<BookingResponse> getRequestsForMyListings() {
+        return bookingRepository.findByItemOwner(resolveCurrentUser()).stream()
                 .map(BookingMapper::toResponse)
                 .toList();
     }
@@ -96,6 +120,8 @@ public class BookingServiceImpl implements BookingService {
     public BookingResponse approveBooking(Long bookingId) {
         Booking booking = bookingRepository.findById(bookingId)
                 .orElseThrow(() -> new IllegalArgumentException("Booking not found"));
+
+        assertCanManageOwnerSide(booking);
 
         if (booking.getStatus() != Booking.BookingStatus.PENDING) {
             throw new IllegalStateException("Only pending bookings can be approved");
@@ -120,6 +146,8 @@ public class BookingServiceImpl implements BookingService {
         Booking booking = bookingRepository.findById(bookingId)
                 .orElseThrow(() -> new IllegalArgumentException("Booking not found"));
 
+        assertCanManageOwnerSide(booking);
+
         if (booking.getStatus() != Booking.BookingStatus.PENDING) {
             throw new IllegalStateException("Only pending bookings can be rejected");
         }
@@ -136,6 +164,8 @@ public class BookingServiceImpl implements BookingService {
     public BookingResponse cancelBooking(Long bookingId) {
         Booking booking = bookingRepository.findById(bookingId)
                 .orElseThrow(() -> new IllegalArgumentException("Booking not found"));
+
+        assertCanCancelBooking(booking);
 
         if (booking.getStatus() == Booking.BookingStatus.COMPLETED
                 || booking.getStatus() == Booking.BookingStatus.CANCELLED
@@ -155,6 +185,8 @@ public class BookingServiceImpl implements BookingService {
     public BookingResponse completeBooking(Long bookingId) {
         Booking booking = bookingRepository.findById(bookingId)
                 .orElseThrow(() -> new IllegalArgumentException("Booking not found"));
+
+        assertCanManageOwnerSide(booking);
 
         if (booking.getStatus() != Booking.BookingStatus.ACTIVE && booking.getStatus() != Booking.BookingStatus.APPROVED) {
             throw new IllegalStateException("Only active or approved bookings can be completed");
@@ -225,6 +257,50 @@ public class BookingServiceImpl implements BookingService {
 
         return userRepository.findByEmailIgnoreCase(email)
                 .orElseThrow(() -> new IllegalStateException("User not found"));
+    }
+
+    private void assertCanViewBooking(Booking booking) {
+        if (isAdmin() || isRenter(booking) || isOwner(booking)) {
+            return;
+        }
+
+        throw new ForbiddenException("You cannot access this booking");
+    }
+
+    private void assertCanManageOwnerSide(Booking booking) {
+        if (isAdmin() || isOwner(booking)) {
+            return;
+        }
+
+        throw new ForbiddenException("Only the listing owner can manage this booking");
+    }
+
+    private void assertCanCancelBooking(Booking booking) {
+        if (isAdmin() || isRenter(booking) || isOwner(booking)) {
+            return;
+        }
+
+        throw new ForbiddenException("You cannot cancel this booking");
+    }
+
+    private boolean isRenter(Booking booking) {
+        User currentUser = resolveCurrentUser();
+        return booking.getRenter() != null
+                && booking.getRenter().getUserId().equals(currentUser.getUserId());
+    }
+
+    private boolean isOwner(Booking booking) {
+        User currentUser = resolveCurrentUser();
+        return booking.getItem() != null
+                && booking.getItem().getOwner() != null
+                && booking.getItem().getOwner().getUserId().equals(currentUser.getUserId());
+    }
+
+    private boolean isAdmin() {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        return authentication != null
+                && authentication.getAuthorities().stream()
+                .anyMatch(authority -> "ROLE_ADMIN".equals(authority.getAuthority()));
     }
 
     private void syncAllItemAvailability() {

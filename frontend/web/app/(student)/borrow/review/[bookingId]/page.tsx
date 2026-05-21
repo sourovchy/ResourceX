@@ -55,7 +55,7 @@ export default function ReviewPage({
 				</h1>
 				<p className="text-textSecondary">
 					Thank you for sharing your experience. Honest reviews help keep the
-					CampusVault community trustworthy and safe.
+					ResourceX community trustworthy and safe.
 				</p>
 				<Link
 					href="/my-bookings"

@@ -1,37 +1,30 @@
-// services/chatService.ts
-// Abstraction layer — swap mock with real API calls later
-
 import { Conversation, Message } from "@/types/chat";
-import { DUMMY_CONVERSATIONS, DUMMY_MESSAGES } from "@/lib/mocks/dummyData";
+import api from "@/lib/api";
 
 export const chatService = {
 	getConversations: async (): Promise<Conversation[]> => {
-		return new Promise((resolve) =>
-			setTimeout(() => resolve(DUMMY_CONVERSATIONS), 300),
-		);
+		try {
+			const { data } = await api.get<Conversation[]>("/messages/conversations");
+			return data ?? [];
+		} catch {
+			return [];
+		}
 	},
 
 	getMessages: async (conversationId: string): Promise<Message[]> => {
-		return new Promise((resolve) =>
-			setTimeout(() => resolve(DUMMY_MESSAGES[conversationId] || []), 200),
-		);
+		try {
+			const { data } = await api.get<Message[]>(`/messages/conversations/${conversationId}`);
+			return data ?? [];
+		} catch {
+			return [];
+		}
 	},
 
 	sendMessage: async (
 		conversationId: string,
 		text: string,
 	): Promise<Message> => {
-		const newMessage: Message = {
-			id: `m-${Date.now()}`,
-			conversationId,
-			senderId: "me",
-			text,
-			time: new Date().toLocaleTimeString([], {
-				hour: "2-digit",
-				minute: "2-digit",
-			}),
-			timestamp: Date.now(),
-		};
-		return new Promise((resolve) => setTimeout(() => resolve(newMessage), 100));
+		const { data } = await api.post<Message>(`/messages/conversations/${conversationId}`, { text });
+		return data;
 	},
 };

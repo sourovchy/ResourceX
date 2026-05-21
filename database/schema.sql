@@ -1,6 +1,6 @@
-DROP DATABASE IF EXISTS campusvault;
-CREATE DATABASE campusvault;
-USE campusvault;
+DROP DATABASE IF EXISTS resourcex;
+CREATE DATABASE resourcex;
+USE resourcex;
 
 -- 1. CORE RELATIONSHIPS & USERS
 

@@ -5,10 +5,6 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ArrowRight, RefreshCw, Smartphone } from "lucide-react";
 
-type StoredUser = {
-	phone?: string;
-};
-
 export default function PhoneVerificationPage() {
 	const router = useRouter();
 	const [otp, setOtp] = useState("");
@@ -19,26 +15,8 @@ export default function PhoneVerificationPage() {
 	const [resending, setResending] = useState(false);
 
 	useEffect(() => {
-		if (localStorage.getItem("campusvault_email_verified") !== "true") {
-			router.replace("/auth/verify-email");
-			return;
-		}
-
-		const rawUser = localStorage.getItem("campusvault_user");
-
-		if (!rawUser) {
-			return;
-		}
-
-		try {
-			const user = JSON.parse(rawUser) as StoredUser;
-			if (user.phone) {
-				setPhone(user.phone);
-			}
-		} catch {
-			setPhone("your mobile number");
-		}
-	}, [router]);
+		setError("Phone verification is not enabled for this ResourceX backend yet.");
+	}, []);
 
 	const handleSubmit = async (e: React.FormEvent) => {
 		e.preventDefault();
@@ -52,12 +30,9 @@ export default function PhoneVerificationPage() {
 		setMessage("");
 		setLoading(true);
 
-		// TODO: Replace with POST /auth/verify-phone when the backend endpoint exists.
-		setTimeout(() => {
-			localStorage.setItem("campusvault_phone_verified", "true");
-			setLoading(false);
-			router.push("/auth/pending");
-		}, 500);
+		setError("Phone verification is not enabled. Please continue with email approval.");
+		setLoading(false);
+		router.push("/auth/pending-approval");
 	};
 
 	const handleResend = () => {
@@ -65,11 +40,8 @@ export default function PhoneVerificationPage() {
 		setMessage("");
 		setResending(true);
 
-		// TODO: Replace with POST /auth/resend-phone-otp when the backend endpoint exists.
-		setTimeout(() => {
-			setResending(false);
-			setMessage("A new phone code has been sent");
-		}, 500);
+		setResending(false);
+		setMessage("Phone OTP is not configured for this backend.");
 	};
 
 	return (

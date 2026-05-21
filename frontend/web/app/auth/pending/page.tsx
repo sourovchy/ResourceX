@@ -1,21 +1,10 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React from "react";
 import Link from "next/link";
-import { Clock, ArrowLeft, FileCheck2 } from "lucide-react";
-import {
-	ApprovalRequest,
-	formatSubmittedAt,
-	getCurrentApprovalRequest,
-} from "@/lib/approvalRequests";
+import { Clock, ArrowLeft } from "lucide-react";
 
 export default function PendingApprovalPage() {
-	const [request, setRequest] = useState<ApprovalRequest | null>(null);
-
-	useEffect(() => {
-		setRequest(getCurrentApprovalRequest());
-	}, []);
-
 	return (
 		<div className="min-h-screen bg-background flex items-center justify-center p-4">
 			{/* Background decoration */}
@@ -49,72 +38,6 @@ export default function PendingApprovalPage() {
 						This usually takes a few hours. You will be notified once your
 						account is approved.
 					</div>
-
-					{request && (
-						<div className="mt-6 text-left bg-surfaceVariant/50 border border-borderLight rounded-2xl p-4">
-							<div className="flex items-center gap-2 text-sm font-bold text-textPrimary mb-4">
-								<FileCheck2 className="w-4 h-4 text-primary" />
-								Submitted verification details
-							</div>
-
-							<div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
-								<div>
-									<div className="text-xs text-textTertiary">Name</div>
-									<div className="font-medium text-textPrimary">
-										{request.name}
-									</div>
-								</div>
-								<div>
-									<div className="text-xs text-textTertiary">Student ID</div>
-									<div className="font-medium text-textPrimary">
-										{request.studentId}
-									</div>
-								</div>
-								<div>
-									<div className="text-xs text-textTertiary">Email</div>
-									<div className="font-medium text-textPrimary break-all">
-										{request.email}
-									</div>
-								</div>
-								<div>
-									<div className="text-xs text-textTertiary">Phone</div>
-									<div className="font-medium text-textPrimary">
-										{request.phone}
-									</div>
-								</div>
-								<div>
-									<div className="text-xs text-textTertiary">University</div>
-									<div className="font-medium text-textPrimary">
-										{request.university}
-									</div>
-								</div>
-								<div>
-									<div className="text-xs text-textTertiary">Department</div>
-									<div className="font-medium text-textPrimary">
-										{request.department}
-									</div>
-								</div>
-								<div>
-									<div className="text-xs text-textTertiary">Submitted</div>
-									<div className="font-medium text-textPrimary">
-										{formatSubmittedAt(request.submittedAt)}
-									</div>
-								</div>
-								<div>
-									<div className="text-xs text-textTertiary">Document</div>
-									<div className="font-medium text-textPrimary truncate">
-										{request.idCardFileName}
-									</div>
-								</div>
-							</div>
-
-							<img
-								src={request.idCardDataUrl}
-								alt="Submitted student ID card"
-								className="mt-4 max-h-72 w-full rounded-xl border border-borderLight object-contain bg-surface"
-							/>
-						</div>
-					)}
 
 					{/* Action */}
 					<div className="mt-8">

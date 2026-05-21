@@ -7,10 +7,11 @@ import com.resourcex.resourcex.repository.UserRepository;
 import com.resourcex.resourcex.util.constants.RoleConstants;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
-import org.springframework.security.core.userdetails.*;
+import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.security.core.userdetails.UserDetailsService;
+import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Service;
 
-import java.util.Collections;
 import java.util.List;
 
 @Service
@@ -21,21 +22,24 @@ public class CustomUserDetailsServiceImpl implements UserDetailsService {
     private final UserRoleRepository userRoleRepository;
 
     @Override
-    public UserDetails loadUserByUsername(String email)
-            throws UsernameNotFoundException {
+    public UserDetails loadUserByUsername(String email) throws UsernameNotFoundException {
+        String normalizedEmail = email == null ? "" : email.trim().toLowerCase();
 
-        User user = userRepository.findByEmailIgnoreCase(email)
-                .orElseThrow(() ->
-                        new ResourceNotFoundException("User not found"));
+        if (normalizedEmail.isBlank()) {
+            throw new UsernameNotFoundException("Email is required");
+        }
+
+        User user = userRepository.findByEmailIgnoreCase(normalizedEmail)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
 
         List<SimpleGrantedAuthority> authorities = userRoleRepository.findByUser(user).stream()
-                .map(userRole -> new SimpleGrantedAuthority(userRole.getRole().getName()))
+                .map(userRole -> userRole.getRole())
+                .filter(role -> role != null && role.getName() != null && !role.getName().isBlank())
+                .map(role -> new SimpleGrantedAuthority(role.getName()))
                 .toList();
 
         if (authorities.isEmpty()) {
-            authorities = Collections.singletonList(
-                    new SimpleGrantedAuthority(RoleConstants.ROLE_USER)
-            );
+            authorities = List.of(new SimpleGrantedAuthority(RoleConstants.ROLE_USER));
         }
 
         return new org.springframework.security.core.userdetails.User(

@@ -6,13 +6,6 @@ import ItemCard from "@/components/cards/ItemCard";
 import api from "@/lib/api";
 import {
 	Search,
-	Filter,
-	Star,
-	Clock,
-	MapPin,
-	ChevronRight,
-	CheckCircle2,
-	Shield,
 	Loader2,
 } from "lucide-react";
 
@@ -148,14 +141,9 @@ export default function BorrowPage() {
 								category: item.category || "General",
 								condition: item.itemCondition || "Good",
 								pricePerDay: item.dailyRate,
-								deposit: 0, // In backend, not yet implemented but expected by UI
-								rating: 4.5, // Placeholder for trust score/rating logic
-								reviews: 0,
 								owner: item.owner?.name || "Campus Provider",
 								trustScore: item.owner?.trustScore || 100,
-								image:
-									item.imageUrls?.[0] ||
-									"https://images.unsplash.com/photo-1586769852836-bc069f19e1b6?auto=format&fit=crop&q=80&w=400&h=300",
+								image: item.imageUrls?.[0],
 							}}
 						/>
 					))}
@@ -163,7 +151,7 @@ export default function BorrowPage() {
 			) : (
 				<div className="bg-surfaceVariant rounded-2xl p-20 text-center border border-borderLight border-dashed">
 					<p className="text-textSecondary font-medium">
-						No items found matching your filters.
+						No listings found. Create your first listing.
 					</p>
 				</div>
 			)}

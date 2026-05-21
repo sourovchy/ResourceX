@@ -121,7 +121,7 @@ export default function BookItemPage({ params }: { params: { id: string } }) {
 						<Shield className="w-5 h-5 text-primary shrink-0 mt-0.5" />
 						<div className="text-primaryDark">
 							<strong className="block mb-0.5">
-								CampusVault Payment Protection
+								ResourceX Payment Protection
 							</strong>
 							Your deposit is held securely and returned automatically after the
 							item is safely returned.

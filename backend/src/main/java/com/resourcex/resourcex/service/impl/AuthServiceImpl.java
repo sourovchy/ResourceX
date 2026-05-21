@@ -3,6 +3,7 @@ package com.resourcex.resourcex.service.impl;
 import com.resourcex.resourcex.dto.request.LoginRequest;
 import com.resourcex.resourcex.dto.request.RegisterRequest;
 import com.resourcex.resourcex.dto.response.AuthResponse;
+import com.resourcex.resourcex.dto.response.CurrentUserResponse;
 import com.resourcex.resourcex.entity.PendingUser;
 import com.resourcex.resourcex.entity.User;
 import com.resourcex.resourcex.entity.UserStatus;
@@ -10,13 +11,19 @@ import com.resourcex.resourcex.exception.ConflictException;
 import com.resourcex.resourcex.exception.UnauthorizedException;
 import com.resourcex.resourcex.mapper.UserMapper;
 import com.resourcex.resourcex.repository.PendingUserRepository;
+import com.resourcex.resourcex.repository.UserRoleRepository;
 import com.resourcex.resourcex.repository.UserRepository;
 import com.resourcex.resourcex.security.JwtService;
 import com.resourcex.resourcex.service.AuthService;
+import com.resourcex.resourcex.util.constants.RoleConstants;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
+import java.util.List;
 
 @Service
 @RequiredArgsConstructor
@@ -24,6 +31,7 @@ public class AuthServiceImpl implements AuthService {
 
     private final UserRepository userRepository;
     private final PendingUserRepository pendingUserRepository;
+    private final UserRoleRepository userRoleRepository;
     private final PasswordEncoder passwordEncoder;
     private final JwtService jwtService;
 
@@ -66,6 +74,7 @@ public class AuthServiceImpl implements AuthService {
                 .message("Registration successful. Please verify your email and wait for approval.")
                 .token(null)
                 .user(null)
+                .roles(List.of())
                 .build();
     }
 
@@ -104,6 +113,36 @@ public class AuthServiceImpl implements AuthService {
                 .message("Login successful")
                 .token(token)
                 .user(UserMapper.toResponse(user))
+                .roles(resolveRoles(user))
                 .build();
+    }
+
+    @Override
+    public CurrentUserResponse getCurrentUser() {
+        User user = resolveCurrentUser();
+
+        return CurrentUserResponse.builder()
+                .user(UserMapper.toResponse(user))
+                .roles(resolveRoles(user))
+                .build();
+    }
+
+    private User resolveCurrentUser() {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+
+        if (authentication == null || authentication.getName() == null || authentication.getName().isBlank()) {
+            throw new UnauthorizedException("Authenticated user not found");
+        }
+
+        return userRepository.findByEmailIgnoreCase(authentication.getName())
+                .orElseThrow(() -> new UnauthorizedException("Authenticated user not found"));
+    }
+
+    private List<String> resolveRoles(User user) {
+        List<String> roles = userRoleRepository.findByUser(user).stream()
+                .map(userRole -> userRole.getRole().getName())
+                .toList();
+
+        return roles.isEmpty() ? List.of(RoleConstants.ROLE_USER) : roles;
     }
 }

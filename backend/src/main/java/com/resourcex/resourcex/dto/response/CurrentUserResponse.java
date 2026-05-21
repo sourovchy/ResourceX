@@ -2,18 +2,16 @@ package com.resourcex.resourcex.dto.response;
 
 import lombok.*;
 
+import java.util.List;
+
 @Getter
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class AuthResponse {
-
-    private String message;
-
-    private String token;
+public class CurrentUserResponse {
 
     private UserResponse user;
 
-    private java.util.List<String> roles;
+    private List<String> roles;
 }

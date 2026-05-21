@@ -6,7 +6,7 @@ import { Megaphone, Plus, Edit2, Trash2, X, Bell } from "lucide-react";
 const INITIAL_ANNOUNCEMENTS = [
 	{
 		id: "AN-001",
-		title: "CampusVault Scheduled Maintenance – May 10",
+		title: "ResourceX Scheduled Maintenance – May 10",
 		body: "The platform will be unavailable from 2:00 AM to 5:00 AM on May 10, 2024 for scheduled database maintenance. Please plan your rentals accordingly.",
 		date: "May 5, 2024",
 		author: "Admin",

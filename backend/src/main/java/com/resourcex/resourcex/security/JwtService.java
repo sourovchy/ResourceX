@@ -3,6 +3,7 @@ package com.resourcex.resourcex.security;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;
+import jakarta.annotation.PostConstruct;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
@@ -11,6 +12,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Objects;
 import java.util.function.Function;
 
 @Service
@@ -22,64 +24,72 @@ public class JwtService {
     @Value("${jwt.expiration}")
     private long jwtExpiration;
 
-    public String generateToken(String email) {
+    @PostConstruct
+    public void validateConfiguration() {
+        if (secretKey == null || secretKey.isBlank()) {
+            throw new IllegalStateException("JWT secret must not be blank");
+        }
 
+        if (secretKey.getBytes(StandardCharsets.UTF_8).length < 32) {
+            throw new IllegalStateException(
+                    "JWT secret must be at least 32 bytes long for HS256"
+            );
+        }
+
+        if (jwtExpiration <= 0) {
+            throw new IllegalStateException("JWT expiration must be greater than zero");
+        }
+    }
+
+    public String generateToken(String email) {
         return generateToken(new HashMap<>(), email);
     }
 
-    public String generateToken(
-            Map<String, Object> extraClaims,
-            String email
-    ) {
+    public String generateToken(Map<String, Object> extraClaims, String email) {
+        String normalizedEmail = normalize(email);
 
         return Jwts.builder()
-                .claims(extraClaims)
-                .subject(email)
+                .claims(extraClaims == null ? new HashMap<>() : extraClaims)
+                .subject(normalizedEmail)
                 .issuedAt(new Date(System.currentTimeMillis()))
-                .expiration(
-                        new Date(System.currentTimeMillis() + jwtExpiration)
-                )
+                .expiration(new Date(System.currentTimeMillis() + jwtExpiration))
                 .signWith(getSigningKey())
                 .compact();
     }
 
     public String extractEmail(String token) {
-
         return extractClaim(token, Claims::getSubject);
     }
 
-    public boolean isTokenValid(
-            String token,
-            String email
-    ) {
+    public boolean isTokenValid(String token, String email) {
+        if (token == null || token.isBlank() || email == null || email.isBlank()) {
+            return false;
+        }
 
-        return extractEmail(token).equals(email)
-                && !isTokenExpired(token);
+        try {
+            String tokenEmail = normalize(extractEmail(token));
+            String expectedEmail = normalize(email);
+
+            return Objects.equals(tokenEmail, expectedEmail) && !isTokenExpired(token);
+        } catch (Exception ex) {
+            return false;
+        }
     }
 
     public boolean isTokenExpired(String token) {
-
-        return extractExpiration(token)
-                .before(new Date());
+        return extractExpiration(token).before(new Date());
     }
 
     public Date extractExpiration(String token) {
-
         return extractClaim(token, Claims::getExpiration);
     }
 
-    public <T> T extractClaim(
-            String token,
-            Function<Claims, T> claimsResolver
-    ) {
-
+    public <T> T extractClaim(String token, Function<Claims, T> claimsResolver) {
         final Claims claims = extractAllClaims(token);
-
         return claimsResolver.apply(claims);
     }
 
     private Claims extractAllClaims(String token) {
-
         return Jwts.parser()
                 .verifyWith(getSigningKey())
                 .build()
@@ -88,9 +98,10 @@ public class JwtService {
     }
 
     private SecretKey getSigningKey() {
+        return Keys.hmacShaKeyFor(secretKey.getBytes(StandardCharsets.UTF_8));
+    }
 
-        return Keys.hmacShaKeyFor(
-                secretKey.getBytes(StandardCharsets.UTF_8)
-        );
+    private String normalize(String value) {
+        return value == null ? null : value.trim().toLowerCase();
     }
 }

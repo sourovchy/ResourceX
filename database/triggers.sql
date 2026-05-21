@@ -1,4 +1,4 @@
-USE campusvault;
+USE resourcex;
 
 -- TRIGGER 1: Handle return and update trust score
 DELIMITER $$
@@ -228,4 +228,4 @@ END$$
 
 DELIMITER ;
 
-SHOW TRIGGERS FROM campusvault;
+SHOW TRIGGERS FROM resourcex;

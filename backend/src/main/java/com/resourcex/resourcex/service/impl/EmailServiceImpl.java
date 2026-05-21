@@ -27,7 +27,7 @@ public class EmailServiceImpl implements EmailService {
 
             helper.setFrom(fromEmail);
             helper.setTo(toEmail);
-            helper.setSubject("Your CampusVault OTP Code");
+            helper.setSubject("Your ResourceX OTP Code");
             helper.setText(buildHtmlBody(otpCode), true);
 
             mailSender.send(message);

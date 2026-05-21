@@ -1,4 +1,4 @@
-USE campusvault;
+USE resourcex;
 
 -- VIEW 1: Available items with owner details
 DROP VIEW IF EXISTS Item_Availability_View;

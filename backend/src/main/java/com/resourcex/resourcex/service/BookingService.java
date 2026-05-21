@@ -13,6 +13,10 @@ public interface BookingService {
 
     List<BookingResponse> getAllBookings();
 
+    List<BookingResponse> getMyBookings();
+
+    List<BookingResponse> getRequestsForMyListings();
+
     BookingResponse approveBooking(Long bookingId);
 
     BookingResponse rejectBooking(Long bookingId);

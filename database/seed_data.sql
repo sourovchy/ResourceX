@@ -1,4 +1,4 @@
-USE campusvault;
+USE resourcex;
 
 -- 1. UNIVERSITIES
 

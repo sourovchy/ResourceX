@@ -62,7 +62,7 @@ export default function AddItemPage() {
 				</h1>
 
 				<p className="text-textSecondary">
-					Your item is now live in the CampusVault catalog and available for
+					Your item is now live in the ResourceX catalog and available for
 					users to view right away.
 				</p>
 

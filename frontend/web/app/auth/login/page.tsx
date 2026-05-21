@@ -2,31 +2,16 @@
 
 import React, { useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { Mail, Lock, ArrowRight, Eye, EyeOff, User } from "lucide-react";
 import { AxiosError } from "axios";
-import api from "@/lib/api";
-
-type AuthResponse = {
-	message: string;
-	token: string;
-	user: {
-		userId: number;
-		studentId: string;
-		name: string;
-		email: string;
-		phone: string;
-		trustScore: number;
-		verified: boolean;
-	};
-};
+import { useAuth } from "@/context/AuthContext";
 
 type ErrorResponse = {
 	message?: string;
 };
 
 export default function LoginPage() {
-	const router = useRouter();
+	const { login } = useAuth();
 
 	const [form, setForm] = useState({
 		email: "",
@@ -57,14 +42,7 @@ export default function LoginPage() {
 		setLoading(true);
 
 		try {
-			const { data } = await api.post<AuthResponse>("/auth/login", {
-				email: form.email.trim(),
-				password: form.password,
-			});
-
-			localStorage.setItem("campusvault_token", data.token);
-			localStorage.setItem("campusvault_user", JSON.stringify(data.user));
-			router.push("/dashboard");
+			await login(form.email.trim(), form.password);
 		} catch (err) {
 			const axiosError = err as AxiosError<ErrorResponse>;
 			setError(

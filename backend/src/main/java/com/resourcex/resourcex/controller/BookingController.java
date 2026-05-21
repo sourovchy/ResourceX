@@ -28,6 +28,16 @@ public class BookingController {
         return bookingService.getAllBookings();
     }
 
+    @GetMapping("/me")
+    public List<BookingResponse> getMyBookings() {
+        return bookingService.getMyBookings();
+    }
+
+    @GetMapping("/owner")
+    public List<BookingResponse> getRequestsForMyListings() {
+        return bookingService.getRequestsForMyListings();
+    }
+
     @GetMapping("/{bookingId}")
     public BookingResponse getBookingById(
             @PathVariable Long bookingId

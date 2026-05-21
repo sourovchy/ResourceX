@@ -1,6 +1,7 @@
 "use client";
 
 import AppShell from "@/components/layout/AppShell";
+import AuthGuard from "@/components/auth/AuthGuard";
 import {
 	LayoutDashboard,
 	ShoppingBag,
@@ -29,8 +30,10 @@ export default function StudentLayout({
 	children: React.ReactNode;
 }) {
 	return (
-		<AppShell navItems={STUDENT_NAV} role="student">
-			{children}
-		</AppShell>
+		<AuthGuard role="student">
+			<AppShell navItems={STUDENT_NAV} role="student">
+				{children}
+			</AppShell>
+		</AuthGuard>
 	);
 }

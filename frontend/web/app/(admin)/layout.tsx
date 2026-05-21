@@ -1,6 +1,10 @@
 "use client";
 
+import React, { useMemo } from "react";
+import { usePathname } from "next/navigation";
+
 import AppShell from "@/components/layout/AppShell";
+import AuthGuard from "@/components/auth/AuthGuard";
 import {
 	LayoutDashboard,
 	BarChart3,
@@ -12,9 +16,14 @@ import {
 	ShieldCheck,
 	Megaphone,
 } from "lucide-react";
-import { usePathname } from "next/navigation";
 
-const ADMIN_NAV = [
+type AdminNavItem = {
+	href: string;
+	icon: React.ComponentType<{ className?: string }>;
+	label: string;
+};
+
+const ADMIN_NAV: AdminNavItem[] = [
 	{ href: "/home", icon: LayoutDashboard, label: "Dashboard" },
 	{ href: "/analytics", icon: BarChart3, label: "Analytics" },
 	{ href: "/users", icon: Users, label: "User Management" },
@@ -28,19 +37,25 @@ const ADMIN_NAV = [
 ];
 
 export default function AdminLayout({
-	children,
-}: {
+										children,
+									}: {
 	children: React.ReactNode;
 }) {
-	const pathname = usePathname();
+	const pathname = usePathname() || "";
 
-	if (pathname === "/AdminLogin") {
+	const isAdminLoginPage = useMemo(() => {
+		return pathname === "/AdminLogin" || pathname === "/adminlogin";
+	}, [pathname]);
+
+	if (isAdminLoginPage) {
 		return <>{children}</>;
 	}
 
 	return (
-		<AppShell navItems={ADMIN_NAV} role="admin">
-			{children}
-		</AppShell>
+		<AuthGuard role="admin">
+			<AppShell navItems={ADMIN_NAV} role="admin">
+				{children}
+			</AppShell>
+		</AuthGuard>
 	);
 }
