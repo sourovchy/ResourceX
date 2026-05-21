@@ -20,4 +20,10 @@ public interface PaymentRepository extends JpaRepository<Payment, Long> {
 
     @Query("select coalesce(sum(p.amount), 0) from Payment p where p.status = :status")
     BigDecimal sumAmountByStatus(PaymentStatus status);
+    @Query("""
+       SELECT COALESCE(SUM(p.amount), 0)
+       FROM Payment p
+       WHERE p.status = com.resourcex.resourcex.entity.Payment.PaymentStatus.SUCCESS
+       """)
+    BigDecimal sumSuccessfulRevenue();
 }

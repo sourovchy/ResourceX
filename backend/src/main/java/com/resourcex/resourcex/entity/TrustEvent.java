@@ -6,44 +6,46 @@ import lombok.*;
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "trust_events")
+@Table(
+        name = "trust_events",
+        indexes = {
+                @Index(name = "idx_trust_event_user", columnList = "user_id"),
+                @Index(name = "idx_trust_event_type", columnList = "event_type")
+        }
+)
 @Getter
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
+@ToString(exclude = {"user", "createdBy"})
 public class TrustEvent {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long trustEventId;
 
-    @ManyToOne(fetch = FetchType.LAZY)
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "user_id", nullable = false)
     private User user;
 
-    @Column(nullable = false)
-    private Integer changeAmount;
-
-    @Column(nullable = false)
-    private Integer oldScore;
-
-    @Column(nullable = false)
-    private Integer newScore;
-
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false)
-    private TrustSourceType sourceType;
-
-    private Long sourceId;
+    @Column(name = "event_type", nullable = false, length = 30)
+    private TrustEventType eventType;
 
     @Column(nullable = false)
+    private Integer points;
+
+    @Column(nullable = false, columnDefinition = "TEXT")
     private String reason;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "created_by")
     private Staff createdBy;
 
+    private Long sourceId;
+
+    @Column(nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
     @PrePersist
@@ -51,7 +53,12 @@ public class TrustEvent {
         this.createdAt = LocalDateTime.now();
     }
 
-    public enum TrustSourceType {
-        PENALTY, REVIEW, DISPUTE, REPORT, SYSTEM, STAFF_ACTION
+    public enum TrustEventType {
+        PENALTY,
+        REVIEW,
+        DISPUTE,
+        REPORT,
+        SYSTEM,
+        STAFF_ACTION
     }
 }

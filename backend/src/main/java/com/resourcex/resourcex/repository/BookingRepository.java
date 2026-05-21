@@ -39,4 +39,5 @@ public interface BookingRepository extends JpaRepository<Booking, Long> {
     );
 
     boolean existsByItemAndStatusIn(Item item, List<Booking.BookingStatus> statuses);
+    long countByStatus(Booking.BookingStatus status);
 }

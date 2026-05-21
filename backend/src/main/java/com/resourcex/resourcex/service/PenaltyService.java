@@ -1,26 +1,32 @@
 package com.resourcex.resourcex.service;
 
-import com.resourcex.resourcex.dto.request.PaymentRequest;
-import com.resourcex.resourcex.dto.response.PaymentResponse;
-import com.resourcex.resourcex.entity.Payment.PaymentStatus;
+import com.resourcex.resourcex.dto.request.PenaltyRequest;
+import com.resourcex.resourcex.dto.response.PenaltyResponse;
+import com.resourcex.resourcex.entity.Penalty;
 
 import java.util.List;
 
-public interface PaymentService {
+public interface PenaltyService {
 
-    PaymentResponse createPayment(PaymentRequest request);
+    PenaltyResponse createPenalty(PenaltyRequest request);
 
-    PaymentResponse getPaymentById(Long paymentId);
+    PenaltyResponse updatePenalty(Long penaltyId, PenaltyRequest request);
 
-    PaymentResponse getPaymentByBookingId(Long bookingId);
+    PenaltyResponse getPenaltyById(Long penaltyId);
 
-    List<PaymentResponse> getAllPayments();
+    List<PenaltyResponse> getAllPenalties();
 
-    PaymentResponse updatePaymentStatus(Long paymentId, PaymentStatus status);
+    List<PenaltyResponse> getPenaltiesByUserId(Long userId);
 
-    PaymentResponse markPaymentSuccessful(Long paymentId, String transactionRef);
+    List<PenaltyResponse> getPenaltiesByBookingId(Long bookingId);
 
-    PaymentResponse markPaymentFailed(Long paymentId);
+    List<PenaltyResponse> getPenaltiesByDisputeId(Long disputeId);
 
-    PaymentResponse refundPayment(Long paymentId);
+    List<PenaltyResponse> getPenaltiesByStatus(Penalty.PenaltyStatus status);
+
+    PenaltyResponse applyPenalty(Long penaltyId);
+
+    PenaltyResponse waivePenalty(Long penaltyId);
+
+    void deletePenalty(Long penaltyId);
 }
