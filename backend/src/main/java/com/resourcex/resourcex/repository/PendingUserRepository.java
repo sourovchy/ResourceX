@@ -6,6 +6,7 @@ import jakarta.persistence.LockModeType;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
@@ -16,7 +17,7 @@ public interface PendingUserRepository extends JpaRepository<PendingUser, Long> 
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("select p from PendingUser p where p.pendingUserId = :id")
-    Optional<PendingUser> findByIdForUpdate(Long id);
+    Optional<PendingUser> findByIdForUpdate(@Param("id") Long id);
 
     Optional<PendingUser> findByEmailIgnoreCase(String email);
 
