@@ -2,35 +2,90 @@ package com.resourcex.resourcex.validator;
 
 import com.resourcex.resourcex.dto.request.CreateItemRequest;
 import com.resourcex.resourcex.dto.request.UpdateItemRequest;
+import com.resourcex.resourcex.exception.BadRequestException;
+import org.springframework.stereotype.Component;
 
 import java.math.BigDecimal;
 
+@Component
 public class ItemValidator {
 
-    public static void validateCreateItemRequest(CreateItemRequest request) {
+    public void validateCreateRequest(CreateItemRequest request) {
+
         if (request == null) {
-            throw new IllegalArgumentException("Create item request cannot be null");
+            throw new BadRequestException("Create item request cannot be null");
         }
-        if (request.getTitle() == null || request.getTitle().isBlank()) {
-            throw new IllegalArgumentException("Title is required");
+
+        validateTitle(request.getTitle());
+        validateCategory(request.getCategory());
+        validateCondition(request.getItemCondition());
+        validateDailyRate(request.getDailyRate());
+    }
+
+    public void validateUpdateRequest(UpdateItemRequest request) {
+
+        if (request == null) {
+            throw new BadRequestException("Update item request cannot be null");
         }
-        if (request.getCategory() == null || request.getCategory().isBlank()) {
-            throw new IllegalArgumentException("Category is required");
+
+        if (request.getTitle() != null) {
+            validateTitle(request.getTitle());
         }
-        if (request.getItemCondition() == null || request.getItemCondition().isBlank()) {
-            throw new IllegalArgumentException("Item condition is required");
+
+        if (request.getCategory() != null) {
+            validateCategory(request.getCategory());
         }
-        if (request.getDailyRate() == null || request.getDailyRate().compareTo(BigDecimal.ZERO) <= 0) {
-            throw new IllegalArgumentException("Daily rate must be greater than zero");
+
+        if (request.getItemCondition() != null) {
+            validateCondition(request.getItemCondition());
+        }
+
+        if (request.getDailyRate() != null) {
+            validateDailyRate(request.getDailyRate());
         }
     }
 
-    public static void validateUpdateItemRequest(UpdateItemRequest request) {
-        if (request == null) {
-            throw new IllegalArgumentException("Update item request cannot be null");
+    private void validateTitle(String title) {
+
+        if (title == null || title.isBlank()) {
+            throw new BadRequestException("Title is required");
         }
-        if (request.getDailyRate() != null && request.getDailyRate().compareTo(BigDecimal.ZERO) <= 0) {
-            throw new IllegalArgumentException("Daily rate must be greater than zero");
+
+        if (title.length() > 255) {
+            throw new BadRequestException("Title cannot exceed 255 characters");
+        }
+    }
+
+    private void validateCategory(String category) {
+
+        if (category == null || category.isBlank()) {
+            throw new BadRequestException("Category is required");
+        }
+
+        if (category.length() > 100) {
+            throw new BadRequestException("Category cannot exceed 100 characters");
+        }
+    }
+
+    private void validateCondition(String condition) {
+
+        if (condition == null || condition.isBlank()) {
+            throw new BadRequestException("Item condition is required");
+        }
+
+        if (condition.length() > 100) {
+            throw new BadRequestException("Item condition cannot exceed 100 characters");
+        }
+    }
+
+    private void validateDailyRate(BigDecimal dailyRate) {
+
+        if (dailyRate == null) {
+            throw new BadRequestException("Daily rate is required");
+        }
+
+        if (dailyRate.compareTo(BigDecimal.ZERO) <= 0) {
+            throw new BadRequestException("Daily rate must be greater than zero");
         }
     }
 }

@@ -22,12 +22,21 @@ public interface BookingRepository extends JpaRepository<Booking, Long> {
 
     long countByStatus(Booking.BookingStatus status);
 
-    @Query("SELECT b FROM Booking b WHERE b.item = :item " +
-           "AND b.status NOT IN (com.resourcex.resourcex.entity.Booking.BookingStatus.CANCELLED, com.resourcex.resourcex.entity.Booking.BookingStatus.REJECTED) " +
-           "AND (:startDate <= b.endDate AND :endDate >= b.startDate)")
+    @Query("""
+            SELECT b
+            FROM Booking b
+            WHERE b.item = :item
+              AND b.status NOT IN (
+                  com.resourcex.resourcex.entity.Booking.BookingStatus.CANCELLED,
+                  com.resourcex.resourcex.entity.Booking.BookingStatus.REJECTED
+              )
+              AND (:startDate <= b.endDate AND :endDate >= b.startDate)
+            """)
     List<Booking> findOverlappingBookings(
             @Param("item") Item item,
             @Param("startDate") LocalDate startDate,
             @Param("endDate") LocalDate endDate
     );
+
+    boolean existsByItemAndStatusIn(Item item, List<Booking.BookingStatus> statuses);
 }

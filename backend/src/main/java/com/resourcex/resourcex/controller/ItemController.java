@@ -6,6 +6,8 @@ import com.resourcex.resourcex.dto.response.ItemResponse;
 import com.resourcex.resourcex.service.ItemService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -18,6 +20,8 @@ public class ItemController {
     private final ItemService itemService;
 
     @PostMapping
+    @ResponseStatus(HttpStatus.CREATED)
+    @PreAuthorize("isAuthenticated()")
     public ItemResponse createItem(
             @Valid @RequestBody CreateItemRequest request
     ) {
@@ -33,6 +37,7 @@ public class ItemController {
     }
 
     @GetMapping("/me")
+    @PreAuthorize("isAuthenticated()")
     public List<ItemResponse> getMyItems() {
         return itemService.getMyItems();
     }
@@ -45,6 +50,7 @@ public class ItemController {
     }
 
     @PutMapping("/{itemId}")
+    @PreAuthorize("isAuthenticated()")
     public ItemResponse updateItem(
             @PathVariable Long itemId,
             @Valid @RequestBody UpdateItemRequest request
@@ -53,6 +59,8 @@ public class ItemController {
     }
 
     @DeleteMapping("/{itemId}")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    @PreAuthorize("isAuthenticated()")
     public void deleteItem(
             @PathVariable Long itemId
     ) {

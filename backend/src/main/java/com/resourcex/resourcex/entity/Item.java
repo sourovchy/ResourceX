@@ -9,7 +9,14 @@ import java.util.ArrayList;
 import java.util.List;
 
 @Entity
-@Table(name = "items")
+@Table(
+        name = "items",
+        indexes = {
+                @Index(name = "idx_items_owner", columnList = "owner_id"),
+                @Index(name = "idx_items_status", columnList = "status"),
+                @Index(name = "idx_items_category", columnList = "category")
+        }
+)
 @Getter
 @Setter
 @NoArgsConstructor
@@ -25,44 +32,90 @@ public class Item {
     @JoinColumn(name = "owner_id", nullable = false)
     private User owner;
 
-    @Column(nullable = false)
+    @Column(nullable = false, length = 150)
     private String title;
 
     @Column(columnDefinition = "TEXT")
     private String description;
 
+    @Column(length = 80)
     private String category;
 
+    @Column(length = 80)
     private String itemCondition;
 
-    @Column(nullable = false)
+    @Column(nullable = false, precision = 10, scale = 2)
     private BigDecimal dailyRate;
 
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false)
+    @Column(nullable = false, length = 40)
     @Builder.Default
     private ItemStatus status = ItemStatus.AVAILABLE;
 
-    @OneToMany(mappedBy = "item", cascade = CascadeType.ALL, orphanRemoval = true)
+    @OneToMany(
+            mappedBy = "item",
+            cascade = CascadeType.ALL,
+            orphanRemoval = true
+    )
     @Builder.Default
     private List<ItemImage> images = new ArrayList<>();
 
+    @Column(nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
+    @Column(nullable = false)
     private LocalDateTime updatedAt;
 
     @PrePersist
     public void onCreate() {
-        this.createdAt = LocalDateTime.now();
-        this.updatedAt = LocalDateTime.now();
+
+        LocalDateTime now = LocalDateTime.now();
+
+        this.createdAt = now;
+        this.updatedAt = now;
+
+        normalizeFields();
+
+        if (this.dailyRate == null || this.dailyRate.signum() < 0) {
+            throw new IllegalArgumentException("Daily rate must be positive");
+        }
     }
 
     @PreUpdate
     public void onUpdate() {
+
         this.updatedAt = LocalDateTime.now();
+
+        normalizeFields();
+
+        if (this.dailyRate == null || this.dailyRate.signum() < 0) {
+            throw new IllegalArgumentException("Daily rate must be positive");
+        }
+    }
+
+    private void normalizeFields() {
+
+        if (this.title != null) {
+            this.title = this.title.trim();
+        }
+
+        if (this.description != null) {
+            this.description = this.description.trim();
+        }
+
+        if (this.category != null) {
+            this.category = this.category.trim();
+        }
+
+        if (this.itemCondition != null) {
+            this.itemCondition = this.itemCondition.trim();
+        }
     }
 
     public enum ItemStatus {
-        AVAILABLE, UNAVAILABLE, BLOCKED, DELETED
+        AVAILABLE,
+        UNAVAILABLE,
+        BLOCKED,
+        DELETED
     }
 }

@@ -3,6 +3,7 @@ package com.resourcex.resourcex.dto.response;
 import lombok.*;
 
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 import java.util.List;
 
 @Getter
@@ -29,4 +30,12 @@ public class ItemResponse {
     private String status;
 
     private List<String> imageUrls;
+
+    /*
+     Recommended additions
+     for frontend sorting/filtering.
+    */
+    private LocalDateTime createdAt;
+
+    private LocalDateTime updatedAt;
 }

@@ -4,6 +4,7 @@ import lombok.*;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 
 @Getter
 @Setter
@@ -25,4 +26,12 @@ public class BookingResponse {
     private String status;
 
     private BigDecimal totalPrice;
+
+    /*
+     Recommended additions
+     for analytics/history/UI.
+    */
+    private LocalDateTime createdAt;
+
+    private LocalDateTime updatedAt;
 }

@@ -20,11 +20,11 @@ public class Booking {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long bookingId;
 
-    @ManyToOne(fetch = FetchType.LAZY)
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "item_id", nullable = false)
     private Item item;
 
-    @ManyToOne(fetch = FetchType.LAZY)
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "renter_id", nullable = false)
     private User renter;
 
@@ -36,11 +36,11 @@ public class Booking {
 
     private LocalDate returnedDate;
 
-    @Column(nullable = false)
+    @Column(nullable = false, precision = 12, scale = 2)
     private BigDecimal totalPrice;
 
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false)
+    @Column(nullable = false, length = 20)
     @Builder.Default
     private BookingStatus status = BookingStatus.PENDING;
 
@@ -50,14 +50,21 @@ public class Booking {
 
     private LocalDateTime approvedAt;
 
+    @Column(nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
+    @Column(nullable = false)
     private LocalDateTime updatedAt;
 
     @PrePersist
     public void onCreate() {
-        this.createdAt = LocalDateTime.now();
-        this.updatedAt = LocalDateTime.now();
+        LocalDateTime now = LocalDateTime.now();
+        this.createdAt = now;
+        this.updatedAt = now;
+
+        if (this.status == null) {
+            this.status = BookingStatus.PENDING;
+        }
     }
 
     @PreUpdate
@@ -66,6 +73,11 @@ public class Booking {
     }
 
     public enum BookingStatus {
-        PENDING, APPROVED, ACTIVE, COMPLETED, CANCELLED, REJECTED
+        PENDING,
+        APPROVED,
+        ACTIVE,
+        COMPLETED,
+        CANCELLED,
+        REJECTED
     }
 }

@@ -6,7 +6,12 @@ import lombok.*;
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "item_images")
+@Table(
+        name = "item_images",
+        indexes = {
+                @Index(name = "idx_item_images_item", columnList = "item_id")
+        }
+)
 @Getter
 @Setter
 @NoArgsConstructor
@@ -22,13 +27,18 @@ public class ItemImage {
     @JoinColumn(name = "item_id", nullable = false)
     private Item item;
 
-    @Column(nullable = false)
+    @Column(nullable = false, length = 500)
     private String imageUrl;
 
+    @Column(nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
     @PrePersist
     public void onCreate() {
         this.createdAt = LocalDateTime.now();
+
+        if (this.imageUrl != null) {
+            this.imageUrl = this.imageUrl.trim();
+        }
     }
 }

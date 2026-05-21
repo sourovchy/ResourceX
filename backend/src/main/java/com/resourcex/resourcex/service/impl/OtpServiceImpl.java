@@ -268,10 +268,18 @@ public class OtpServiceImpl implements OtpService {
     }
 
     private String normalizeOtp(String otp) {
-        if (otp == null || !otp.matches("\\d{6}")) {
+
+        if (otp == null) {
+            throw new UnauthorizedException("OTP is required");
+        }
+
+        String normalized = otp.trim();
+
+        if (!normalized.matches("\\d{6}")) {
             throw new UnauthorizedException("OTP must be 6 digits");
         }
-        return otp;
+
+        return normalized;
     }
 
     private String normalizeEmail(String email) {

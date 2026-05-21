@@ -12,12 +12,12 @@ import java.time.LocalDate;
 @Builder
 public class CreateBookingRequest {
 
-    @NotNull
+    @NotNull(message = "Item ID is required")
     private Long itemId;
 
-    @NotNull
+    @NotNull(message = "Start date is required")
     private LocalDate startDate;
 
-    @NotNull
+    @NotNull(message = "End date is required")
     private LocalDate endDate;
 }

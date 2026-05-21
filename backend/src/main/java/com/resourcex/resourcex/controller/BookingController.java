@@ -5,6 +5,8 @@ import com.resourcex.resourcex.dto.response.BookingResponse;
 import com.resourcex.resourcex.service.BookingService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -17,6 +19,8 @@ public class BookingController {
     private final BookingService bookingService;
 
     @PostMapping
+    @ResponseStatus(HttpStatus.CREATED)
+    @PreAuthorize("isAuthenticated()")
     public BookingResponse createBooking(
             @Valid @RequestBody CreateBookingRequest request
     ) {
@@ -24,21 +28,25 @@ public class BookingController {
     }
 
     @GetMapping
+    @PreAuthorize("hasRole('ADMIN')")
     public List<BookingResponse> getAllBookings() {
         return bookingService.getAllBookings();
     }
 
     @GetMapping("/me")
+    @PreAuthorize("isAuthenticated()")
     public List<BookingResponse> getMyBookings() {
         return bookingService.getMyBookings();
     }
 
     @GetMapping("/owner")
+    @PreAuthorize("isAuthenticated()")
     public List<BookingResponse> getRequestsForMyListings() {
         return bookingService.getRequestsForMyListings();
     }
 
     @GetMapping("/{bookingId}")
+    @PreAuthorize("isAuthenticated()")
     public BookingResponse getBookingById(
             @PathVariable Long bookingId
     ) {
@@ -46,22 +54,34 @@ public class BookingController {
     }
 
     @PatchMapping("/{bookingId}/approve")
-    public BookingResponse approveBooking(@PathVariable Long bookingId) {
+    @PreAuthorize("isAuthenticated()")
+    public BookingResponse approveBooking(
+            @PathVariable Long bookingId
+    ) {
         return bookingService.approveBooking(bookingId);
     }
 
     @PatchMapping("/{bookingId}/reject")
-    public BookingResponse rejectBooking(@PathVariable Long bookingId) {
+    @PreAuthorize("isAuthenticated()")
+    public BookingResponse rejectBooking(
+            @PathVariable Long bookingId
+    ) {
         return bookingService.rejectBooking(bookingId);
     }
 
     @PatchMapping("/{bookingId}/cancel")
-    public BookingResponse cancelBooking(@PathVariable Long bookingId) {
+    @PreAuthorize("isAuthenticated()")
+    public BookingResponse cancelBooking(
+            @PathVariable Long bookingId
+    ) {
         return bookingService.cancelBooking(bookingId);
     }
 
     @PatchMapping("/{bookingId}/complete")
-    public BookingResponse completeBooking(@PathVariable Long bookingId) {
+    @PreAuthorize("isAuthenticated()")
+    public BookingResponse completeBooking(
+            @PathVariable Long bookingId
+    ) {
         return bookingService.completeBooking(bookingId);
     }
 }

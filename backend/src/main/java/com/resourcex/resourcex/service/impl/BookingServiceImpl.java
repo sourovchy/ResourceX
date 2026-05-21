@@ -5,18 +5,21 @@ import com.resourcex.resourcex.dto.response.BookingResponse;
 import com.resourcex.resourcex.entity.Booking;
 import com.resourcex.resourcex.entity.Item;
 import com.resourcex.resourcex.entity.User;
+import com.resourcex.resourcex.exception.BadRequestException;
+import com.resourcex.resourcex.exception.ConflictException;
 import com.resourcex.resourcex.exception.ForbiddenException;
+import com.resourcex.resourcex.exception.ResourceNotFoundException;
 import com.resourcex.resourcex.mapper.BookingMapper;
 import com.resourcex.resourcex.repository.BookingRepository;
 import com.resourcex.resourcex.repository.ItemRepository;
 import com.resourcex.resourcex.repository.UserRepository;
 import com.resourcex.resourcex.service.BookingService;
-import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -38,27 +41,43 @@ public class BookingServiceImpl implements BookingService {
         validateDates(request.getStartDate(), request.getEndDate());
 
         Item item = itemRepository.findByIdWithLock(request.getItemId())
-                .orElseThrow(() -> new IllegalArgumentException("Item not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Item not found"));
 
-        if (item.getStatus() == Item.ItemStatus.BLOCKED) {
-            throw new IllegalStateException("This item is blocked and cannot be booked");
+        // Prevent owners from booking their own items
+        User renter = resolveCurrentUser();
+        if (item.getOwner() != null
+                && item.getOwner().getUserId().equals(renter.getUserId())) {
+            throw new BadRequestException("You cannot book your own item");
         }
 
-        User renter = resolveCurrentUser();
+        // Block deleted/unavailable items
+        if (item.getStatus() == Item.ItemStatus.DELETED) {
+            throw new BadRequestException("This item is no longer available");
+        }
+        if (item.getStatus() == Item.ItemStatus.BLOCKED) {
+            throw new ConflictException("This item is blocked and cannot be booked");
+        }
+        if (item.getStatus() == Item.ItemStatus.UNAVAILABLE) {
+            throw new ConflictException("This item is currently unavailable");
+        }
 
+        // Overlap check: exclude CANCELLED, REJECTED, COMPLETED bookings
         List<Booking> overlappingBookings = bookingRepository.findOverlappingBookings(
                 item,
                 request.getStartDate(),
-                request.getEndDate()
+                request.getEndDate(),
+                List.of(Booking.BookingStatus.CANCELLED,
+                        Booking.BookingStatus.REJECTED,
+                        Booking.BookingStatus.COMPLETED)
         );
 
         if (!overlappingBookings.isEmpty()) {
-            throw new IllegalStateException("This item is already booked for the selected dates");
+            throw new ConflictException("This item is already booked for the selected dates");
         }
 
         long days = ChronoUnit.DAYS.between(request.getStartDate(), request.getEndDate()) + 1;
         if (days <= 0) {
-            throw new IllegalArgumentException("End date must be on or after start date");
+            throw new BadRequestException("End date must be on or after start date");
         }
 
         BigDecimal totalPrice = item.getDailyRate().multiply(BigDecimal.valueOf(days));
@@ -77,30 +96,29 @@ public class BookingServiceImpl implements BookingService {
     }
 
     @Override
-    @Transactional
+    @Transactional(readOnly = true)
     public BookingResponse getBookingById(Long bookingId) {
         Booking booking = bookingRepository.findById(bookingId)
-                .orElseThrow(() -> new IllegalArgumentException("Booking not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Booking not found"));
         assertCanViewBooking(booking);
         return BookingMapper.toResponse(booking);
     }
 
     @Override
-    @Transactional
+    @Transactional(readOnly = true)
     public List<BookingResponse> getAllBookings() {
         if (isAdmin()) {
             return bookingRepository.findAll().stream()
                     .map(BookingMapper::toResponse)
                     .toList();
         }
-
         return bookingRepository.findByRenter(resolveCurrentUser()).stream()
                 .map(BookingMapper::toResponse)
                 .toList();
     }
 
     @Override
-    @Transactional
+    @Transactional(readOnly = true)
     public List<BookingResponse> getMyBookings() {
         return bookingRepository.findByRenter(resolveCurrentUser()).stream()
                 .map(BookingMapper::toResponse)
@@ -108,8 +126,9 @@ public class BookingServiceImpl implements BookingService {
     }
 
     @Override
-    @Transactional
+    @Transactional(readOnly = true)
     public List<BookingResponse> getRequestsForMyListings() {
+        // TODO: add support for status filtering, pagination, sorting
         return bookingRepository.findByItemOwner(resolveCurrentUser()).stream()
                 .map(BookingMapper::toResponse)
                 .toList();
@@ -119,24 +138,25 @@ public class BookingServiceImpl implements BookingService {
     @Transactional
     public BookingResponse approveBooking(Long bookingId) {
         Booking booking = bookingRepository.findById(bookingId)
-                .orElseThrow(() -> new IllegalArgumentException("Booking not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Booking not found"));
 
         assertCanManageOwnerSide(booking);
 
         if (booking.getStatus() != Booking.BookingStatus.PENDING) {
-            throw new IllegalStateException("Only pending bookings can be approved");
+            throw new ConflictException("Only pending bookings can be approved");
         }
 
         booking.setStatus(Booking.BookingStatus.APPROVED);
         booking.setApprovedAt(LocalDateTime.now());
-        
+
         LocalDate today = LocalDate.now();
         if (!today.isBefore(booking.getStartDate()) && !today.isAfter(booking.getEndDate())) {
             booking.setStatus(Booking.BookingStatus.ACTIVE);
-            syncItemAvailability(booking.getItem());
         }
 
         Booking saved = bookingRepository.save(booking);
+        // Sync availability after any approval (status changed)
+        syncItemAvailability(saved.getItem());
         return BookingMapper.toResponse(saved);
     }
 
@@ -144,12 +164,12 @@ public class BookingServiceImpl implements BookingService {
     @Transactional
     public BookingResponse rejectBooking(Long bookingId) {
         Booking booking = bookingRepository.findById(bookingId)
-                .orElseThrow(() -> new IllegalArgumentException("Booking not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Booking not found"));
 
         assertCanManageOwnerSide(booking);
 
         if (booking.getStatus() != Booking.BookingStatus.PENDING) {
-            throw new IllegalStateException("Only pending bookings can be rejected");
+            throw new ConflictException("Only pending bookings can be rejected");
         }
 
         booking.setStatus(Booking.BookingStatus.REJECTED);
@@ -163,14 +183,14 @@ public class BookingServiceImpl implements BookingService {
     @Transactional
     public BookingResponse cancelBooking(Long bookingId) {
         Booking booking = bookingRepository.findById(bookingId)
-                .orElseThrow(() -> new IllegalArgumentException("Booking not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Booking not found"));
 
         assertCanCancelBooking(booking);
 
         if (booking.getStatus() == Booking.BookingStatus.COMPLETED
                 || booking.getStatus() == Booking.BookingStatus.CANCELLED
                 || booking.getStatus() == Booking.BookingStatus.REJECTED) {
-            throw new IllegalStateException("This booking can no longer be cancelled");
+            throw new ConflictException("This booking can no longer be cancelled");
         }
 
         booking.setStatus(Booking.BookingStatus.CANCELLED);
@@ -184,12 +204,13 @@ public class BookingServiceImpl implements BookingService {
     @Transactional
     public BookingResponse completeBooking(Long bookingId) {
         Booking booking = bookingRepository.findById(bookingId)
-                .orElseThrow(() -> new IllegalArgumentException("Booking not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Booking not found"));
 
         assertCanManageOwnerSide(booking);
 
-        if (booking.getStatus() != Booking.BookingStatus.ACTIVE && booking.getStatus() != Booking.BookingStatus.APPROVED) {
-            throw new IllegalStateException("Only active or approved bookings can be completed");
+        if (booking.getStatus() != Booking.BookingStatus.ACTIVE
+                && booking.getStatus() != Booking.BookingStatus.APPROVED) {
+            throw new ConflictException("Only active or approved bookings can be completed");
         }
 
         booking.setStatus(Booking.BookingStatus.COMPLETED);
@@ -206,6 +227,7 @@ public class BookingServiceImpl implements BookingService {
         LocalDate today = LocalDate.now();
         boolean itemSyncNeeded = false;
 
+        // TODO: replace with a query that fetches only APPROVED/ACTIVE bookings
         List<Booking> bookings = bookingRepository.findAll();
 
         for (Booking booking : bookings) {
@@ -239,31 +261,35 @@ public class BookingServiceImpl implements BookingService {
 
     private void validateDates(LocalDate startDate, LocalDate endDate) {
         if (startDate == null || endDate == null) {
-            throw new IllegalArgumentException("Start date and end date are required");
+            throw new BadRequestException("Start date and end date are required");
+        }
+        if (startDate.isBefore(LocalDate.now())) {
+            throw new BadRequestException("Start date cannot be in the past");
         }
         if (endDate.isBefore(startDate)) {
-            throw new IllegalArgumentException("End date cannot be before start date");
+            throw new BadRequestException("End date cannot be before start date");
         }
+        // Optional: add max/min rental duration rules here
     }
 
     private User resolveCurrentUser() {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
 
-        if (authentication == null || authentication.getName() == null || authentication.getName().isBlank()) {
-            throw new IllegalStateException("Authenticated user not found");
+        if (authentication == null || authentication.getName() == null
+                || authentication.getName().isBlank()) {
+            throw new BadRequestException("Authenticated user not found");
         }
 
         String email = authentication.getName();
 
         return userRepository.findByEmailIgnoreCase(email)
-                .orElseThrow(() -> new IllegalStateException("User not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
     }
 
     private void assertCanViewBooking(Booking booking) {
         if (isAdmin() || isRenter(booking) || isOwner(booking)) {
             return;
         }
-
         throw new ForbiddenException("You cannot access this booking");
     }
 
@@ -271,7 +297,6 @@ public class BookingServiceImpl implements BookingService {
         if (isAdmin() || isOwner(booking)) {
             return;
         }
-
         throw new ForbiddenException("Only the listing owner can manage this booking");
     }
 
@@ -279,7 +304,6 @@ public class BookingServiceImpl implements BookingService {
         if (isAdmin() || isRenter(booking) || isOwner(booking)) {
             return;
         }
-
         throw new ForbiddenException("You cannot cancel this booking");
     }
 
@@ -321,8 +345,10 @@ public class BookingServiceImpl implements BookingService {
 
         LocalDate today = LocalDate.now();
 
+        // TODO: replace with a dedicated existsActiveBookingForItem query to avoid full scan
         boolean hasActiveBooking = bookingRepository.findAll().stream()
-                .filter(b -> b.getItem() != null && b.getItem().getItemId().equals(item.getItemId()))
+                .filter(b -> b.getItem() != null
+                        && b.getItem().getItemId().equals(item.getItemId()))
                 .anyMatch(b -> b.getStatus() == Booking.BookingStatus.ACTIVE
                         && !today.isBefore(b.getStartDate())
                         && !today.isAfter(b.getEndDate()));
@@ -331,7 +357,9 @@ public class BookingServiceImpl implements BookingService {
             return;
         }
 
-        item.setStatus(hasActiveBooking ? Item.ItemStatus.UNAVAILABLE : Item.ItemStatus.AVAILABLE);
+        item.setStatus(hasActiveBooking
+                ? Item.ItemStatus.UNAVAILABLE
+                : Item.ItemStatus.AVAILABLE);
         itemRepository.save(item);
     }
 }
