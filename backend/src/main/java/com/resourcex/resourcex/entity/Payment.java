@@ -19,11 +19,11 @@ public class Payment {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long paymentId;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "booking_id", nullable = false)
+    @OneToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "booking_id", nullable = false, unique = true)
     private Booking booking;
 
-    @Column(nullable = false)
+    @Column(nullable = false, precision = 10, scale = 2)
     private BigDecimal amount;
 
     @Enumerated(EnumType.STRING)
@@ -31,13 +31,16 @@ public class Payment {
     @Builder.Default
     private PaymentStatus status = PaymentStatus.PENDING;
 
+    @Column(name = "method", nullable = false, length = 50)
     private String method;
 
     @Column(name = "transaction_ref", unique = true)
     private String transactionRef;
 
+    @Column(name = "paid_at")
     private LocalDateTime paidAt;
 
+    @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
     @PrePersist
@@ -46,6 +49,9 @@ public class Payment {
     }
 
     public enum PaymentStatus {
-        PENDING, SUCCESS, FAILED, REFUNDED
+        PENDING,
+        SUCCESS,
+        FAILED,
+        REFUNDED
     }
 }

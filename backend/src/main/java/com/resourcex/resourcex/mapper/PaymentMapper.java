@@ -13,10 +13,21 @@ public class PaymentMapper {
 
         return PaymentResponse.builder()
                 .paymentId(payment.getPaymentId())
-                .bookingId(payment.getBooking().getBookingId())
+                .bookingId(
+                        payment.getBooking() != null
+                                ? payment.getBooking().getBookingId()
+                                : null
+                )
                 .amount(payment.getAmount())
-                .status(payment.getStatus() != null ? payment.getStatus().name() : null)
-                .paymentDate(payment.getPaidAt())
+                .status(
+                        payment.getStatus() != null
+                                ? payment.getStatus().name()
+                                : null
+                )
+                .paymentMethod(payment.getMethod())
+                .transactionRef(payment.getTransactionRef())
+                .paidAt(payment.getPaidAt())
+                .createdAt(payment.getCreatedAt())
                 .build();
     }
 }

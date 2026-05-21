@@ -1,5 +1,6 @@
 package com.resourcex.resourcex.repository;
 
+import com.resourcex.resourcex.entity.Booking;
 import com.resourcex.resourcex.entity.Review;
 import com.resourcex.resourcex.entity.User;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -13,4 +14,6 @@ public interface ReviewRepository extends JpaRepository<Review, Long> {
     List<Review> findByReviewer(User reviewer);
 
     List<Review> findByReviewee(User reviewee);
+
+    boolean existsByBookingAndReviewer(Booking booking, User reviewer);
 }

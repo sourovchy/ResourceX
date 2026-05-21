@@ -20,5 +20,11 @@ public class PaymentResponse {
 
     private String status;
 
-    private LocalDateTime paymentDate;
+    private String paymentMethod;
+
+    private String transactionRef;
+
+    private LocalDateTime paidAt;
+
+    private LocalDateTime createdAt;
 }

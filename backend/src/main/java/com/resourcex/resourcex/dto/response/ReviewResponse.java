@@ -17,6 +17,8 @@ public class ReviewResponse {
 
     private UserResponse reviewer;
 
+    private UserResponse reviewee;
+
     private Integer rating;
 
     private String comment;

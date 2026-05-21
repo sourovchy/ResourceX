@@ -34,6 +34,7 @@ public class Booking {
     @Column(nullable = false)
     private LocalDate endDate;
 
+    @Column(name = "returned_date")
     private LocalDate returnedDate;
 
     @Column(nullable = false, precision = 12, scale = 2)
@@ -49,11 +50,13 @@ public class Booking {
     private Staff approvedBy;
 
     private LocalDateTime approvedAt;
+    @OneToOne(mappedBy = "booking", fetch = FetchType.LAZY)
+    private Payment payment;
 
-    @Column(nullable = false, updatable = false)
+    @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
-    @Column(nullable = false)
+    @Column(name = "updated_at", nullable = false)
     private LocalDateTime updatedAt;
 
     @PrePersist

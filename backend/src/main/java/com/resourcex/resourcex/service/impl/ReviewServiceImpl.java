@@ -7,6 +7,7 @@ import com.resourcex.resourcex.entity.Review;
 import com.resourcex.resourcex.entity.User;
 import com.resourcex.resourcex.exception.ForbiddenException;
 import com.resourcex.resourcex.exception.ResourceNotFoundException;
+import com.resourcex.resourcex.exception.custom.DuplicateResourceException;
 import com.resourcex.resourcex.mapper.ReviewMapper;
 import com.resourcex.resourcex.repository.BookingRepository;
 import com.resourcex.resourcex.repository.ReviewRepository;
@@ -22,6 +23,7 @@ import java.util.List;
 
 @Service
 @RequiredArgsConstructor
+@Transactional
 public class ReviewServiceImpl implements ReviewService {
 
     private final ReviewRepository reviewRepository;
@@ -29,14 +31,18 @@ public class ReviewServiceImpl implements ReviewService {
     private final UserRepository userRepository;
 
     @Override
-    @Transactional
     public ReviewResponse createReview(CreateReviewRequest request) {
         User reviewer = resolveCurrentUser();
+
         Booking booking = bookingRepository.findById(request.getBookingId())
                 .orElseThrow(() -> new ResourceNotFoundException("Booking not found"));
 
         if (!booking.getRenter().getUserId().equals(reviewer.getUserId())) {
             throw new ForbiddenException("Only the renter can review this booking");
+        }
+
+        if (reviewRepository.existsByBookingAndReviewer(booking, reviewer)) {
+            throw new DuplicateResourceException("You have already reviewed this booking");
         }
 
         Review review = Review.builder()
@@ -51,14 +57,88 @@ public class ReviewServiceImpl implements ReviewService {
     }
 
     @Override
+    @Transactional(readOnly = true)
+    public ReviewResponse getReviewById(Long reviewId) {
+        Review review = reviewRepository.findById(reviewId)
+                .orElseThrow(() -> new ResourceNotFoundException("Review not found"));
+
+        User currentUser = resolveCurrentUser();
+        if (!isAdmin()
+                && !review.getReviewer().getUserId().equals(currentUser.getUserId())
+                && !review.getReviewee().getUserId().equals(currentUser.getUserId())) {
+            throw new ForbiddenException("You do not have permission to view this review");
+        }
+
+        return ReviewMapper.toResponse(review);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
     public List<ReviewResponse> getAllReviews() {
-        User user = resolveCurrentUser();
-        return reviewRepository.findAll().stream()
-                .filter(review -> isAdmin()
-                        || review.getReviewer().getUserId().equals(user.getUserId())
-                        || review.getReviewee().getUserId().equals(user.getUserId()))
+        User currentUser = resolveCurrentUser();
+
+        if (isAdmin()) {
+            return reviewRepository.findAll()
+                    .stream()
+                    .map(ReviewMapper::toResponse)
+                    .toList();
+        }
+
+        return reviewRepository.findAll()
+                .stream()
+                .filter(review ->
+                        review.getReviewer().getUserId().equals(currentUser.getUserId())
+                                || review.getReviewee().getUserId().equals(currentUser.getUserId()))
                 .map(ReviewMapper::toResponse)
                 .toList();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<ReviewResponse> getReviewsByReviewer(Long reviewerId) {
+        User reviewer = userRepository.findById(reviewerId)
+                .orElseThrow(() -> new ResourceNotFoundException("Reviewer not found"));
+
+        User currentUser = resolveCurrentUser();
+        if (!isAdmin() && !currentUser.getUserId().equals(reviewer.getUserId())) {
+            throw new ForbiddenException("You do not have permission to view these reviews");
+        }
+
+        return reviewRepository.findByReviewer(reviewer)
+                .stream()
+                .map(ReviewMapper::toResponse)
+                .toList();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<ReviewResponse> getReviewsByReviewee(Long revieweeId) {
+        User reviewee = userRepository.findById(revieweeId)
+                .orElseThrow(() -> new ResourceNotFoundException("Reviewee not found"));
+
+        User currentUser = resolveCurrentUser();
+        if (!isAdmin() && !currentUser.getUserId().equals(reviewee.getUserId())) {
+            throw new ForbiddenException("You do not have permission to view these reviews");
+        }
+
+        return reviewRepository.findByReviewee(reviewee)
+                .stream()
+                .map(ReviewMapper::toResponse)
+                .toList();
+    }
+
+    @Override
+    public void deleteReview(Long reviewId) {
+        Review review = reviewRepository.findById(reviewId)
+                .orElseThrow(() -> new ResourceNotFoundException("Review not found"));
+
+        User currentUser = resolveCurrentUser();
+        boolean owner = review.getReviewer().getUserId().equals(currentUser.getUserId());
+        if (!isAdmin() && !owner) {
+            throw new ForbiddenException("You do not have permission to delete this review");
+        }
+
+        reviewRepository.delete(review);
     }
 
     private User resolveCurrentUser() {
@@ -66,6 +146,7 @@ public class ReviewServiceImpl implements ReviewService {
         if (authentication == null || authentication.getName() == null || authentication.getName().isBlank()) {
             throw new ForbiddenException("Authenticated user not found");
         }
+
         return userRepository.findByEmailIgnoreCase(authentication.getName())
                 .orElseThrow(() -> new ResourceNotFoundException("User not found"));
     }

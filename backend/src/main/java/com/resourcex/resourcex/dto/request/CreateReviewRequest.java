@@ -3,6 +3,7 @@ package com.resourcex.resourcex.dto.request;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Size;
 import lombok.*;
 
 @Getter
@@ -20,5 +21,6 @@ public class CreateReviewRequest {
     @Max(5)
     private Integer rating;
 
+    @Size(max = 1000)
     private String comment;
 }
