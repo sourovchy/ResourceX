@@ -112,7 +112,10 @@ public class AuthServiceImpl implements AuthService {
         return AuthResponse.builder()
                 .message("Login successful")
                 .token(token)
-                .user(UserMapper.toResponse(user))
+                .user(UserMapper.toResponse(
+    user,
+    userRoleRepository.findByUser(user)
+))
                 .roles(resolveRoles(user))
                 .build();
     }
@@ -122,7 +125,10 @@ public class AuthServiceImpl implements AuthService {
         User user = resolveCurrentUser();
 
         return CurrentUserResponse.builder()
-                .user(UserMapper.toResponse(user))
+                .user(UserMapper.toResponse(
+    user,
+    userRoleRepository.findByUser(user)
+))
                 .roles(resolveRoles(user))
                 .build();
     }
@@ -139,7 +145,7 @@ public class AuthServiceImpl implements AuthService {
     }
 
     private List<String> resolveRoles(User user) {
-        List<String> roles = userRoleRepository.findByUser(user).stream()
+        List<String> roles = userRoleRepository.findAllByUser(user).stream()
                 .map(userRole -> userRole.getRole().getName())
                 .toList();
 

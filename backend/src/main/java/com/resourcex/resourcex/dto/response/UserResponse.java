@@ -31,4 +31,9 @@ public class UserResponse {
     private Boolean phoneVerified;
 
     private UserStatus status;
+    // Important for frontend auth routing
+    private List<String> roles;
+
+    // Helpful for admin/dashboard/history features
+    private LocalDateTime createdAt;
 }

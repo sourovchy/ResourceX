@@ -32,7 +32,7 @@ public class CustomUserDetailsServiceImpl implements UserDetailsService {
         User user = userRepository.findByEmailIgnoreCase(normalizedEmail)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found"));
 
-        List<SimpleGrantedAuthority> authorities = userRoleRepository.findByUser(user).stream()
+        List<SimpleGrantedAuthority> authorities = userRoleRepository.findAllByUser(user).stream()
                 .map(userRole -> userRole.getRole())
                 .filter(role -> role != null && role.getName() != null && !role.getName().isBlank())
                 .map(role -> new SimpleGrantedAuthority(role.getName()))
