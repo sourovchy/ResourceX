@@ -1,6 +1,6 @@
 package com.resourcex.resourcex.dto.response;
 
-import com.resourcex.resourcex.entity.UserStatus;
+import com.resourcex.resourcex.entity.PendingUserStatus;
 import lombok.*;
 import java.time.LocalDateTime;
 
@@ -18,8 +18,6 @@ public class PendingUserResponse {
     private String university;
     private String department;
     private String idCardDataUrl;
-    private UserStatus status;
-    private boolean emailVerified;
-    private boolean phoneVerified;
+    private PendingUserStatus status;
     private LocalDateTime createdAt;
 }

@@ -1,14 +1,7 @@
-// components/ChatWindow.tsx
 "use client";
 
-import { useEffect, useRef, useState } from "react";
-import {
-	Info,
-	MoreVertical,
-	MessageSquare,
-	Ban,
-	ShieldCheck,
-} from "lucide-react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { Info, MoreVertical, MessageSquare } from "lucide-react";
 import { Conversation, Message } from "@/types/chat";
 import MessageBubble from "./MessageBubble";
 import MessageInput from "./MessageInput";
@@ -17,21 +10,44 @@ import UserInfoModal from "./UserInfoModal";
 interface ChatWindowProps {
 	conversation: Conversation | null;
 	messages: Message[];
-	isBlocked: boolean;
+	currentUserId?: number;
 	onSend: (text: string) => void;
-	onToggleBlock: (userId: string) => void;
 }
 
 export default function ChatWindow({
 	conversation,
 	messages,
-	isBlocked,
+	currentUserId,
 	onSend,
-	onToggleBlock,
 }: ChatWindowProps) {
 	const bottomRef = useRef<HTMLDivElement>(null);
 	const [showInfo, setShowInfo] = useState(false);
 	const [showMenu, setShowMenu] = useState(false);
+
+	const otherParticipant = useMemo(() => {
+		if (!conversation) return null;
+
+		if (conversation.participantOneUserId === currentUserId) {
+			return {
+				userId: conversation.participantTwoUserId,
+				name: conversation.participantTwoName,
+				email: conversation.participantTwoEmail,
+			};
+		}
+
+		return {
+			userId: conversation.participantOneUserId,
+			name: conversation.participantOneName,
+			email: conversation.participantOneEmail,
+		};
+	}, [conversation, currentUserId]);
+
+	const contextLabel = useMemo(() => {
+		if (!conversation) return "";
+		if (conversation.bookingId) return `Booking #${conversation.bookingId}`;
+		if (conversation.disputeId) return `Dispute #${conversation.disputeId}`;
+		return "Direct Conversation";
+	}, [conversation]);
 
 	// Auto-scroll to bottom on new messages
 	useEffect(() => {
@@ -46,7 +62,7 @@ export default function ChatWindow({
 		return () => document.removeEventListener("click", handler);
 	}, [showMenu]);
 
-	if (!conversation) {
+	if (!conversation || !otherParticipant) {
 		return (
 			<div className="flex-1 flex flex-col items-center justify-center text-textSecondary bg-background/30 gap-4">
 				<div className="w-16 h-16 rounded-2xl bg-surfaceVariant flex items-center justify-center">
@@ -64,7 +80,9 @@ export default function ChatWindow({
 		);
 	}
 
-	const { participant, itemTitle } = conversation;
+	const participantInitial = otherParticipant.name
+		? otherParticipant.name.charAt(0).toUpperCase()
+		: "U";
 
 	return (
 		<div className="flex-1 flex flex-col min-w-0 bg-background/30">
@@ -73,26 +91,18 @@ export default function ChatWindow({
 				<div className="flex items-center gap-3">
 					<div className="relative">
 						<div className="w-10 h-10 rounded-full bg-primary text-white flex items-center justify-center font-bold text-lg">
-							{participant.avatar}
+							{participantInitial}
 						</div>
-						{participant.online && (
-							<span className="absolute bottom-0 right-0 w-2.5 h-2.5 bg-success rounded-full border-2 border-surface" />
-						)}
 					</div>
 					<div>
 						<h3 className="font-bold text-textPrimary text-sm leading-none">
-							{participant.name}
+							{otherParticipant.name}
 						</h3>
 						<div className="text-xs text-textSecondary mt-1 flex items-center gap-1.5">
-							<span
-								className={`w-1.5 h-1.5 rounded-full ${
-									participant.online ? "bg-success" : "bg-outline"
-								}`}
-							/>
-							{participant.online ? "Online" : "Offline"}
-							{isBlocked && (
-								<span className="ml-2 text-error font-semibold flex items-center gap-1">
-									<Ban className="w-3 h-3" /> Blocked
+							{otherParticipant.email}
+							{conversation.unreadCount > 0 && (
+								<span className="ml-2 text-primary font-semibold">
+									{conversation.unreadCount} unread
 								</span>
 							)}
 						</div>
@@ -104,7 +114,7 @@ export default function ChatWindow({
 					<button
 						onClick={() => setShowInfo(true)}
 						className="p-2 text-textSecondary hover:text-primary transition-colors hover:bg-surfaceVariant rounded-lg"
-						title="User Info">
+						title="Conversation Info">
 						<Info className="w-5 h-5" />
 					</button>
 
@@ -120,26 +130,9 @@ export default function ChatWindow({
 						</button>
 						{showMenu && (
 							<div className="absolute right-0 top-full mt-1 w-44 bg-surface border border-borderLight rounded-xl shadow-lg z-30 overflow-hidden">
-								<button
-									onClick={() => {
-										onToggleBlock(participant.id);
-										setShowMenu(false);
-									}}
-									className={`flex items-center gap-2 w-full px-4 py-3 text-sm font-medium transition-colors ${
-										isBlocked
-											? "text-success hover:bg-success/10"
-											: "text-error hover:bg-error/10"
-									}`}>
-									{isBlocked ? (
-										<>
-											<ShieldCheck className="w-4 h-4" /> Unblock User
-										</>
-									) : (
-										<>
-											<Ban className="w-4 h-4" /> Block User
-										</>
-									)}
-								</button>
+								<div className="px-4 py-3 text-sm text-textSecondary">
+									Booking/Dispute actions are handled from the backend context.
+								</div>
 							</div>
 						)}
 					</div>
@@ -149,7 +142,7 @@ export default function ChatWindow({
 			{/* Messages Area */}
 			<div className="flex-1 overflow-y-auto p-6 space-y-4">
 				<div className="text-center text-xs font-semibold text-textTertiary mb-6 uppercase tracking-wider">
-					Chat started regarding {itemTitle}
+					{contextLabel}
 				</div>
 
 				{messages.length === 0 ? (
@@ -158,22 +151,22 @@ export default function ChatWindow({
 						<p className="text-sm">No messages yet. Say hi!</p>
 					</div>
 				) : (
-					messages.map((msg) => <MessageBubble key={msg.id} message={msg} />)
+					messages.map((msg) => <MessageBubble key={msg.messageId} message={msg} />)
 				)}
 				<div ref={bottomRef} />
 			</div>
 
 			{/* Input */}
-			<MessageInput onSend={onSend} blocked={isBlocked} />
+			<MessageInput onSend={onSend} blocked={false} />
 
 			{/* User Info Modal */}
 			{showInfo && (
 				<UserInfoModal
-					user={participant}
-					itemTitle={itemTitle}
-					isBlocked={isBlocked}
+					user={otherParticipant}
+					itemTitle={contextLabel}
+					isBlocked={false}
 					onClose={() => setShowInfo(false)}
-					onToggleBlock={() => onToggleBlock(participant.id)}
+					onToggleBlock={() => undefined}
 				/>
 			)}
 		</div>

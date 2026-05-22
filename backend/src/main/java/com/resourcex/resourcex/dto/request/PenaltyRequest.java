@@ -28,6 +28,6 @@ public class PenaltyRequest {
     @NotBlank(message = "Reason is required")
     private String reason;
 
-    @NotNull(message = "Issued by staff ID is required")
-    private Long issuedByStaffId;
+    @NotNull(message = "Issued by user ID is required")
+    private Long issuedByUserId;
 }

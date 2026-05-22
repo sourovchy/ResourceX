@@ -38,11 +38,13 @@ public class Report {
     private ReportStatus status = ReportStatus.PENDING;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "reviewed_by")
-    private Staff reviewedBy;
+    @JoinColumn(name = "reviewed_by_user_id")
+    private User reviewedBy;
 
+    @Column(name = "reviewed_at")
     private LocalDateTime reviewedAt;
 
+    @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
     @PrePersist

@@ -46,13 +46,13 @@ public class PenaltyMapper {
 
                 .status(penalty.getStatus())
 
-                .issuedByStaffId(
+                .issuedByUserId(
                         penalty.getIssuedBy() != null
-                                ? penalty.getIssuedBy().getStaffId()
+                                ? penalty.getIssuedBy().getUserId()
                                 : null
                 )
 
-                .issuedByStaffName(
+                .issuedByUserName(
                         penalty.getIssuedBy() != null
                                 ? penalty.getIssuedBy().getName()
                                 : null

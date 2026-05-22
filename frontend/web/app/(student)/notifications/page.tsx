@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import {
 	CheckCircle2,
 	AlertTriangle,
@@ -12,86 +12,243 @@ import {
 	Check,
 } from "lucide-react";
 
+type NotificationItem = {
+	id: number;
+	type: string;
+	title: string;
+	message: string;
+	time: string;
+	isRead: boolean;
+};
+
+type NotificationApiResponse =
+	| {
+		notifications?: unknown;
+		data?: unknown;
+		content?: unknown;
+	}
+	| unknown;
+
+const NOTIFICATION_ENDPOINTS = [
+	"/api/notifications",
+	"/api/notifications/me",
+	"/api/users/notifications",
+];
+
+function getAuthHeaders(): Record<string, string> {
+	if (typeof window === "undefined") return {};
+
+	const token =
+		localStorage.getItem("resourcex_token");
+
+	return token
+		? {
+			Authorization: `Bearer ${token}`,
+		}
+		: {};
+}
+
+async function fetchJson(url: string) {
+	const response = await fetch(url, {
+		method: "GET",
+		credentials: "include",
+		headers: {
+			"Content-Type": "application/json",
+			...getAuthHeaders(),
+		},
+	});
+
+	if (!response.ok) {
+		throw new Error(`Request failed with status ${response.status}`);
+	}
+
+	return (await response.json()) as NotificationApiResponse;
+}
+
+function formatRelativeTime(dateString?: string) {
+	if (!dateString) return "Recently";
+
+	const date = new Date(dateString);
+	const now = new Date();
+	const diffMs = now.getTime() - date.getTime();
+	const diffMinutes = Math.floor(diffMs / (1000 * 60));
+	const diffHours = Math.floor(diffMinutes / 60);
+	const diffDays = Math.floor(diffHours / 24);
+
+	if (diffMinutes < 1) return "Just now";
+	if (diffMinutes < 60) return `${diffMinutes} minute${diffMinutes > 1 ? "s" : ""} ago`;
+	if (diffHours < 24) return `${diffHours} hour${diffHours > 1 ? "s" : ""} ago`;
+	if (diffDays < 7) return `${diffDays} day${diffDays > 1 ? "s" : ""} ago`;
+
+	return date.toLocaleDateString();
+}
+
+function normalizeNotification(raw: any): NotificationItem {
+	return {
+		id: Number(raw?.id ?? raw?.notificationId ?? Date.now()),
+		type: raw?.type ?? raw?.notificationType ?? "general",
+		title: raw?.title ?? "Notification",
+		message: raw?.message ?? raw?.content ?? "",
+		time: formatRelativeTime(raw?.createdAt ?? raw?.time ?? raw?.date),
+		isRead: Boolean(raw?.isRead ?? raw?.read ?? false),
+	};
+}
+
+function extractNotifications(payload: NotificationApiResponse) {
+	const root: any = payload && typeof payload === "object" ? payload : {};
+
+	const source =
+		root.notifications ?? root.data ?? root.content ?? payload;
+
+	if (!Array.isArray(source)) {
+		return [] as NotificationItem[];
+	}
+
+	return source.map((item: any) => normalizeNotification(item));
+}
+
+function getNotificationStyle(type: string) {
+	switch (type.toLowerCase()) {
+		case "return_reminder":
+			return {
+				icon: <AlertTriangle className="w-5 h-5 text-warningDark" />,
+				bgColor: "bg-warningLight",
+			};
+
+		case "booking_request":
+			return {
+				icon: <Inbox className="w-5 h-5 text-primary" />,
+				bgColor: "bg-primaryLight",
+			};
+
+		case "booking_approved":
+			return {
+				icon: <CheckCircle2 className="w-5 h-5 text-success" />,
+				bgColor: "bg-successLight",
+			};
+
+		case "deposit_released":
+			return {
+				icon: <DollarSign className="w-5 h-5 text-success" />,
+				bgColor: "bg-successLight",
+			};
+
+		case "item_approved":
+			return {
+				icon: <PackageOpen className="w-5 h-5 text-dashboardBlue" />,
+				bgColor: "bg-dashboardBlueTint",
+			};
+
+		case "penalty_applied":
+			return {
+				icon: <AlertOctagon className="w-5 h-5 text-error" />,
+				bgColor: "bg-errorLight",
+			};
+
+		default:
+			return {
+				icon: <Bell className="w-5 h-5 text-primary" />,
+				bgColor: "bg-primaryLight",
+			};
+	}
+}
+
 export default function NotificationsPage() {
-	const [notifications, setNotifications] = useState([
-		{
-			id: 1,
-			type: "return_reminder",
-			title: "Return Due Tomorrow",
-			message:
-				"Your rental for 'DSLR Camera Setup' is due tomorrow by 5:00 PM.",
-			time: "2 hours ago",
-			isRead: false,
-			icon: <AlertTriangle className="w-5 h-5 text-warningDark" />,
-			bgColor: "bg-warningLight",
-		},
-		{
-			id: 2,
-			type: "booking_request",
-			title: "New Booking Request Received",
-			message:
-				"John Doe wants to rent your 'Sony Alpha A7III' for May 10 - May 12.",
-			time: "5 hours ago",
-			isRead: false,
-			icon: <Inbox className="w-5 h-5 text-primary" />,
-			bgColor: "bg-primaryLight",
-		},
-		{
-			id: 3,
-			type: "booking_approved",
-			title: "Booking Approved!",
-			message:
-				"Your request for 'Arduino Mega Kit' has been approved. Please pay the deposit.",
-			time: "1 day ago",
-			isRead: true,
-			icon: <CheckCircle2 className="w-5 h-5 text-success" />,
-			bgColor: "bg-successLight",
-		},
-		{
-			id: 4,
-			type: "deposit_released",
-			title: "Deposit Released",
-			message:
-				"Good news! Your deposit of ৳ 5000 for 'MacBook Pro' has been fully released.",
-			time: "2 days ago",
-			isRead: true,
-			icon: <DollarSign className="w-5 h-5 text-success" />,
-			bgColor: "bg-successLight",
-		},
-		{
-			id: 5,
-			type: "item_approved",
-			title: "Item Listing Live",
-			message:
-				"Admin approved your item 'Camping Tent'. It is now visible to all students.",
-			time: "3 days ago",
-			isRead: true,
-			icon: <PackageOpen className="w-5 h-5 text-dashboardBlue" />,
-			bgColor: "bg-dashboardBlueTint",
-		},
-		{
-			id: 6,
-			type: "penalty_applied",
-			title: "Penalty Applied",
-			message:
-				"Admin approved a damage penalty of ৳ 150 against your booking of 'JBL PartyBox'.",
-			time: "1 week ago",
-			isRead: true,
-			icon: <AlertOctagon className="w-5 h-5 text-error" />,
-			bgColor: "bg-errorLight",
-		},
-	]);
+	const [notifications, setNotifications] = useState<NotificationItem[]>([]);
+	const [loading, setLoading] = useState(true);
+	const [error, setError] = useState<string | null>(null);
 
-	const unreadCount = notifications.filter((n) => !n.isRead).length;
+	useEffect(() => {
+		let active = true;
 
-	const markAllRead = () => {
-		setNotifications((prev) => prev.map((n) => ({ ...n, isRead: true })));
+		const loadNotifications = async () => {
+			setLoading(true);
+			setError(null);
+
+			try {
+				let loadedNotifications: NotificationItem[] = [];
+
+				for (const endpoint of NOTIFICATION_ENDPOINTS) {
+					try {
+						const payload = await fetchJson(endpoint);
+						const normalized = extractNotifications(payload);
+
+						if (normalized.length > 0) {
+							loadedNotifications = normalized;
+							break;
+						}
+					} catch {
+						// Try next endpoint.
+					}
+				}
+
+				if (!active) return;
+
+				setNotifications(loadedNotifications);
+			} catch (err) {
+				if (!active) return;
+				setError(
+					err instanceof Error
+						? err.message
+						: "Failed to load notifications.",
+				);
+			} finally {
+				if (active) {
+					setLoading(false);
+				}
+			}
+		};
+
+		void loadNotifications();
+
+		return () => {
+			active = false;
+		};
+	}, []);
+
+	const unreadCount = useMemo(
+		() => notifications.filter((n) => !n.isRead).length,
+		[notifications],
+	);
+
+	const markAllRead = async () => {
+		setNotifications((prev) =>
+			prev.map((n) => ({ ...n, isRead: true })),
+		);
+
+		try {
+			await fetch("/api/notifications/read-all", {
+				method: "PUT",
+				credentials: "include",
+				headers: {
+					"Content-Type": "application/json",
+					...getAuthHeaders(),
+				},
+			});
+		} catch {
+			// Silent fail for optimistic UI.
+		}
 	};
 
-	const markAsRead = (id: number) => {
+	const markAsRead = async (id: number) => {
 		setNotifications((prev) =>
-			prev.map((n) => (n.id === id ? { ...n, isRead: true } : n)),
+			prev.map((n) =>
+				n.id === id ? { ...n, isRead: true } : n,
+			),
 		);
+
+		try {
+			await fetch(`/api/notifications/${id}/read`, {
+				method: "PUT",
+				credentials: "include",
+				headers: {
+					"Content-Type": "application/json",
+					...getAuthHeaders(),
+				},
+			});
+		} catch {
+			// Silent fail for optimistic UI.
+		}
 	};
 
 	return (
@@ -126,44 +283,61 @@ export default function NotificationsPage() {
 			</div>
 
 			<div className="bg-surface border border-borderLight rounded-2xl shadow-sm overflow-hidden flex flex-col">
-				<div className="divide-y divide-borderLight">
-					{notifications.map((n) => (
-						<div
-							key={n.id}
-							onClick={() => markAsRead(n.id)}
-							className={`p-6 flex flex-col sm:flex-row gap-5 cursor-pointer transition-colors ${n.isRead ? "bg-surface hover:bg-surfaceVariant/50" : "bg-primaryLight/10 hover:bg-primaryLight/20"}`}>
-							<div
-								className={`w-12 h-12 shrink-0 rounded-full flex items-center justify-center ${n.bgColor}`}>
-								{n.icon}
-							</div>
+				{loading ? (
+					<div className="p-12 text-center text-textSecondary">
+						Loading notifications...
+					</div>
+				) : error ? (
+					<div className="p-12 text-center text-error font-medium">
+						{error}
+					</div>
+				) : (
+					<div className="divide-y divide-borderLight">
+						{notifications.map((n) => {
+							const style = getNotificationStyle(n.type);
 
-							<div className="flex-1 min-w-0">
-								<div className="flex justify-between items-start gap-4 mb-1">
-									<h3
-										className={`font-bold text-textPrimary ${n.isRead ? "text-base" : "text-lg"}`}>
-										{n.title}
-									</h3>
-									{!n.isRead && (
-										<span className="shrink-0 w-2.5 h-2.5 rounded-full bg-primary mt-2"></span>
-									)}
+							return (
+								<div
+									key={n.id}
+									onClick={() => void markAsRead(n.id)}
+									className={`p-6 flex flex-col sm:flex-row gap-5 cursor-pointer transition-colors ${n.isRead ? "bg-surface hover:bg-surfaceVariant/50" : "bg-primaryLight/10 hover:bg-primaryLight/20"}`}>
+									<div
+										className={`w-12 h-12 shrink-0 rounded-full flex items-center justify-center ${style.bgColor}`}>
+										{style.icon}
+									</div>
+
+									<div className="flex-1 min-w-0">
+										<div className="flex justify-between items-start gap-4 mb-1">
+											<h3
+												className={`font-bold text-textPrimary ${n.isRead ? "text-base" : "text-lg"}`}>
+												{n.title}
+											</h3>
+											{!n.isRead && (
+												<span className="shrink-0 w-2.5 h-2.5 rounded-full bg-primary mt-2"></span>
+											)}
+										</div>
+
+										<p
+											className={`text-textSecondary ${!n.isRead && "text-textPrimary font-medium"}`}>
+											{n.message}
+										</p>
+
+										<div className="text-xs text-textTertiary font-medium mt-3">
+											{n.time}
+										</div>
+									</div>
 								</div>
-								<p
-									className={`text-textSecondary ${!n.isRead && "text-textPrimary font-medium"}`}>
-									{n.message}
-								</p>
-								<div className="text-xs text-textTertiary font-medium mt-3">
-									{n.time}
-								</div>
+							);
+						})}
+
+						{notifications.length === 0 && (
+							<div className="p-12 text-center text-textSecondary">
+								<Bell className="w-12 h-12 text-outline mx-auto mb-4" />
+								You have no notifications.
 							</div>
-						</div>
-					))}
-					{notifications.length === 0 && (
-						<div className="p-12 text-center text-textSecondary">
-							<Bell className="w-12 h-12 text-outline mx-auto mb-4" />
-							You have no notifications.
-						</div>
-					)}
-				</div>
+						)}
+					</div>
+				)}
 			</div>
 		</div>
 	);

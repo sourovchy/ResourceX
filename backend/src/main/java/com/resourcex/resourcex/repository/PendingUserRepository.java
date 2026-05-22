@@ -1,7 +1,7 @@
 package com.resourcex.resourcex.repository;
 
 import com.resourcex.resourcex.entity.PendingUser;
-import com.resourcex.resourcex.entity.UserStatus;
+import com.resourcex.resourcex.entity.PendingUserStatus;
 import jakarta.persistence.LockModeType;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Lock;
@@ -31,7 +31,7 @@ public interface PendingUserRepository extends JpaRepository<PendingUser, Long> 
 
     boolean existsByPhone(String phone);
 
-    List<PendingUser> findByStatus(UserStatus status);
+    List<PendingUser> findByStatus(PendingUserStatus status);
 
-    long countByStatus(UserStatus status);
+    long countByStatus(PendingUserStatus status);
 }

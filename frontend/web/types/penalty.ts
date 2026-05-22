@@ -9,8 +9,8 @@ export interface PenaltyResponse {
   amount: number;
   reason: string;
   status: PenaltyStatus;
-  issuedByStaffId?: number;
-  issuedByStaffName?: string;
+  issuedByUserId?: number;
+  issuedByUserName?: string;
   createdAt: string;
   appliedAt?: string;
 }

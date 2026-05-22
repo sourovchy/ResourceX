@@ -1,17 +1,27 @@
-export type UserRole = "ROLE_USER" | "ROLE_ADMIN" | string;
+export type UserRole =
+	| "ROLE_USER"
+	| "ROLE_ADMIN"
+	| "ROLE_MODERATOR"
+	| "ROLE_SUPER_ADMIN"
+	| string;
 
 export type AuthUser = {
 	userId: number;
-	studentId: string;
 	name: string;
 	email: string;
-	phone: string;
-	university?: string;
-	department?: string;
-	trustScore?: number;
-	emailVerified?: boolean;
-	phoneVerified?: boolean;
 	status?: string;
+	roles?: UserRole[];
+	studentProfile?: StudentProfile | null;
+};
+
+export type StudentProfile = {
+	studentId: string;
+	phone: string;
+	university?: string | null;
+	department?: string | null;
+	trustScore: number;
+	emailVerified: boolean;
+	phoneVerified: boolean;
 };
 
 export type CurrentUserResponse = {

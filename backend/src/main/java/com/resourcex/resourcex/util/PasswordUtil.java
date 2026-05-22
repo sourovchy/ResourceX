@@ -1,11 +1,11 @@
 package com.resourcex.resourcex.util;
 
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.security.crypto.password.PasswordEncoder;
 
 public class PasswordUtil {
 
-    private static final BCryptPasswordEncoder encoder =
-            new BCryptPasswordEncoder();
+    private static final PasswordEncoder encoder = new BCryptPasswordEncoder();
 
     private PasswordUtil() {
     }
@@ -16,8 +16,11 @@ public class PasswordUtil {
 
     public static boolean matches(
             String rawPassword,
-            String hashedPassword
-    ) {
+            String hashedPassword) {
+        if (rawPassword == null || hashedPassword == null) {
+            return false;
+        }
+
         return encoder.matches(rawPassword, hashedPassword);
     }
 }

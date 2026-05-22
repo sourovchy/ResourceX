@@ -9,8 +9,8 @@ import java.time.LocalDateTime;
 @Table(
         name = "trust_events",
         indexes = {
-                @Index(name = "idx_trust_event_user", columnList = "user_id"),
-                @Index(name = "idx_trust_event_type", columnList = "event_type")
+                @Index(name = "idx_trust_events_user_id", columnList = "user_id"),
+                @Index(name = "idx_trust_events_created_by_user_id", columnList = "created_by_user_id")
         }
 )
 @Getter
@@ -30,22 +30,29 @@ public class TrustEvent {
     private User user;
 
     @Enumerated(EnumType.STRING)
-    @Column(name = "event_type", nullable = false, length = 30)
-    private TrustEventType eventType;
+    @Column(name = "source_type", nullable = false, length = 30)
+    private TrustEventType sourceType;
 
-    @Column(nullable = false)
-    private Integer points;
+    @Column(name = "source_id")
+    private Long sourceId;
 
-    @Column(nullable = false, columnDefinition = "TEXT")
+    @Column(name = "change_amount", nullable = false)
+    private Integer changeAmount;
+
+    @Column(name = "old_score", nullable = false)
+    private Integer oldScore;
+
+    @Column(name = "new_score", nullable = false)
+    private Integer newScore;
+
+    @Column(nullable = false, length = 255)
     private String reason;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "created_by")
-    private Staff createdBy;
+    @JoinColumn(name = "created_by_user_id")
+    private User createdBy;
 
-    private Long sourceId;
-
-    @Column(nullable = false, updatable = false)
+    @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
     @PrePersist
@@ -59,6 +66,6 @@ public class TrustEvent {
         DISPUTE,
         REPORT,
         SYSTEM,
-        STAFF_ACTION
+        ADMIN_ACTION
     }
 }

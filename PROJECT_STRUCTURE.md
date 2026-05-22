@@ -49,6 +49,7 @@ backend/
     |   |               |   |-- BookingController.java
     |   |               |   |-- DisputeController.java
     |   |               |   |-- ItemController.java
+    |   |               |   |-- NotificationController.java
     |   |               |   |-- OtpController.java
     |   |               |   |-- PaymentController.java
     |   |               |   |-- ReviewController.java
@@ -60,6 +61,7 @@ backend/
     |   |               |   |   |-- CreateItemRequest.java
     |   |               |   |   |-- CreateReviewRequest.java
     |   |               |   |   |-- LoginRequest.java
+    |   |               |   |   |-- NotificationRequest.java
     |   |               |   |   |-- OtpRequest.java
     |   |               |   |   |-- OtpVerifyRequest.java
     |   |               |   |   |-- PaymentRequest.java
@@ -76,6 +78,7 @@ backend/
     |   |               |       |-- DashboardStatsResponse.java
     |   |               |       |-- DisputeResponse.java
     |   |               |       |-- ItemResponse.java
+    |   |               |       |-- NotificationResponse.java
     |   |               |       |-- OtpResponse.java
     |   |               |       |-- PaymentResponse.java
     |   |               |       |-- PendingUserResponse.java
@@ -87,6 +90,7 @@ backend/
     |   |               |   |-- Dispute.java
     |   |               |   |-- Item.java
     |   |               |   |-- ItemImage.java
+    |   |               |   |-- Notification.java
     |   |               |   |-- OtpStatus.java
     |   |               |   |-- OtpToken.java
     |   |               |   |-- Payment.java
@@ -120,6 +124,7 @@ backend/
     |   |               |   |-- BookingMapper.java
     |   |               |   |-- DisputeMapper.java
     |   |               |   |-- ItemMapper.java
+    |   |               |   |-- NotificationMapper.java
     |   |               |   |-- PaymentMapper.java
     |   |               |   |-- ReviewMapper.java
     |   |               |   `-- UserMapper.java
@@ -129,6 +134,7 @@ backend/
     |   |               |   |-- DisputeRepository.java
     |   |               |   |-- ItemImageRepository.java
     |   |               |   |-- ItemRepository.java
+    |   |               |   |-- NotificationRepository.java
     |   |               |   |-- OtpRepository.java
     |   |               |   |-- PaymentRepository.java
     |   |               |   |-- PenaltyRepository.java
@@ -153,6 +159,7 @@ backend/
     |   |               |   |-- DisputeService.java
     |   |               |   |-- EmailService.java
     |   |               |   |-- ItemService.java
+    |   |               |   |-- NotificationService.java
     |   |               |   |-- OtpService.java
     |   |               |   |-- PaymentService.java
     |   |               |   |-- ReviewService.java
@@ -166,6 +173,7 @@ backend/
     |   |               |       |-- DisputeServiceImpl.java
     |   |               |       |-- EmailServiceImpl.java
     |   |               |       |-- ItemServiceImpl.java
+    |   |               |       |-- NotificationServiceImpl.java
     |   |               |       |-- OtpServiceImpl.java
     |   |               |       |-- PaymentServiceImpl.java
     |   |               |       |-- ReviewServiceImpl.java
@@ -190,6 +198,7 @@ backend/
     |   |               `-- validator/
     |   |                   |-- BookingValidator.java
     |   |                   |-- ItemValidator.java
+    |   |                   |-- NotificationValidator.java
     |   |                   |-- PaymentValidator.java
     |   |                   `-- UserValidator.java
     |   `-- resources/
@@ -206,23 +215,23 @@ backend/
 
 ### Backend Package Responsibilities
 
-| Folder | Purpose |
-| --- | --- |
-| `config/` | Spring configuration such as CORS/web and mail setup. |
-| `controller/` | REST API endpoints for auth, users, items, bookings, payments, disputes, reviews, admin, analytics, and OTP. |
-| `dto/request/` | Request payload models received from the frontend/API clients. |
-| `dto/response/` | Response payload models returned by the API. |
-| `entity/` | JPA entity models representing database tables and domain records. |
-| `exception/` | Global and custom API exception handling. |
-| `filter/` | Request-level filters such as logging. |
-| `mapper/` | Entity-to-DTO and DTO-to-entity conversion helpers. |
-| `repository/` | Spring Data JPA repositories for database access. |
-| `security/` | JWT, Spring Security configuration, and user-details integration. |
-| `service/` | Service interfaces for business logic contracts. |
-| `service/impl/` | Concrete service implementations. |
-| `util/` | Shared utility classes for dates, files, JWT, password, response, currency, pagination, and email. |
-| `util/constants/` | Centralized constants for app values, messages, regex, roles, and error codes. |
-| `validator/` | Request/domain validation helpers. |
+| Folder            | Purpose                                                                                                      |
+| ----------------- | ------------------------------------------------------------------------------------------------------------ |
+| `config/`         | Spring configuration such as CORS/web and mail setup.                                                        |
+| `controller/`     | REST API endpoints for auth, users, items, bookings, payments, disputes, reviews, admin, analytics, and OTP. |
+| `dto/request/`    | Request payload models received from the frontend/API clients.                                               |
+| `dto/response/`   | Response payload models returned by the API.                                                                 |
+| `entity/`         | JPA entity models representing database tables and domain records.                                           |
+| `exception/`      | Global and custom API exception handling.                                                                    |
+| `filter/`         | Request-level filters such as logging.                                                                       |
+| `mapper/`         | Entity-to-DTO and DTO-to-entity conversion helpers. Includes mappers for notifications.                      |
+| `repository/`     | Spring Data JPA repositories for database access. Includes notification queries and persistence.             |
+| `security/`       | JWT, Spring Security configuration, and user-details integration.                                            |
+| `service/`        | Service interfaces for business logic contracts. Includes notification service interface.                    |
+| `service/impl/`   | Concrete service implementations. Includes notification service implementation with transaction management.  |
+| `util/`           | Shared utility classes for dates, files, JWT, password, response, currency, pagination, and email.           |
+| `util/constants/` | Centralized constants for app values, messages, regex, roles, and error codes.                               |
+| `validator/`      | Request/domain validation helpers. Includes notification request validation and access control checks.       |
 
 ## Frontend
 
@@ -417,22 +426,22 @@ frontend/
 
 ### Frontend Folder Responsibilities
 
-| Folder | Purpose |
-| --- | --- |
-| `app/` | Next.js App Router pages, layouts, route groups, and global CSS. |
-| `app/auth/` | Authentication pages such as login, register, verification, pending approval, and password reset. |
-| `app/(admin)/` | Admin dashboard routes for analytics, announcements, bookings, disputes, items, users, categories, penalties, trust scores, and profile. |
-| `app/(student)/` | Student routes for dashboard, borrowing, bookings, history, disputes, inbox, notifications, profile, and posts. |
-| `components/` | Shared reusable UI components. |
-| `components/cards/` | Card components for actions, bookings, items, and stats. |
-| `components/layout/` | Layout-level components such as the app shell. |
-| `components/misc/` | Small supporting UI components such as modals and notifications. |
-| `context/` | React context providers, currently including theme state. |
-| `hooks/` | Shared custom React hooks. |
-| `lib/` | API clients, auth helpers, date utilities, approval requests, services, and mock data. |
-| `public/` | Static frontend assets such as the logo. |
-| `theme/` | Design tokens for colors, spacing, typography, radius, shadows, and light/dark themes. |
-| `types/` | Shared TypeScript domain types. |
+| Folder               | Purpose                                                                                                                                  |
+| -------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
+| `app/`               | Next.js App Router pages, layouts, route groups, and global CSS.                                                                         |
+| `app/auth/`          | Authentication pages such as login, register, verification, pending approval, and password reset.                                        |
+| `app/(admin)/`       | Admin dashboard routes for analytics, announcements, bookings, disputes, items, users, categories, penalties, trust scores, and profile. |
+| `app/(student)/`     | Student routes for dashboard, borrowing, bookings, history, disputes, inbox, notifications, profile, and posts.                          |
+| `components/`        | Shared reusable UI components.                                                                                                           |
+| `components/cards/`  | Card components for actions, bookings, items, and stats.                                                                                 |
+| `components/layout/` | Layout-level components such as the app shell.                                                                                           |
+| `components/misc/`   | Small supporting UI components such as modals and notifications.                                                                         |
+| `context/`           | React context providers, currently including theme state.                                                                                |
+| `hooks/`             | Shared custom React hooks.                                                                                                               |
+| `lib/`               | API clients, auth helpers, date utilities, approval requests, services, and mock data.                                                   |
+| `public/`            | Static frontend assets such as the logo.                                                                                                 |
+| `theme/`             | Design tokens for colors, spacing, typography, radius, shadows, and light/dark themes.                                                   |
+| `types/`             | Shared TypeScript domain types.                                                                                                          |
 
 ## Database
 

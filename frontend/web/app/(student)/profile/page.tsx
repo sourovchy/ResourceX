@@ -60,7 +60,8 @@ export default function ProfilePage() {
 	}
 
 	const successfulReturns = bookings.filter((booking) => booking.status === "COMPLETED").length;
-	const trustScore = user?.trustScore ?? 0;
+	const studentProfile = user?.studentProfile;
+	const trustScore = studentProfile?.trustScore ?? 0;
 
 	return (
 		<div className="max-w-4xl mx-auto space-y-6 pb-20">
@@ -76,7 +77,7 @@ export default function ProfilePage() {
 							</span>
 						</div>
 						<h2 className="text-xl font-bold text-textPrimary">{user?.name}</h2>
-						<p className="text-sm text-textSecondary font-medium">Student ID: {user?.studentId}</p>
+						<p className="text-sm text-textSecondary font-medium">Student ID: {studentProfile?.studentId ?? "N/A"}</p>
 
 						<div className="w-full border-t border-borderLight my-4" />
 
@@ -85,7 +86,7 @@ export default function ProfilePage() {
 								<Mail className="w-4 h-4" /> {user?.email}
 							</span>
 							<span className="flex items-center gap-2">
-								<CalendarDays className="w-4 h-4" /> {user?.department || "Department not set"}
+								<CalendarDays className="w-4 h-4" /> {studentProfile?.department || "Department not set"}
 							</span>
 						</div>
 

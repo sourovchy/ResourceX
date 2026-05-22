@@ -6,19 +6,10 @@ import lombok.*;
 import java.time.Instant;
 
 @Entity
-@Table(
-        name = "otp_tokens",
-        indexes = {
-                @Index(
-                        name = "idx_otp_email_status",
-                        columnList = "email,status"
-                ),
-                @Index(
-                        name = "idx_otp_expires_at",
-                        columnList = "expiresAt"
-                )
-        }
-)
+@Table(name = "otp_tokens", indexes = {
+        @Index(name = "idx_otp_email_status", columnList = "email,status"),
+        @Index(name = "idx_otp_expires_at", columnList = "expiresAt")
+})
 @Getter
 @Setter
 @NoArgsConstructor
@@ -44,6 +35,10 @@ public class OtpToken {
     @Column(nullable = false)
     @Builder.Default
     private int attemptCount = 0;
+
+    @Column(nullable = false)
+    @Builder.Default
+    private int resendCount = 0;
 
     @Column(nullable = false)
     private Instant createdAt;

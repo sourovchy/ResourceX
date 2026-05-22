@@ -1,120 +1,454 @@
-USE resourcex;
-
--- 1. UNIVERSITIES
-
-INSERT INTO universities (name, domain, is_verified) VALUES
-    ('State University', 'university.edu', TRUE);
+-- =========================================================
+-- SEED ROLES
+-- =========================================================
 
 INSERT INTO roles (name) VALUES
-    ('ROLE_USER'),
-    ('ROLE_ADMIN'),
-    ('ROLE_MODERATOR'),
-    ('ROLE_SUPER_ADMIN');
+                             ('ROLE_USER'),
+                             ('ROLE_ADMIN'),
+                             ('ROLE_MODERATOR'),
+                             ('ROLE_SUPER_ADMIN');
 
+-- =========================================================
+-- SEED UNIVERSITIES
+-- =========================================================
 
--- 2. USERS (4 Verified, 2 Pending Verification)
+INSERT INTO universities (name, domain, is_verified) VALUES
+                                                         ('Daffodil International University', 'daffodilvarsity.edu.bd', TRUE),
+                                                         ('North South University', 'northsouth.edu', TRUE),
+                                                         ('BRAC University', 'bracu.ac.bd', TRUE),
+                                                         ('Dhaka University', 'du.ac.bd', TRUE);
 
-INSERT INTO users (name, email, student_id, phone, password_hash, university, department, trust_score, status, email_verified, phone_verified) VALUES
-    ('Alice Smith',   'saidasanzida1@gmail.com', 'S1001', '555-0101', 'samiul!1A', 'State University', 'Computer Science', 100, 'ACTIVE', TRUE, FALSE),
-    ('Bob Johnson',   'saidasanzida2@gmail.com', 'S1002', '555-0102', 'samiul!1A', 'State University', 'Computer Science', 90,  'ACTIVE', TRUE, FALSE),
-    ('Charlie Brown', 'saidasanzida3@gmail.com', 'S1003', '555-0103', 'samiul!1A', 'State University', 'Computer Science', 60,  'ACTIVE', TRUE, FALSE),
-    ('Diana Prince',  'saidasanzida4@gmail.com', 'S1004', '555-0104', 'samiul!1A', 'State University', 'Computer Science', 100, 'ACTIVE', TRUE, FALSE),
-    ('Evan Wright',   'saidasanzida5@gmail.com', 'S1005', '555-0105', 'samiul!1A', 'State University', 'Computer Science', 100, 'ACTIVE', TRUE, FALSE),
-    ('Fiona Gallagher','saidasanzida6@gmail.com', 'S1006', '555-0106', 'samiul!1A', 'State University', 'Computer Science', 100, 'ACTIVE', TRUE, FALSE);
+-- =========================================================
+-- SEED USERS
+-- Passwords are plain text ONLY for demo/testing
+-- =========================================================
 
+INSERT INTO users (name, email, password_hash, status) VALUES
+                                                           ('Super Admin', 'superadmin@resourcex.com', 'super123', 'ACTIVE'),
+                                                           ('Main Admin', 'admin@resourcex.com', 'admin123', 'ACTIVE'),
+                                                           ('Moderator One', 'moderator@resourcex.com', 'mod123', 'ACTIVE'),
+
+                                                           ('Samiul Mirja', 'samiul@student.com', 'student123', 'ACTIVE'),
+                                                           ('Arafat Rahman', 'arafat@student.com', 'student123', 'ACTIVE'),
+                                                           ('Nusrat Jahan', 'nusrat@student.com', 'student123', 'ACTIVE'),
+                                                           ('Tanvir Hasan', 'tanvir@student.com', 'student123', 'ACTIVE');
+
+-- =========================================================
+-- ASSIGN ROLES
+-- =========================================================
+
+-- Super Admin
+INSERT INTO user_roles (user_id, role_id)
+VALUES (1, 4);
+
+-- Admin
+INSERT INTO user_roles (user_id, role_id)
+VALUES (2, 2);
+
+-- Moderator
+INSERT INTO user_roles (user_id, role_id)
+VALUES (3, 3);
+
+-- Students
 INSERT INTO user_roles (user_id, role_id) VALUES
-    (1, 1),
-    (2, 1),
-    (3, 1),
-    (4, 1),
-    (5, 1),
-    (6, 1);
+                                              (4, 1),
+                                              (5, 1),
+                                              (6, 1),
+                                              (7, 1);
 
+-- =========================================================
+-- STUDENT PROFILES
+-- =========================================================
 
--- 3. STAFF
+INSERT INTO student_profiles (
+    user_id,
+    student_id,
+    phone,
+    university_id,
+    department,
+    trust_score,
+    email_verified,
+    phone_verified
+) VALUES
+      (4, 'DIU-221-15-1', '01711111111', 1, 'CSE', 100, TRUE, TRUE),
+      (5, 'NSU-222-15-2', '01722222222', 2, 'EEE', 95, TRUE, TRUE),
+      (6, 'BRAC-223-15-3', '01733333333', 3, 'BBA', 88, TRUE, FALSE),
+      (7, 'DU-224-15-4', '01744444444', 4, 'LAW', 76, TRUE, TRUE);
 
-INSERT INTO staff (name, email, role, status, password_hash) VALUES
-    ('Admin Support', 'saidasanzida7@gmail.com', 'ADMIN', 'ACTIVE', 'samiul!1A'),
-    ('Super Admin',   'saidasanzida8@gmail.com', 'SUPER_ADMIN', 'ACTIVE', 'samiul!1A');
+-- =========================================================
+-- PENDING USERS
+-- =========================================================
 
+INSERT INTO pending_users (
+    name,
+    email,
+    student_id,
+    phone,
+    university_id,
+    department,
+    status,
+    password_hash,
+    id_card_data_url
+) VALUES
+      (
+          'Pending Student',
+          'pending@student.com',
+          'DIU-999-15-9',
+          '01899999999',
+          1,
+          'CSE',
+          'PENDING',
+          'pending123',
+          'https://example.com/idcards/pending-student.png'
+      ),
+      (
+          'Rejected Student',
+          'rejected@student.com',
+          'NSU-888-15-8',
+          '01888888888',
+          2,
+          'Architecture',
+          'REJECTED',
+          'reject123',
+          'https://example.com/idcards/rejected-student.png'
+      );
 
--- 4. STUDENT VERIFICATIONS
+-- =========================================================
+-- OTP TOKENS
+-- =========================================================
 
-INSERT INTO student_verifications (user_id, status, reviewed_by, id_card_image, rejection_reason, reviewed_at) VALUES
-    (1, 'VERIFIED', 1,    'https://example.com/id/alice.jpg',   NULL,             NOW()),
-    (2, 'VERIFIED', 1,    'https://example.com/id/bob.jpg',     NULL,             NOW()),
-    (3, 'VERIFIED', 1,    'https://example.com/id/charlie.jpg', NULL,             NOW()),
-    (4, 'VERIFIED', 1,    'https://example.com/id/diana.jpg',   NULL,             NOW()),
-    (5, 'PENDING',  NULL, 'https://example.com/id/evan.jpg',    NULL,             NULL),
-    (6, 'PENDING',  NULL, 'https://example.com/id/fiona.jpg',   NULL,             NULL);
+INSERT INTO otp_tokens (
+    email,
+    status,
+    otp_hash,
+    expires_at
+) VALUES
+    (
+        'pending@student.com',
+        'PENDING',
+        '123456',
+        DATE_ADD(NOW(), INTERVAL 10 MINUTE)
+    );
 
+-- =========================================================
+-- ITEMS
+-- =========================================================
 
--- 5. ITEMS
+INSERT INTO items (
+    title,
+    owner_id,
+    category,
+    item_condition,
+    daily_rate,
+    status,
+    description
+) VALUES
+      (
+          'Dell Inspiron Laptop',
+          4,
+          'Electronics',
+          'GOOD',
+          500.00,
+          'AVAILABLE',
+          'Core i7 laptop for programming and assignments'
+      ),
+      (
+          'Canon DSLR Camera',
+          5,
+          'Photography',
+          'EXCELLENT',
+          800.00,
+          'AVAILABLE',
+          'Professional DSLR camera'
+      ),
+      (
+          'Scientific Calculator',
+          6,
+          'Study Materials',
+          'GOOD',
+          100.00,
+          'AVAILABLE',
+          'Casio scientific calculator'
+      );
 
-INSERT INTO items (title, owner_id, category, item_condition, daily_rate, status, description) VALUES
-    ('Calculus Textbook',    1, 'Books',          'Good',      2.50,  'AVAILABLE',   '8th Edition James Stewart'),
-    ('Scientific Calculator', 1, 'Electronics',    'Excellent', 5.00,  'UNAVAILABLE', 'TI-84 Plus CE'),
-    ('Mini Fridge',           2, 'Appliances',     'Fair',      3.00,  'AVAILABLE',   'Perfect for dorm room'),
-    ('Bicycle',               3, 'Transportation', 'Good',      10.00, 'AVAILABLE',   'Mountain bike, 21 gear');
-
-
--- 6. ITEM IMAGES
+-- =========================================================
+-- ITEM IMAGES
+-- =========================================================
 
 INSERT INTO item_images (item_id, image_url) VALUES
-    (1, 'https://example.com/book.jpg'),
-    (2, 'https://example.com/calculator.jpg'),
-    (3, 'https://example.com/fridge.jpg'),
-    (4, 'https://example.com/bike.jpg');
+                                                 (1, 'https://example.com/items/laptop1.png'),
+                                                 (1, 'https://example.com/items/laptop2.png'),
+                                                 (2, 'https://example.com/items/camera1.png'),
+                                                 (3, 'https://example.com/items/calculator1.png');
 
+-- =========================================================
+-- BOOKINGS
+-- =========================================================
 
--- 7. BOOKINGS
+INSERT INTO bookings (
+    item_id,
+    renter_id,
+    status,
+    start_date,
+    end_date,
+    total_price,
+    approved_by_user_id,
+    approved_at
+) VALUES
+      (
+          1,
+          5,
+          'APPROVED',
+          '2026-05-20',
+          '2026-05-25',
+          2500.00,
+          2,
+          NOW()
+      ),
+      (
+          2,
+          4,
+          'PENDING',
+          '2026-05-23',
+          '2026-05-26',
+          2400.00,
+          NULL,
+          NULL
+      );
 
-INSERT INTO bookings (item_id, renter_id, status, start_date, end_date, returned_date, total_price, approved_by, approved_at) VALUES
-    (3, 4, 'COMPLETED', DATE_SUB(CURDATE(), INTERVAL 10 DAY), DATE_SUB(CURDATE(), INTERVAL 5 DAY), DATE_SUB(CURDATE(), INTERVAL 5 DAY), 15.00, 1,    NOW()),
-    (2, 3, 'APPROVED',  DATE_SUB(CURDATE(), INTERVAL 2 DAY),  DATE_ADD(CURDATE(), INTERVAL 5 DAY), NULL,                                 35.00, 1,    NOW()),
-    (4, 2, 'APPROVED',  DATE_SUB(CURDATE(), INTERVAL 10 DAY), DATE_SUB(CURDATE(), INTERVAL 2 DAY), NULL,                                 80.00, 1,    NOW()),
-    (1, 3, 'PENDING',   DATE_ADD(CURDATE(), INTERVAL 1 DAY),  DATE_ADD(CURDATE(), INTERVAL 3 DAY), NULL,                                 7.50,  NULL, NULL);
+-- =========================================================
+-- PAYMENTS
+-- =========================================================
 
+INSERT INTO payments (
+    booking_id,
+    amount,
+    status,
+    method,
+    transaction_ref,
+    paid_at
+) VALUES
+    (
+        1,
+        2500.00,
+        'SUCCESS',
+        'BKASH',
+        'TXN-100001',
+        NOW()
+    );
 
--- 8. PAYMENTS
+-- =========================================================
+-- REVIEWS
+-- =========================================================
 
-INSERT INTO payments (booking_id, amount, status, method, transaction_ref) VALUES
-    (1, 15.00, 'SUCCESS', 'Card',  'TXN12345'),
-    (2, 35.00, 'SUCCESS', 'bKash', 'TXN12346'),
-    (3, 80.00, 'PENDING', 'Cash',  NULL);
+INSERT INTO reviews (
+    booking_id,
+    reviewer_id,
+    reviewee_id,
+    rating,
+    comment
+) VALUES
+    (
+        1,
+        5,
+        4,
+        5,
+        'Very smooth rental experience'
+    );
 
+-- =========================================================
+-- REPORTS
+-- =========================================================
 
--- 9. REVIEWS
+INSERT INTO reports (
+    reporter_id,
+    entity_type,
+    entity_id,
+    status,
+    reviewed_by_user_id,
+    reason,
+    reviewed_at
+) VALUES
+    (
+        6,
+        'ITEM',
+        1,
+        'REVIEWED',
+        3,
+        'Item description was misleading',
+        NOW()
+    );
 
-INSERT INTO reviews (booking_id, reviewer_id, reviewee_id, rating, comment) VALUES
-    (1, 4, 2, 5, 'Great mini fridge, works perfectly!');
--- 10. REPORTS
+-- =========================================================
+-- DISPUTES
+-- =========================================================
 
-INSERT INTO reports (reporter_id, entity_type, entity_id, status, reason) VALUES
-    (4, 'ITEM', 2, 'PENDING', 'Item is inappropriate');
+INSERT INTO disputes (
+    booking_id,
+    raised_by,
+    status,
+    reason
+) VALUES
+    (
+        1,
+        5,
+        'UNDER_REVIEW',
+        'Laptop battery backup was lower than expected'
+    );
 
+-- =========================================================
+-- PENALTIES
+-- =========================================================
 
--- 11. DISPUTES
+INSERT INTO penalties (
+    user_id,
+    booking_id,
+    dispute_id,
+    status,
+    amount,
+    issued_by_user_id,
+    reason,
+    applied_at
+) VALUES
+    (
+        4,
+        1,
+        1,
+        'APPLIED',
+        300.00,
+        2,
+        'Late item return',
+        NOW()
+    );
 
-INSERT INTO disputes (booking_id, raised_by, status, reason, resolution) VALUES
-    (3, 2, 'OPEN', 'Item returned damaged', NULL);
+-- =========================================================
+-- TRUST EVENTS
+-- =========================================================
 
+INSERT INTO trust_events (
+    user_id,
+    source_type,
+    source_id,
+    change_amount,
+    old_score,
+    new_score,
+    reason,
+    created_by_user_id
+) VALUES
+    (
+        4,
+        'PENALTY',
+        1,
+        -10,
+        100,
+        90,
+        'Late return penalty',
+        2
+    );
 
--- 12. PENALTIES
+-- =========================================================
+-- AUDIT LOGS
+-- =========================================================
 
-INSERT INTO penalties (user_id, booking_id, dispute_id, status, amount, issued_by, reason, applied_at) VALUES
-    (3, 3, 1, 'APPLIED', 20.00, 1, 'Damaged item penalty', NOW());
+INSERT INTO audit_logs (
+    actor_type,
+    actor_id,
+    action_type,
+    entity_type,
+    entity_id,
+    outcome,
+    details
+) VALUES
+      (
+          'USER',
+          1,
+          'CREATE_ADMIN',
+          'USER',
+          2,
+          'SUCCESS',
+          'Super admin created a new admin'
+      ),
+      (
+          'USER',
+          2,
+          'APPROVE_BOOKING',
+          'BOOKING',
+          1,
+          'APPROVED',
+          'Admin approved booking request'
+      );
 
+-- =========================================================
+-- NOTIFICATIONS
+-- =========================================================
 
--- 13. TRUST EVENTS
+INSERT INTO notifications (
+    user_id,
+    notification_type,
+    title,
+    message,
+    related_entity_type,
+    related_entity_id,
+    created_by_user_id
+) VALUES
+      (
+          4,
+          'PENALTY',
+          'Penalty Applied',
+          'A late return penalty has been applied to your account.',
+          'PENALTY',
+          1,
+          2
+      ),
+      (
+          5,
+          'BOOKING',
+          'Booking Approved',
+          'Your booking request has been approved.',
+          'BOOKING',
+          1,
+          2
+      );
 
-INSERT INTO trust_events (user_id, source_type, source_id, change_amount, old_score, new_score, reason, created_by) VALUES
-    (2, 'SYSTEM', 1, -5,  95, 90, 'Late return',        NULL),
-    (3, 'SYSTEM', 3, -20, 80, 60, 'Damaged item',       NULL);
+-- =========================================================
+-- CONVERSATIONS
+-- =========================================================
 
+INSERT INTO conversations (
+    participant_one_user_id,
+    participant_two_user_id,
+    booking_id,
+    last_message_at
+) VALUES
+    (
+        4,
+        5,
+        1,
+        NOW()
+    );
 
--- 14. AUDIT LOGS
+-- =========================================================
+-- MESSAGES
+-- =========================================================
 
-INSERT INTO audit_logs (actor_type, actor_id, action_type, entity_type, entity_id, outcome, details) VALUES
-    ('STAFF', 1,    'VERIFY_STUDENT_ID', 'STUDENT_VERIFICATION', 1, 'SUCCESS', 'Verified Alice student ID'),
-    ('SYSTEM', NULL, 'AUTO_TRUST_DEDUCT', 'BOOKING',              1, 'SUCCESS', 'Late return trust deduction applied');
+INSERT INTO messages (
+    conversation_id,
+    sender_user_id,
+    receiver_user_id,
+    content,
+    is_read
+) VALUES
+      (
+          1,
+          5,
+          4,
+          'Hello ভাই, কখন laptop collect করতে পারি?',
+          TRUE
+      ),
+      (
+          1,
+          4,
+          5,
+          'আগামীকাল দুপুরের পর collect করতে পারবেন.',
+          FALSE
+      );

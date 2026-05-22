@@ -109,7 +109,7 @@ export default function StudentDashboard() {
 				<StatCard icon={<PackageOpen className="w-5 h-5 text-dashboardBlue" />} title="Active Rentals" value={String(activeRentals)} tint="bg-dashboardBlueTint" />
 				<StatCard icon={<PlusCircle className="w-5 h-5 text-dashboardPurple" />} title="Items Listed" value={String(items.length)} tint="bg-dashboardPurpleTint" />
 				<StatCard icon={<Bell className="w-5 h-5 text-dashboardYellow" />} title="Pending Requests" value={String(pendingRequests)} tint="bg-dashboardYellowTint" />
-				<StatCard icon={<Star className="w-5 h-5 text-dashboardGreen" />} title="Trust Score" value={String(user?.trustScore ?? 0)} tint="bg-dashboardGreenTint" />
+				<StatCard icon={<Star className="w-5 h-5 text-dashboardGreen" />} title="Trust Score" value={String(user?.studentProfile?.trustScore ?? 0)} tint="bg-dashboardGreenTint" />
 			</div>
 
 			<div>

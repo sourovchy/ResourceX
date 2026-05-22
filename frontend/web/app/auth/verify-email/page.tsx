@@ -1,48 +1,115 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ArrowRight, MailCheck, RefreshCw } from "lucide-react";
 import api from "@/lib/api";
-import { OTP_LAST_SEND_KEY, PENDING_EMAIL_KEY } from "@/lib/auth";
+import {
+	PENDING_EMAIL_KEY,
+	getOtpLastSendTimestamp,
+	setOtpLastSendTimestamp,
+	clearOtpLastSendTimestamp,
+} from "@/lib/auth";
+
+const RESEND_COOLDOWN_SECONDS = 180;
+const MAX_RESEND_ATTEMPTS = 3;
 
 export default function EmailVerificationPage() {
 	const router = useRouter();
+
 	const [otp, setOtp] = useState("");
-	const [email, setEmail] = useState("your student email");
+	const [email, setEmail] = useState("");
 	const [error, setError] = useState("");
 	const [message, setMessage] = useState("");
 	const [loading, setLoading] = useState(false);
 	const [resending, setResending] = useState(false);
 	const [timer, setTimer] = useState(0);
+	const [cooldownAnchor, setCooldownAnchor] = useState<number | null>(null);
+	const [resendPermaDisabled, setResendPermaDisabled] = useState(false);
+
+	const displayedEmail = email || "your student email";
 
 	useEffect(() => {
+		if (typeof window === "undefined") return;
+
 		const pendingEmail = localStorage.getItem(PENDING_EMAIL_KEY);
 		if (pendingEmail) {
 			setEmail(pendingEmail);
 		}
 
-		const lastSend = localStorage.getItem(OTP_LAST_SEND_KEY);
+		const permaDisabled = localStorage.getItem("otp_resend_perma_disabled");
+		if (permaDisabled === "true") {
+			setResendPermaDisabled(true);
+			setError(
+				"Maximum resend attempts exceeded. Please contact support or start a new verification.",
+			);
+		}
+
+		const lastSend = getOtpLastSendTimestamp();
 		if (lastSend) {
-			const diff = Math.floor((Date.now() - parseInt(lastSend)) / 1000);
-			if (diff < 300) {
-				setTimer(300 - diff);
-			}
+			setCooldownAnchor(lastSend);
 		}
 	}, []);
 
 	useEffect(() => {
-		if (timer > 0) {
-			const interval = setInterval(() => {
-				setTimer((prev) => prev - 1);
-			}, 1000);
-			return () => clearInterval(interval);
+		if (!cooldownAnchor) {
+			setTimer(0);
+			return;
 		}
-	}, [timer]);
+
+		const syncTimer = () => {
+			const elapsed = Math.floor((Date.now() - cooldownAnchor) / 1000);
+			const remaining = Math.max(RESEND_COOLDOWN_SECONDS - elapsed, 0);
+			setTimer(remaining);
+		};
+
+		syncTimer();
+		const intervalId = window.setInterval(syncTimer, 1000);
+
+		return () => window.clearInterval(intervalId);
+	}, [cooldownAnchor]);
+
+	const isResendDisabled = useMemo(
+		() => resending || timer > 0 || resendPermaDisabled || !email,
+		[resending, timer, resendPermaDisabled, email],
+	);
+
+	const parseCooldownFromMessage = (msg: string) => {
+		const match = msg?.match(/(\d+)\s*(?:seconds?|secs?|s)\b/i);
+		return match ? Number(match[1]) : 0;
+	};
+
+	const formatCooldown = (seconds: number) => {
+		const safeSeconds = Math.max(seconds, 0);
+		const minutes = Math.floor(safeSeconds / 60);
+		const secs = safeSeconds % 60;
+		return `${minutes}:${secs.toString().padStart(2, "0")}`;
+	};
+
+	const getResendButtonText = () => {
+		if (resending) return "Sending...";
+		if (resendPermaDisabled) return "Resend unavailable";
+		if (!email) return "No email found";
+		if (timer > 0) return `Resend in ${formatCooldown(timer)}`;
+		return "Resend code";
+	};
+
+	const markPermaDisabled = () => {
+		setResendPermaDisabled(true);
+		localStorage.setItem("otp_resend_perma_disabled", "true");
+		setError(
+			"Maximum resend attempts exceeded. Please contact support or start a new verification.",
+		);
+	};
 
 	const handleSubmit = async (e: React.FormEvent) => {
 		e.preventDefault();
+
+		if (!email) {
+			setError("No pending email found. Please start verification again.");
+			return;
+		}
 
 		if (otp.length !== 6) {
 			setError("Enter the 6-digit code sent to your email");
@@ -54,18 +121,18 @@ export default function EmailVerificationPage() {
 		setLoading(true);
 
 		try {
-			// POST to /api/otp/verify
 			const res = await api.post("/otp/verify", { email, otp });
-
-			// OtpResponse has { success: boolean, message: string, timestamp: string }
 			const data = res.data;
 
-			if (!data.success) {
-				throw new Error(data.message || "Invalid OTP");
+			if (!data?.success) {
+				throw new Error(data?.message || "Invalid OTP");
 			}
 
+			clearOtpLastSendTimestamp();
 			localStorage.removeItem(PENDING_EMAIL_KEY);
-			router.push("/auth/pending-approval");
+			localStorage.removeItem("otp_resend_perma_disabled");
+			localStorage.removeItem(`otp_resend_attempts_${email}`);
+			router.replace("/auth/pending-approval");
 		} catch (err: any) {
 			const msg =
 				err?.response?.data?.message || err?.message || "Verification failed";
@@ -76,34 +143,63 @@ export default function EmailVerificationPage() {
 	};
 
 	const handleResend = async () => {
-		if (timer > 0) return;
+		if (!email || timer > 0 || resendPermaDisabled || resending) return;
 
 		setError("");
 		setMessage("");
 		setResending(true);
 
 		try {
-			// POST to /api/otp/request to resend
 			const res = await api.post("/otp/request", { email });
-
 			const data = res.data;
 
-			if (!data.success) {
-				throw new Error(data.message || "Failed to resend code");
+			if (!data?.success) {
+				throw new Error(data?.message || "Failed to resend code");
 			}
 
-			setMessage("A new email code has been sent to " + email);
-			setTimer(300);
-			localStorage.setItem(OTP_LAST_SEND_KEY, Date.now().toString());
+			const now = Date.now();
+			setMessage(`A new email code has been sent to ${email}.`);
+			setCooldownAnchor(now);
+			setOtpLastSendTimestamp(now);
+
+			const attemptsKey = `otp_resend_attempts_${email}`;
+			const attemptsData = localStorage.getItem(attemptsKey);
+			const attempts = attemptsData ? parseInt(attemptsData, 10) : 0;
+			const nextAttempts = attempts + 1;
+
+			localStorage.setItem(attemptsKey, nextAttempts.toString());
+
+			if (nextAttempts >= MAX_RESEND_ATTEMPTS) {
+				markPermaDisabled();
+			}
 		} catch (err: any) {
 			const msg =
 				err?.response?.data?.message || err?.message || "Failed to resend code";
 			setError(msg);
 
-			// If the error is due to cooldown, try to extract time from message if the backend sent it
-			// Or just set a default if the backend says we are in cooldown
-			if (err?.response?.status === 429) {
-				setTimer(300); // Default to 5 mins if we hit rate limit
+			const cooldown = parseCooldownFromMessage(msg);
+			if (cooldown > 0) {
+				const anchor = Date.now() - (RESEND_COOLDOWN_SECONDS - cooldown) * 1000;
+				setCooldownAnchor(anchor);
+				setOtpLastSendTimestamp(anchor);
+			}
+
+			const lowered = msg.toLowerCase();
+			if (
+				lowered.includes("maximum") ||
+				lowered.includes("limit") ||
+				lowered.includes("too many") ||
+				lowered.includes("attempts") ||
+				lowered.includes("resend")
+			) {
+				if (
+					lowered.includes("maximum") ||
+					lowered.includes("limit") ||
+					lowered.includes("too many") ||
+					lowered.includes("attempts")
+				) {
+					markPermaDisabled();
+				}
 			}
 		} finally {
 			setResending(false);
@@ -113,8 +209,8 @@ export default function EmailVerificationPage() {
 	return (
 		<div className="min-h-screen bg-background flex items-center justify-center p-4">
 			<div className="absolute inset-0 overflow-hidden pointer-events-none">
-				<div className="absolute top-[-10%] left-[-10%] w-96 h-96 bg-primary opacity-20 rounded-full blur-3xl"></div>
-				<div className="absolute bottom-[-10%] right-[-10%] w-[30rem] h-[30rem] bg-accent opacity-20 rounded-full blur-3xl"></div>
+				<div className="absolute top-[-10%] left-[-10%] w-96 h-96 bg-primary opacity-20 rounded-full blur-3xl" />
+				<div className="absolute bottom-[-10%] right-[-10%] w-[30rem] h-[30rem] bg-accent opacity-20 rounded-full blur-3xl" />
 			</div>
 
 			<div className="relative z-10 w-full max-w-md">
@@ -128,8 +224,20 @@ export default function EmailVerificationPage() {
 						</h1>
 						<p className="text-textSecondary mt-2">
 							Enter the 6-digit code sent to{" "}
-							<span className="font-semibold text-textPrimary">{email}</span>.
+							<span className="font-semibold text-textPrimary">
+								{displayedEmail}
+							</span>
+							.
 						</p>
+						{timer > 0 && (
+							<p className="mt-3 text-sm text-textSecondary">
+								You can request a new code in{" "}
+								<span className="font-semibold text-textPrimary">
+									{formatCooldown(timer)}
+								</span>
+								.
+							</p>
+						)}
 					</div>
 
 					<form className="space-y-5" onSubmit={handleSubmit}>
@@ -157,35 +265,30 @@ export default function EmailVerificationPage() {
 								onChange={(e) => setOtp(e.target.value.replace(/\D/g, ""))}
 								className="w-full px-4 py-3 bg-surface border border-outlineVariant rounded-lg focus:ring-2 focus:ring-primary focus:border-primary outline-none transition text-textPrimary text-center text-xl tracking-[0.35em]"
 								placeholder="000000"
+								autoComplete="one-time-code"
 								required
 							/>
 						</div>
 
 						<button
 							type="submit"
-							disabled={loading}
+							disabled={loading || !email}
 							className="w-full flex items-center justify-center gap-2 bg-primary hover:bg-primaryDark disabled:opacity-70 disabled:cursor-not-allowed text-onPrimary py-3 rounded-lg font-medium transition shadow-md hover:shadow-lg focus:ring-4 focus:ring-primaryLight">
 							{loading ? "Verifying..." : "Verify Email"}
 							{!loading && <ArrowRight className="w-4 h-4" />}
 						</button>
 					</form>
 
-					<div className="mt-6 flex items-center justify-between text-sm">
+					<div className="mt-6 flex items-center justify-between text-sm gap-4">
 						<button
 							type="button"
 							onClick={handleResend}
-							disabled={resending || timer > 0}
-							className="inline-flex items-center gap-2 font-semibold text-primary hover:text-primaryDark disabled:opacity-70">
+							disabled={isResendDisabled}
+							className="inline-flex items-center gap-2 font-semibold text-primary hover:text-primaryDark disabled:opacity-70 disabled:cursor-not-allowed">
 							<RefreshCw
 								className={`w-4 h-4 ${resending ? "animate-spin" : ""}`}
 							/>
-							{resending
-								? "Sending..."
-								: timer > 0
-									? `Resend in ${Math.floor(timer / 60)}:${(timer % 60)
-											.toString()
-											.padStart(2, "0")}`
-									: "Resend code"}
+							{getResendButtonText()}
 						</button>
 
 						<Link

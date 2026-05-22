@@ -6,14 +6,13 @@ import lombok.*;
 import java.time.LocalDateTime;
 
 @Entity
-@Table(
-        name = "pending_users",
-        indexes = {
-                @Index(name = "idx_pending_users_email", columnList = "email"),
-                @Index(name = "idx_pending_users_student_id", columnList = "studentId"),
-                @Index(name = "idx_pending_users_status", columnList = "status")
-        }
-)
+@Table(name = "pending_users", indexes = {
+        @Index(name = "idx_pending_users_email", columnList = "email"),
+        @Index(name = "idx_pending_users_student_id", columnList = "student_id"),
+        @Index(name = "idx_pending_users_status", columnList = "status"),
+        @Index(name = "idx_pending_users_university_id", columnList = "university_id"),
+        @Index(name = "idx_pending_users_reviewed_by", columnList = "reviewed_by_user_id")
+})
 @Getter
 @Setter
 @NoArgsConstructor
@@ -26,7 +25,7 @@ public class PendingUser {
     @Column(name = "id")
     private Long pendingUserId;
 
-    @Column(nullable = false, unique = true, length = 100)
+    @Column(name = "student_id", nullable = false, unique = true, length = 50)
     private String studentId;
 
     @Column(nullable = false, length = 120)
@@ -36,33 +35,36 @@ public class PendingUser {
     private String email;
 
     @Column(name = "password_hash", nullable = false)
-    private String password;
+    private String passwordHash;
 
-    @Column(nullable = false, unique = true, length = 30)
+    @Column(nullable = false, unique = true, length = 20)
     private String phone;
 
-    @Column(length = 150)
-    private String university;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "university_id")
+    private University university;
 
-    @Column(length = 120)
+    @Column(length = 100)
     private String department;
 
     @Lob
-    @Column(columnDefinition = "LONGTEXT")
+    @Column(name = "id_card_data_url", columnDefinition = "LONGTEXT")
     private String idCardDataUrl;
 
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false, length = 40)
+    @Column(nullable = false, length = 20)
     @Builder.Default
-    private UserStatus status = UserStatus.PENDING_VERIFICATION;
+    private PendingUserStatus status = PendingUserStatus.PENDING;
 
-    @Builder.Default
-    @Column(nullable = false)
-    private Boolean emailVerified = false;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "reviewed_by_user_id")
+    private User reviewedBy;
 
-    @Builder.Default
-    @Column(nullable = false)
-    private Boolean phoneVerified = false;
+    @Column(name = "reviewed_at")
+    private LocalDateTime reviewedAt;
+
+    @Column(name = "rejection_reason", columnDefinition = "TEXT")
+    private String rejectionReason;
 
     @Column(nullable = false, updatable = false)
     private LocalDateTime createdAt;
@@ -103,10 +105,6 @@ public class PendingUser {
 
         if (this.name != null) {
             this.name = this.name.trim();
-        }
-
-        if (this.university != null) {
-            this.university = this.university.trim();
         }
 
         if (this.department != null) {

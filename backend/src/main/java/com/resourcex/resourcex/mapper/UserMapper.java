@@ -1,6 +1,8 @@
 package com.resourcex.resourcex.mapper;
 
+import com.resourcex.resourcex.dto.response.StudentProfileResponse;
 import com.resourcex.resourcex.dto.response.UserResponse;
+import com.resourcex.resourcex.entity.StudentProfile;
 import com.resourcex.resourcex.entity.User;
 import com.resourcex.resourcex.entity.UserRole;
 
@@ -13,14 +15,19 @@ public class UserMapper {
     }
 
     public static UserResponse toResponse(User user) {
-
-        return toResponse(user, Collections.emptyList());
+        return toResponse(user, Collections.emptyList(), null);
     }
 
     public static UserResponse toResponse(
             User user,
-            List<UserRole> userRoles
-    ) {
+            List<UserRole> userRoles) {
+        return toResponse(user, userRoles, null);
+    }
+
+    public static UserResponse toResponse(
+            User user,
+            List<UserRole> userRoles,
+            StudentProfile studentProfile) {
 
         if (user == null) {
             return null;
@@ -29,23 +36,30 @@ public class UserMapper {
         List<String> roles = userRoles == null
                 ? Collections.emptyList()
                 : userRoles.stream()
-                  .map(UserRole::getRole)
-                  .filter(role -> role != null && role.getName() != null)
-                  .map(role -> role.getName())
-                  .toList();
+                        .map(UserRole::getRole)
+                        .filter(role -> role != null && role.getName() != null)
+                        .map(role -> role.getName())
+                        .toList();
+
+        StudentProfileResponse profile = studentProfile == null
+                ? null
+                : StudentProfileResponse.builder()
+                        .studentId(studentProfile.getStudentId())
+                        .phone(studentProfile.getPhone())
+                        .university(studentProfile.getUniversity() != null ? studentProfile.getUniversity().getName()
+                                : null)
+                        .department(studentProfile.getDepartment())
+                        .trustScore(studentProfile.getTrustScore())
+                        .emailVerified(studentProfile.getEmailVerified())
+                        .phoneVerified(studentProfile.getPhoneVerified())
+                        .build();
 
         return UserResponse.builder()
                 .userId(user.getUserId())
-                .studentId(user.getStudentId())
                 .name(user.getName())
                 .email(user.getEmail())
-                .phone(user.getPhone())
-                .university(user.getUniversity())
-                .department(user.getDepartment())
-                .trustScore(user.getTrustScore())
-                .emailVerified(user.getEmailVerified())
-                .phoneVerified(user.getPhoneVerified())
                 .status(user.getStatus())
+                .studentProfile(profile)
                 .roles(roles)
                 .createdAt(user.getCreatedAt())
                 .build();

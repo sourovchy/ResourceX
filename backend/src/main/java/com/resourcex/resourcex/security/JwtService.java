@@ -11,12 +11,16 @@ import javax.crypto.SecretKey;
 import java.nio.charset.StandardCharsets;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.function.Function;
 
 @Service
 public class JwtService {
+
+    public static final String ROLES_CLAIM = "roles";
+    public static final String USER_ID_CLAIM = "userId";
 
     @Value("${jwt.secret}")
     private String secretKey;
@@ -45,6 +49,20 @@ public class JwtService {
         return generateToken(new HashMap<>(), email);
     }
 
+    public String generateToken(String email, List<String> roles) {
+        return generateToken(null, email, roles);
+    }
+
+    public String generateToken(Long userId, String email, List<String> roles) {
+        Map<String, Object> claims = new HashMap<>();
+        claims.put(ROLES_CLAIM, roles == null ? List.of() : roles);
+        if (userId != null) {
+            claims.put(USER_ID_CLAIM, userId);
+        }
+
+        return generateToken(claims, email);
+    }
+
     public String generateToken(Map<String, Object> extraClaims, String email) {
         String normalizedEmail = normalize(email);
 
@@ -59,6 +77,33 @@ public class JwtService {
 
     public String extractEmail(String token) {
         return extractClaim(token, Claims::getSubject);
+    }
+
+    public List<String> extractRoles(String token) {
+        return extractClaim(token, claims -> {
+            Object roles = claims.get(ROLES_CLAIM);
+            if (!(roles instanceof List<?> roleList)) {
+                return List.of();
+            }
+
+            return roleList.stream()
+                    .filter(String.class::isInstance)
+                    .map(String.class::cast)
+                    .toList();
+        });
+    }
+
+    public Long extractUserId(String token) {
+        return extractClaim(token, claims -> {
+            Object value = claims.get(USER_ID_CLAIM);
+            if (value instanceof Number number) {
+                return number.longValue();
+            }
+            if (value instanceof String stringValue && !stringValue.isBlank()) {
+                return Long.valueOf(stringValue);
+            }
+            return null;
+        });
     }
 
     public boolean isTokenValid(String token, String email) {

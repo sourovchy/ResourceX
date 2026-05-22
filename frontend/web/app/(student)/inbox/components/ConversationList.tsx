@@ -8,9 +8,10 @@ import { Users } from "lucide-react";
 
 interface ConversationListProps {
 	conversations: Conversation[];
-	selectedId: string | null;
+	selectedId: number | null;
 	searchQuery: string;
-	onSelect: (id: string) => void;
+	currentUserId?: number;
+	onSelect: (id: number) => void;
 	onSearchChange: (val: string) => void;
 }
 
@@ -18,6 +19,7 @@ export default function ConversationList({
 	conversations,
 	selectedId,
 	searchQuery,
+	currentUserId,
 	onSelect,
 	onSearchChange,
 }: ConversationListProps) {
@@ -41,10 +43,11 @@ export default function ConversationList({
 				) : (
 					conversations.map((c) => (
 						<ConversationItem
-							key={c.id}
+							key={c.conversationId}
 							conversation={c}
-							isActive={c.id === selectedId}
-							onClick={() => onSelect(c.id)}
+							currentUserId={currentUserId}
+							isActive={c.conversationId === selectedId}
+							onClick={() => onSelect(c.conversationId)}
 						/>
 					))
 				)}

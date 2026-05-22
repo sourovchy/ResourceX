@@ -23,7 +23,6 @@ public class PenaltyServiceImpl implements PenaltyService {
     private final UserRepository userRepository;
     private final BookingRepository bookingRepository;
     private final DisputeRepository disputeRepository;
-    private final StaffRepository staffRepository;
     private final PenaltyMapper penaltyMapper;
 
     @Override
@@ -44,8 +43,8 @@ public class PenaltyServiceImpl implements PenaltyService {
                     .orElseThrow(() -> new ResourceNotFoundException("Dispute not found"));
         }
 
-        Staff issuedBy = staffRepository.findById(request.getIssuedByStaffId())
-                .orElseThrow(() -> new ResourceNotFoundException("Staff not found"));
+        User issuedBy = userRepository.findById(request.getIssuedByUserId())
+                .orElseThrow(() -> new ResourceNotFoundException("Admin/User not found"));
 
         Penalty penalty = Penalty.builder()
                 .user(user)

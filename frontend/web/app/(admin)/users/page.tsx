@@ -12,7 +12,6 @@ import {
 	Users,
 	Clock,
 	AlertTriangle,
-	ShieldAlert,
 	X,
 	Info,
 	RefreshCcw,

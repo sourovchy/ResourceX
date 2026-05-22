@@ -12,10 +12,10 @@ import java.time.LocalDateTime;
 @Table(
         name = "penalties",
         indexes = {
-                @Index(name = "idx_penalty_user", columnList = "user_id"),
-                @Index(name = "idx_penalty_booking", columnList = "booking_id"),
-                @Index(name = "idx_penalty_dispute", columnList = "dispute_id"),
-                @Index(name = "idx_penalty_status", columnList = "status")
+                @Index(name = "idx_penalties_user_id", columnList = "user_id"),
+                @Index(name = "idx_penalties_booking_id", columnList = "booking_id"),
+                @Index(name = "idx_penalties_dispute_id", columnList = "dispute_id"),
+                @Index(name = "idx_penalties_issued_by_user_id", columnList = "issued_by_user_id")
         }
 )
 @Getter
@@ -74,11 +74,11 @@ public class Penalty {
     private PenaltyStatus status = PenaltyStatus.PENDING;
 
     /**
-     * Staff/Admin who issued the penalty
+     * Admin/User who issued the penalty
      */
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "issued_by", nullable = false)
-    private Staff issuedBy;
+    @JoinColumn(name = "issued_by_user_id", nullable = false)
+    private User issuedBy;
 
     /**
      * Creation timestamp
@@ -89,6 +89,7 @@ public class Penalty {
     /**
      * When penalty was applied
      */
+    @Column(name = "applied_at")
     private LocalDateTime appliedAt;
 
     @PrePersist

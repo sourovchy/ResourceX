@@ -29,9 +29,9 @@ public class PenaltyResponse {
 
     private Penalty.PenaltyStatus status;
 
-    private Long issuedByStaffId;
+    private Long issuedByUserId;
 
-    private String issuedByStaffName;
+    private String issuedByUserName;
 
     private LocalDateTime createdAt;
 

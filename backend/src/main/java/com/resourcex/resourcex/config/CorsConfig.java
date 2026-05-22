@@ -14,36 +14,32 @@ import java.util.List;
 @Configuration
 public class CorsConfig {
 
-    @Bean
-    public CorsConfigurationSource corsConfigurationSource(
-            @Value("${app.cors.allowed-origins}") List<String> allowedOrigins
-    ) {
-        CorsConfiguration configuration = new CorsConfiguration();
+        @Bean
+        public CorsConfigurationSource corsConfigurationSource(
+                        @Value("${app.cors.allowed-origins}") List<String> allowedOrigins) {
+                CorsConfiguration configuration = new CorsConfiguration();
 
-        configuration.setAllowedOrigins(allowedOrigins);
-        configuration.setAllowedMethods(List.of(
-                HttpMethod.GET.name(),
-                HttpMethod.POST.name(),
-                HttpMethod.PUT.name(),
-                HttpMethod.PATCH.name(),
-                HttpMethod.DELETE.name(),
-                HttpMethod.OPTIONS.name()
-        ));
-        configuration.setAllowedHeaders(List.of(
-                HttpHeaders.AUTHORIZATION,
-                HttpHeaders.CONTENT_TYPE,
-                HttpHeaders.ACCEPT,
-                HttpHeaders.ORIGIN,
-                "X-Requested-With"
-        ));
-        configuration.setExposedHeaders(List.of(
-                HttpHeaders.AUTHORIZATION
-        ));
-        configuration.setAllowCredentials(true);
-        configuration.setMaxAge(3600L);
+                configuration.setAllowedOrigins(allowedOrigins);
+                configuration.setAllowedMethods(List.of(
+                                HttpMethod.GET.name(),
+                                HttpMethod.POST.name(),
+                                HttpMethod.PUT.name(),
+                                HttpMethod.PATCH.name(),
+                                HttpMethod.DELETE.name(),
+                                HttpMethod.OPTIONS.name()));
+                configuration.setAllowedHeaders(List.of(
+                                HttpHeaders.AUTHORIZATION,
+                                HttpHeaders.CONTENT_TYPE,
+                                HttpHeaders.ACCEPT,
+                                HttpHeaders.ORIGIN,
+                                "X-Requested-With"));
+                configuration.setExposedHeaders(List.of(
+                                HttpHeaders.AUTHORIZATION));
+                configuration.setAllowCredentials(true);
+                configuration.setMaxAge(3600L);
 
-        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
-        source.registerCorsConfiguration("/**", configuration);
-        return source;
-    }
+                UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
+                source.registerCorsConfiguration("/**", configuration);
+                return source;
+        }
 }

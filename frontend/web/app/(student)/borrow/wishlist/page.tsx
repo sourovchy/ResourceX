@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import {
 	Star,
@@ -9,49 +9,216 @@ import {
 	Heart,
 	Search,
 	ArrowRight,
+	Loader2,
+	AlertTriangle,
 } from "lucide-react";
 
-// Mock Data
-const INITIAL_WISHLIST = [
-	{
-		id: "item-1",
-		title: "Sony Alpha A7III DSLR Camera",
-		category: "Electronics",
-		condition: "Excellent",
-		pricePerDay: 500,
-		deposit: 5000,
-		rating: 4.8,
-		reviews: 14,
-		owner: "Arif H.",
-		trustScore: 105,
-		isVerified: true,
-		image:
-			"https://images.unsplash.com/photo-1516035069371-29a1b244cc32?auto=format&fit=crop&q=80&w=400&h=300",
-	},
-	{
-		id: "item-3",
-		title: "JBL PartyBox 310",
-		category: "Events",
-		condition: "Like New",
-		pricePerDay: 800,
-		deposit: 3000,
-		rating: 5.0,
-		reviews: 8,
-		owner: "Tanvir A.",
-		trustScore: 110,
-		isVerified: true,
-		image:
-			"https://images.unsplash.com/photo-1608043152269-423dbba4e7e1?auto=format&fit=crop&q=80&w=400&h=300",
-	},
+type WishlistItem = {
+	id: string;
+	title: string;
+	category: string;
+	condition: string;
+	pricePerDay: number;
+	deposit: number;
+	rating: number;
+	reviews: number;
+	owner: string;
+	trustScore: number;
+	isVerified: boolean;
+	image: string;
+};
+
+type WishlistApiResponse =
+	| {
+		wishlist?: unknown;
+		items?: unknown;
+		data?: unknown;
+		content?: unknown;
+	}
+	| unknown;
+
+const WISHLIST_ENDPOINTS = [
+	"/api/wishlist",
+	"/api/wishlist/items",
+	"/api/users/wishlist",
 ];
 
-export default function WishlistPage() {
-	const [wishlist, setWishlist] = useState(INITIAL_WISHLIST);
+function getAuthHeaders(): Record<string, string> {
+	if (typeof window === "undefined") return {};
 
-	const handleRemove = (e: React.MouseEvent, id: string) => {
+	const token =
+		localStorage.getItem("resourcex_token");
+
+	return token
+		? {
+			Authorization: `Bearer ${token}`,
+		}
+		: {};
+}
+
+async function fetchJson(url: string) {
+	const response = await fetch(url, {
+		method: "GET",
+		credentials: "include",
+		headers: {
+			"Content-Type": "application/json",
+			...getAuthHeaders(),
+		},
+	});
+
+	if (!response.ok) {
+		throw new Error(`Request failed with status ${response.status}`);
+	}
+
+	return (await response.json()) as WishlistApiResponse;
+}
+
+function normalizeWishlistItem(raw: any): WishlistItem {
+	const image =
+		raw?.image ??
+		raw?.imageUrl ??
+		raw?.imageUrls?.[0] ??
+		raw?.images?.[0] ??
+		"https://placehold.co/400x300?text=Item";
+
+	return {
+		id: String(raw?.id ?? raw?.itemId ?? crypto.randomUUID()),
+		title: raw?.title ?? raw?.name ?? "Untitled Item",
+		category: raw?.category ?? "General",
+		condition: raw?.condition ?? raw?.itemCondition ?? "Good",
+		pricePerDay: Number(
+			raw?.pricePerDay ??
+				raw?.dailyRate ??
+				raw?.rentalPricePerDay ??
+				0,
+		),
+		deposit: Number(raw?.deposit ?? raw?.securityDeposit ?? 0),
+		rating: Number(raw?.rating ?? raw?.averageRating ?? 0),
+		reviews: Number(raw?.reviews ?? raw?.reviewCount ?? 0),
+		owner:
+			raw?.owner?.name ??
+			raw?.ownerName ??
+			raw?.user?.name ??
+			"Unknown Owner",
+		trustScore: Number(raw?.owner?.trustScore ?? raw?.trustScore ?? 100),
+		isVerified: Boolean(raw?.owner?.verified ?? raw?.isVerified ?? true),
+		image,
+	};
+}
+
+function extractWishlist(payload: WishlistApiResponse) {
+	const root: any = payload && typeof payload === "object" ? payload : {};
+
+	const source =
+		root.wishlist ??
+		root.items ??
+		root.data ??
+		root.content ??
+		payload;
+
+	if (!Array.isArray(source)) {
+		return [] as WishlistItem[];
+	}
+
+	return source.map((item: any) => normalizeWishlistItem(item));
+}
+
+export default function WishlistPage() {
+	const [wishlist, setWishlist] = useState<WishlistItem[]>([]);
+	const [loading, setLoading] = useState(true);
+	const [error, setError] = useState<string | null>(null);
+
+	useEffect(() => {
+		let active = true;
+
+		const loadWishlist = async () => {
+			setLoading(true);
+			setError(null);
+
+			try {
+				let loadedWishlist: WishlistItem[] = [];
+
+				for (const endpoint of WISHLIST_ENDPOINTS) {
+					try {
+						const payload = await fetchJson(endpoint);
+						const normalized = extractWishlist(payload);
+
+						if (normalized.length > 0) {
+							loadedWishlist = normalized;
+							break;
+						}
+					} catch {
+						// try next endpoint
+					}
+				}
+
+				if (!active) return;
+
+				setWishlist(loadedWishlist);
+			} catch (err) {
+				if (!active) return;
+
+				setError(
+					err instanceof Error
+						? err.message
+						: "Failed to load wishlist.",
+				);
+			} finally {
+				if (active) {
+					setLoading(false);
+				}
+			}
+		};
+
+		void loadWishlist();
+
+		return () => {
+			active = false;
+		};
+	}, []);
+
+	const itemCount = useMemo(() => wishlist.length, [wishlist]);
+
+	const handleRemove = async (e: React.MouseEvent, id: string) => {
 		e.preventDefault();
 		e.stopPropagation();
+
+		const previous = wishlist;
+
 		setWishlist((prev) => prev.filter((item) => item.id !== id));
+
+		const endpoints = [
+			`/api/wishlist/${id}`,
+			`/api/wishlist/remove/${id}`,
+			`/api/users/wishlist/${id}`,
+		];
+
+		let success = false;
+
+		for (const endpoint of endpoints) {
+			try {
+				const response = await fetch(endpoint, {
+					method: "DELETE",
+					credentials: "include",
+					headers: {
+						"Content-Type": "application/json",
+						...getAuthHeaders(),
+					},
+				});
+
+				if (response.ok) {
+					success = true;
+					break;
+				}
+			} catch {
+				// try next endpoint
+			}
+		}
+
+		if (!success) {
+			setWishlist(previous);
+			setError("Failed to remove item from wishlist.");
+		}
 	};
 
 	return (
@@ -67,12 +234,22 @@ export default function WishlistPage() {
 					</p>
 				</div>
 				<div className="text-sm font-bold text-primary bg-primaryLight px-4 py-2 rounded-xl border border-primary/20">
-					{wishlist.length} Items Saved
+					{itemCount} Items Saved
 				</div>
 			</div>
 
 			{/* Items Grid */}
-			{wishlist.length > 0 ? (
+			{loading ? (
+				<div className="bg-surface border border-borderLight rounded-2xl p-16 text-center shadow-sm text-textSecondary flex flex-col items-center gap-4">
+					<Loader2 className="w-10 h-10 animate-spin text-primary" />
+					<p>Loading wishlist...</p>
+				</div>
+			) : error ? (
+				<div className="bg-errorLight/20 border border-error rounded-2xl p-8 text-center shadow-sm text-errorDark flex flex-col items-center gap-4">
+					<AlertTriangle className="w-10 h-10" />
+					<p className="font-semibold">{error}</p>
+				</div>
+			) : wishlist.length > 0 ? (
 				<div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
 					{wishlist.map((item) => (
 						<WishlistCard key={item.id} item={item} onRemove={handleRemove} />
@@ -105,7 +282,7 @@ function WishlistCard({
 	item,
 	onRemove,
 }: {
-	item: any;
+	item: WishlistItem;
 	onRemove: (e: React.MouseEvent, id: string) => void;
 }) {
 	return (
@@ -163,7 +340,7 @@ function WishlistCard({
 							Rent
 						</div>
 						<div className="text-lg font-extrabold text-primary border-transparent">
-							৳ {item.pricePerDay}
+							৳ {item.pricePerDay.toLocaleString()}
 							<span className="text-xs text-textSecondary font-medium">
 								/day
 							</span>
@@ -174,7 +351,7 @@ function WishlistCard({
 							Deposit
 						</div>
 						<div className="text-sm font-bold text-textPrimary">
-							৳ {item.deposit}
+							৳ {item.deposit.toLocaleString()}
 						</div>
 					</div>
 				</div>

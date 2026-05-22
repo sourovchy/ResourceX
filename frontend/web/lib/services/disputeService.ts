@@ -24,7 +24,7 @@ export const disputeService = {
     disputeId: number,
     resolutionData: {
       resolution: string;
-      resolvedByStaffId: number;
+      resolvedByUserId: number;
     }
   ): Promise<DisputeResponse> => {
     const response = await api.post<DisputeResponse>(
@@ -33,7 +33,7 @@ export const disputeService = {
       {
         params: {
           resolution: resolutionData.resolution,
-          staffId: resolutionData.resolvedByStaffId,
+          userId: resolutionData.resolvedByUserId,
         },
       }
     );

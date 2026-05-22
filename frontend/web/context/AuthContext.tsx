@@ -51,7 +51,9 @@ function normalizeRoles(
 }
 
 function getHomeRoute(roles: UserRole[]) {
-	return roles.includes("ROLE_ADMIN")
+	return roles.some((role) =>
+		["ROLE_ADMIN", "ROLE_SUPER_ADMIN", "ROLE_MODERATOR"].includes(role),
+	)
 		? "/home"
 		: "/dashboard";
 }

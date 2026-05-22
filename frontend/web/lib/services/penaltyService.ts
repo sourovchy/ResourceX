@@ -18,7 +18,7 @@ export const penaltyService = {
     disputeId?: number;
     amount: number;
     reason: string;
-    issuedByStaffId: number;
+    issuedByUserId: number;
   }): Promise<PenaltyResponse> => {
     const response = await api.post<PenaltyResponse>("/penalties", penaltyData);
     return response.data;

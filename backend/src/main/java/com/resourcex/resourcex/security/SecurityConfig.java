@@ -20,91 +20,102 @@ import org.springframework.web.cors.CorsConfigurationSource;
 @RequiredArgsConstructor
 public class SecurityConfig {
 
-    private final JwtAuthenticationFilter jwtAuthenticationFilter;
+        private final JwtAuthenticationFilter jwtAuthenticationFilter;
 
-    @Bean
-    public SecurityFilterChain securityFilterChain(
-            HttpSecurity http,
-            CorsConfigurationSource corsConfigurationSource
-    ) throws Exception {
+        @Bean
+        public SecurityFilterChain securityFilterChain(
+                        HttpSecurity http,
+                        CorsConfigurationSource corsConfigurationSource) throws Exception {
 
-        http
-                .cors(cors -> cors.configurationSource(corsConfigurationSource))
+                http
+                                .cors(cors -> cors.configurationSource(corsConfigurationSource))
 
-                .csrf(csrf -> csrf.disable())
+                                .csrf(csrf -> csrf.disable())
 
-                .sessionManagement(session ->
-                        session.sessionCreationPolicy(SessionCreationPolicy.STATELESS)
-                )
+                                .sessionManagement(session -> session
+                                                .sessionCreationPolicy(SessionCreationPolicy.STATELESS))
 
-                .authorizeHttpRequests(auth -> auth
+                                .authorizeHttpRequests(auth -> auth
 
-                        // Preflight requests
-                        .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
+                                                // Preflight
+                                                .requestMatchers(HttpMethod.OPTIONS, "/**")
+                                                .permitAll()
 
-                        // Public auth endpoints
-                        .requestMatchers(
-                                "/api/auth/login",
-                                "/api/auth/register",
-                                "/api/auth/current-user"
-                        ).permitAll()
+                                                // Public auth endpoints
+                                                .requestMatchers(
+                                                                "/api/auth/login",
+                                                                "/api/auth/register")
+                                                .permitAll()
 
-                        // OTP endpoints
-                        .requestMatchers("/api/otp/**").permitAll()
+                                                // OTP endpoints
+                                                .requestMatchers("/api/otp/**")
+                                                .permitAll()
 
-                        // Swagger
-                        .requestMatchers(
-                                "/swagger-ui/**",
-                                "/v3/api-docs/**",
-                                "/swagger-ui.html"
-                        ).permitAll()
+                                                // Swagger
+                                                .requestMatchers(
+                                                                "/swagger-ui/**",
+                                                                "/v3/api-docs/**",
+                                                                "/swagger-ui.html")
+                                                .permitAll()
 
-                        // Admin endpoints
-                        .requestMatchers("/api/admin/**").hasRole("ADMIN")
+                                                // Super Admin endpoints
+                                                .requestMatchers("/api/superadmin/**")
+                                                .hasRole("SUPER_ADMIN")
 
-                        // Analytics endpoints
-                        .requestMatchers("/api/analytics/**").hasRole("ADMIN")
+                                                // Admin endpoints
+                                                .requestMatchers("/api/admin/**")
+                                                .hasAnyRole("SUPER_ADMIN", "ADMIN")
 
-                        // User endpoints
-                        .requestMatchers("/api/users/**").authenticated()
+                                                // Analytics endpoints
+                                                .requestMatchers("/api/analytics/**")
+                                                .hasAnyRole("SUPER_ADMIN", "ADMIN")
 
-                        // Item endpoints
-                        .requestMatchers(HttpMethod.GET, "/api/items/**").authenticated()
-                        .requestMatchers("/api/items/**").hasAnyRole("USER", "ADMIN")
+                                                // User endpoints
+                                                .requestMatchers("/api/users/**")
+                                                .authenticated()
 
-                        // Booking endpoints
-                        .requestMatchers("/api/bookings/**").hasAnyRole("USER", "ADMIN")
+                                                // Item endpoints
+                                                .requestMatchers(HttpMethod.GET, "/api/items/**")
+                                                .authenticated()
 
-                        // Review endpoints
-                        .requestMatchers("/api/reviews/**").hasAnyRole("USER", "ADMIN")
+                                                .requestMatchers("/api/items/**")
+                                                .hasAnyRole("USER", "ADMIN", "SUPER_ADMIN", "MODERATOR")
 
-                        // Payment endpoints
-                        .requestMatchers("/api/payments/**").hasAnyRole("USER", "ADMIN")
+                                                // Booking endpoints
+                                                .requestMatchers("/api/bookings/**")
+                                                .hasAnyRole("USER", "ADMIN", "SUPER_ADMIN", "MODERATOR")
 
-                        // Dispute endpoints
-                        .requestMatchers("/api/disputes/**").hasAnyRole("USER", "ADMIN")
+                                                // Review endpoints
+                                                .requestMatchers("/api/reviews/**")
+                                                .hasAnyRole("USER", "ADMIN", "SUPER_ADMIN", "MODERATOR")
 
-                        // Everything else
-                        .anyRequest().authenticated()
-                )
+                                                // Payment endpoints
+                                                .requestMatchers("/api/payments/**")
+                                                .hasAnyRole("USER", "ADMIN", "SUPER_ADMIN", "MODERATOR")
 
-                .addFilterBefore(
-                        jwtAuthenticationFilter,
-                        UsernamePasswordAuthenticationFilter.class
-                );
+                                                // Dispute endpoints
+                                                .requestMatchers("/api/disputes/**")
+                                                .hasAnyRole("USER", "ADMIN", "SUPER_ADMIN", "MODERATOR")
 
-        return http.build();
-    }
+                                                // Everything else
+                                                .anyRequest()
+                                                .authenticated())
 
-    @Bean
-    public PasswordEncoder passwordEncoder() {
-        return new BCryptPasswordEncoder();
-    }
+                                .addFilterBefore(
+                                                jwtAuthenticationFilter,
+                                                UsernamePasswordAuthenticationFilter.class);
 
-    @Bean
-    public AuthenticationManager authenticationManager(
-            AuthenticationConfiguration config
-    ) throws Exception {
-        return config.getAuthenticationManager();
-    }
+                return http.build();
+        }
+
+        @Bean
+        public PasswordEncoder passwordEncoder() {
+                return new BCryptPasswordEncoder();
+        }
+
+        @Bean
+        public AuthenticationManager authenticationManager(
+                        AuthenticationConfiguration config) throws Exception {
+                return config.getAuthenticationManager();
+        }
 }

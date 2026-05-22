@@ -14,7 +14,7 @@ import {
 	FileCheck2,
 } from "lucide-react";
 import api from "@/lib/api";
-import { PENDING_EMAIL_KEY } from "@/lib/auth";
+import { PENDING_EMAIL_KEY, setOtpLastSendTimestamp } from "@/lib/auth";
 
 type AuthResponse = {
 	message: string;
@@ -126,6 +126,7 @@ export default function RegisterPage() {
 
 			try {
 				await api.post("/otp/request", { email: form.email.trim() });
+				setOtpLastSendTimestamp(Date.now());
 			} catch {
 				// Non-fatal
 			}
@@ -143,10 +144,10 @@ export default function RegisterPage() {
 				rawMessage.toLowerCase().includes("phone")
 					? "Phone number already exists"
 					: rawMessage.toLowerCase().includes("duplicate") &&
-					rawMessage.toLowerCase().includes("email")
+						  rawMessage.toLowerCase().includes("email")
 						? "Email already registered"
 						: rawMessage.toLowerCase().includes("duplicate") &&
-						rawMessage.toLowerCase().includes("studentid")
+							  rawMessage.toLowerCase().includes("studentid")
 							? "Student ID already registered"
 							: rawMessage;
 
@@ -162,7 +163,6 @@ export default function RegisterPage() {
 		"w-full rounded-xl border border-slate-300/70 bg-white/90 px-4 py-3 text-textPrimary outline-none transition placeholder:text-slate-400 focus:border-primary focus:ring-4 focus:ring-primary/15 dark:border-white/10 dark:bg-white/5 dark:text-white dark:placeholder:text-slate-400";
 	return (
 		<div className="min-h-screen bg-background flex items-center justify-center p-4 relative overflow-hidden">
-
 			{/* Minimal Background */}
 			<div className="absolute inset-0 pointer-events-none overflow-hidden">
 				{/* Soft top glow */}
@@ -186,7 +186,6 @@ export default function RegisterPage() {
 
 			<div className="relative z-10 w-full max-w-6xl">
 				<div className="grid overflow-hidden rounded-3xl border border-borderLight bg-surface/90 shadow-2xl backdrop-blur-xl lg:grid-cols-[0.75fr_1.25fr]">
-
 					{/* LEFT SIDE */}
 					<div className="hidden lg:flex flex-col justify-between border-r border-borderLight bg-surfaceVariant/30 p-10">
 						<div>
@@ -199,7 +198,8 @@ export default function RegisterPage() {
 							</h1>
 
 							<p className="mt-5 max-w-md text-lg leading-8 text-textSecondary">
-								Rent, share and exchange resources securely within your university community.
+								Rent, share and exchange resources securely within your
+								university community.
 							</p>
 						</div>
 
@@ -215,9 +215,7 @@ export default function RegisterPage() {
 							</div>
 
 							<div className="rounded-2xl border border-borderLight bg-surface p-5">
-								<p className="text-sm text-textSecondary">
-									Quick onboarding
-								</p>
+								<p className="text-sm text-textSecondary">Quick onboarding</p>
 
 								<h3 className="mt-1 text-lg font-semibold text-textPrimary">
 									Create account in minutes
@@ -229,7 +227,6 @@ export default function RegisterPage() {
 					{/* RIGHT SIDE */}
 					<div className="bg-surface p-6 sm:p-8 lg:p-10">
 						<div className="mx-auto w-full max-w-xl">
-
 							{/* Header */}
 							<div className="mb-8">
 								<h2 className="text-3xl font-bold text-textPrimary">
@@ -263,10 +260,7 @@ export default function RegisterPage() {
 												onChange={(e) =>
 													setForm({
 														...form,
-														name: e.target.value.replace(
-															/[^a-zA-Z.\s]/g,
-															"",
-														),
+														name: e.target.value.replace(/[^a-zA-Z.\s]/g, ""),
 													})
 												}
 												className={`${inputBase} pl-10`}
@@ -442,8 +436,7 @@ export default function RegisterPage() {
 										<button
 											type="button"
 											onClick={() => setShowPassword(!showPassword)}
-											className="absolute right-3 top-1/2 -translate-y-1/2 text-textTertiary transition hover:text-textPrimary dark:hover:text-white"
-										>
+											className="absolute right-3 top-1/2 -translate-y-1/2 text-textTertiary transition hover:text-textPrimary dark:hover:text-white">
 											{showPassword ? (
 												<EyeOff className="h-5 w-5" />
 											) : (
@@ -457,11 +450,8 @@ export default function RegisterPage() {
 											<div
 												key={check.label}
 												className={`text-xs font-medium ${
-													check.valid
-														? "text-success"
-														: "text-textTertiary"
-												}`}
-											>
+													check.valid ? "text-success" : "text-textTertiary"
+												}`}>
 												{check.valid ? "OK" : "-"} {check.label}
 											</div>
 										))}
@@ -514,8 +504,7 @@ export default function RegisterPage() {
 								<button
 									type="submit"
 									disabled={loading}
-									className="mt-2 flex w-full items-center justify-center gap-2 rounded-xl bg-primary px-4 py-3 font-semibold text-onPrimary shadow-lg shadow-primary/20 transition hover:bg-primaryDark hover:shadow-xl disabled:cursor-not-allowed disabled:opacity-70 focus:ring-4 focus:ring-primary/20"
-								>
+									className="mt-2 flex w-full items-center justify-center gap-2 rounded-xl bg-primary px-4 py-3 font-semibold text-onPrimary shadow-lg shadow-primary/20 transition hover:bg-primaryDark hover:shadow-xl disabled:cursor-not-allowed disabled:opacity-70 focus:ring-4 focus:ring-primary/20">
 									{loading ? "Creating account..." : "Sign Up"}
 									{!loading && <ArrowRight className="h-4 w-4" />}
 								</button>
@@ -535,6 +524,4 @@ export default function RegisterPage() {
 			</div>
 		</div>
 	);
-
 }
-

@@ -71,7 +71,7 @@ export default function LoginPage() {
 						</div>
 
 						<h1 className="text-3xl font-bold text-textPrimary">
-							Student Login
+							ResourceX Login
 						</h1>
 
 						<p className="text-textSecondary mt-2">
@@ -164,15 +164,6 @@ export default function LoginPage() {
 						</Link>
 					</p>
 
-					{/* Admin Access */}
-					<p className="mt-6 text-center text-sm text-textSecondary">
-						Are you an admin?{" "}
-						<Link
-							href="/AdminLogin"
-							className="font-semibold text-primary hover:text-primaryDark">
-							Login as Admin
-						</Link>
-					</p>
 				</div>
 			</div>
 		</div>

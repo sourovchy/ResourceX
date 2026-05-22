@@ -21,11 +21,11 @@ public class AuditLog {
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     @Builder.Default
-    private ActorType actorType = ActorType.STAFF;
+    private ActorType actorType = ActorType.USER;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "actor_id")
-    private Staff actor;
+    private User actor;
 
     @Column(nullable = false, length = 80)
     private String actionType;
@@ -50,7 +50,7 @@ public class AuditLog {
     }
 
     public enum ActorType {
-        STAFF, SYSTEM
+        USER, SYSTEM
     }
 
     public enum AuditOutcome {

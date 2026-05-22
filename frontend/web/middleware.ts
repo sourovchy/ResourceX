@@ -30,8 +30,6 @@ const ADMIN_PATHS = [
 export function middleware(request: NextRequest) {
 	const { pathname } = request.nextUrl;
 	const token = request.cookies.get("resourcex_token")?.value;
-	const encodedRoles = request.cookies.get("resourcex_roles")?.value;
-	const roles = encodedRoles ? decodeURIComponent(encodedRoles) : "[]";
 
 	const isStudentRoute = STUDENT_PATHS.some(
 		(path) => pathname === path || pathname.startsWith(`${path}/`),
@@ -40,12 +38,8 @@ export function middleware(request: NextRequest) {
 		(path) => pathname === path || pathname.startsWith(`${path}/`),
 	);
 
-	if ((isStudentRoute || isAdminRoute) && !token) {
+	if ((isAdminRoute || isStudentRoute) && !token) {
 		return NextResponse.redirect(new URL("/auth/login", request.url));
-	}
-
-	if (isAdminRoute && !roles.includes("ROLE_ADMIN")) {
-		return NextResponse.redirect(new URL("/dashboard", request.url));
 	}
 
 	return NextResponse.next();

@@ -31,16 +31,6 @@ public class DisputeMapper {
                 )
                 .reason(dispute.getReason())
                 .resolution(dispute.getResolution())
-                .resolvedBy(
-                        dispute.getResolvedBy() != null
-                                ? UserResponse.builder()
-                                        .userId(dispute.getResolvedBy().getStaffId())
-                                        .name(dispute.getResolvedBy().getName())
-                                        .email(dispute.getResolvedBy().getEmail())
-                                        .roles(java.util.List.of("ROLE_ADMIN"))
-                                        .build()
-                                : null
-                )
                 .createdAt(dispute.getCreatedAt())
                 .resolvedAt(dispute.getResolvedAt())
                 .build();

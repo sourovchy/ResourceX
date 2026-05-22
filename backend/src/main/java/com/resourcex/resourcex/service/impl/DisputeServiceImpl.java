@@ -5,7 +5,6 @@ import com.resourcex.resourcex.dto.request.ResolutionRequest;
 import com.resourcex.resourcex.dto.response.DisputeResponse;
 import com.resourcex.resourcex.entity.Booking;
 import com.resourcex.resourcex.entity.Dispute;
-import com.resourcex.resourcex.entity.Staff;
 import com.resourcex.resourcex.entity.User;
 import com.resourcex.resourcex.entity.Dispute.DisputeStatus;
 import com.resourcex.resourcex.exception.ForbiddenException;
@@ -138,7 +137,7 @@ public class DisputeServiceImpl implements DisputeService {
         dispute.setStatus(status);
         dispute.setResolution(request.getResolution());
 
-        if (status == DisputeStatus.RESOLVED || status == DisputeStatus.REJECTED || status == DisputeStatus.CLOSED) {
+        if (status == DisputeStatus.RESOLVED || status == DisputeStatus.CLOSED) {
             dispute.setResolvedAt(LocalDateTime.now());
         }
 

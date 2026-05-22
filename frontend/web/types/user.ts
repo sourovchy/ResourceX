@@ -1,23 +1,27 @@
-export type UserStatus = "ACTIVE" | "PENDING_VERIFICATION" | "PENDING_APPROVAL" | "REJECTED" | "SUSPENDED" | "BANNED";
+export type UserStatus = "ACTIVE" | "SUSPENDED" | "BANNED";
+
+export interface StudentProfileResponse {
+  studentId: string;
+  phone: string;
+  university?: string | null;
+  department?: string | null;
+  trustScore: number;
+  emailVerified: boolean;
+  phoneVerified: boolean;
+}
 
 export interface UserResponse {
   userId: number;
-  studentId: string;
   name: string;
   email: string;
-  phone: string;
-  university?: string;
-  department?: string;
-  trustScore?: number;
-  emailVerified?: boolean;
-  phoneVerified?: boolean;
   status?: UserStatus;
+  studentProfile?: StudentProfileResponse | null;
   roles?: string[];
   createdAt?: string;
 }
 
 export interface PendingUserResponse {
-  pendingUserId: number;
+  id: number;
   studentId: string;
   name: string;
   email: string;

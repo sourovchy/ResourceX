@@ -40,7 +40,7 @@ public class AnalyticsServiceImpl implements AnalyticsService {
 
         metrics.put(
                 "activeBookings",
-                bookingRepository.countByStatus(Booking.BookingStatus.ACTIVE)
+                bookingRepository.countByStatus(Booking.BookingStatus.APPROVED)
         );
 
         metrics.put(

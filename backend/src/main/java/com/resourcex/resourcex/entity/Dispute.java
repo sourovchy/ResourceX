@@ -26,10 +26,6 @@ public class Dispute {
     @JoinColumn(name = "raised_by", nullable = false)
     private User raisedBy;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "resolved_by")
-    private Staff resolvedBy;
-
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 30)
     @Builder.Default
@@ -40,8 +36,6 @@ public class Dispute {
 
     @Column(columnDefinition = "TEXT")
     private String resolution;
-    @Column(columnDefinition = "TEXT")
-    private String description;
 
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
@@ -62,7 +56,6 @@ public class Dispute {
         OPEN,
         UNDER_REVIEW,
         RESOLVED,
-        REJECTED,
         CLOSED
     }
 }

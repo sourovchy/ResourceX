@@ -35,10 +35,15 @@ public class TrustServiceImpl implements TrustService {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found"));
 
+        int oldScore = 100;
+        int changeAmount = points == null ? 0 : points;
+
         TrustEvent trustEvent = TrustEvent.builder()
                 .user(user)
-                .eventType(eventType)
-                .points(points)
+                .sourceType(eventType)
+                .changeAmount(changeAmount)
+                .oldScore(oldScore)
+                .newScore(oldScore + changeAmount)
                 .reason(reason)
                 .build();
 
@@ -104,8 +109,8 @@ public class TrustServiceImpl implements TrustService {
                 .trustEventId(trustEvent.getTrustEventId())
                 .userId(trustEvent.getUser().getUserId())
                 .userName(trustEvent.getUser().getName())
-                .eventType(trustEvent.getEventType())
-                .points(trustEvent.getPoints())
+                .eventType(trustEvent.getSourceType())
+                .points(trustEvent.getChangeAmount())
                 .reason(trustEvent.getReason())
                 .createdAt(trustEvent.getCreatedAt())
                 .build();

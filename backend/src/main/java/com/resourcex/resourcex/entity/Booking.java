@@ -37,7 +37,7 @@ public class Booking {
     @Column(name = "returned_date")
     private LocalDate returnedDate;
 
-    @Column(nullable = false, precision = 12, scale = 2)
+    @Column(nullable = false, precision = 10, scale = 2)
     private BigDecimal totalPrice;
 
     @Enumerated(EnumType.STRING)
@@ -46,9 +46,10 @@ public class Booking {
     private BookingStatus status = BookingStatus.PENDING;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "approved_by")
-    private Staff approvedBy;
+    @JoinColumn(name = "approved_by_user_id")
+    private User approvedBy;
 
+    @Column(name = "approved_at")
     private LocalDateTime approvedAt;
     @OneToOne(mappedBy = "booking", fetch = FetchType.LAZY)
     private Payment payment;
@@ -78,7 +79,6 @@ public class Booking {
     public enum BookingStatus {
         PENDING,
         APPROVED,
-        ACTIVE,
         COMPLETED,
         CANCELLED,
         REJECTED

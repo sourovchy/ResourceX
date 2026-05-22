@@ -2,10 +2,12 @@ package com.resourcex.resourcex.service.impl;
 
 import com.resourcex.resourcex.dto.request.UpdateUserRequest;
 import com.resourcex.resourcex.dto.response.UserResponse;
+import com.resourcex.resourcex.entity.StudentProfile;
 import com.resourcex.resourcex.entity.User;
 import com.resourcex.resourcex.exception.ResourceNotFoundException;
 import com.resourcex.resourcex.exception.UnauthorizedException;
 import com.resourcex.resourcex.mapper.UserMapper;
+import com.resourcex.resourcex.repository.StudentProfileRepository;
 import com.resourcex.resourcex.repository.UserRepository;
 import com.resourcex.resourcex.service.UserService;
 import lombok.RequiredArgsConstructor;
@@ -21,6 +23,7 @@ import java.util.List;
 public class UserServiceImpl implements UserService {
 
     private final UserRepository userRepository;
+    private final StudentProfileRepository studentProfileRepository;
 
     @Override
     public UserResponse getCurrentUser() {
@@ -75,7 +78,10 @@ public class UserServiceImpl implements UserService {
         }
 
         if (request.getPhone() != null && !request.getPhone().isBlank()) {
-            user.setPhone(request.getPhone().trim());
+            StudentProfile studentProfile = studentProfileRepository.findByUser(user)
+                    .orElseThrow(() -> new ResourceNotFoundException("Student profile not found"));
+            studentProfile.setPhone(request.getPhone().trim());
+            studentProfileRepository.save(studentProfile);
         }
     }
 }

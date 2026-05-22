@@ -2,7 +2,9 @@ import axios from "axios";
 import { clearSession, getStoredToken } from "@/lib/auth";
 
 const api = axios.create({
-	baseURL: "http://localhost:8082/api",
+	baseURL:
+		process.env.NEXT_PUBLIC_API_URL?.replace(/\/$/, "") ||
+		"http://localhost:8082/api",
 	withCredentials: true,
 	headers: {
 		"Content-Type": "application/json",

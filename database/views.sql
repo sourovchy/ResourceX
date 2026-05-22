@@ -196,13 +196,13 @@ SELECT
     p.penalty_id,
     p.amount AS penalty_amount,
     p.status AS penalty_status,
-    s.name AS issued_by_staff,
+    issuer.name AS issued_by_user,
     d.created_at AS dispute_date,
     p.created_at AS penalty_date
 FROM Disputes d
 JOIN Users u ON d.raised_by = u.user_id
 LEFT JOIN Penalties p ON d.dispute_id = p.dispute_id
-LEFT JOIN Staff s ON p.issued_by = s.staff_id;
+LEFT JOIN Users issuer ON p.issued_by_user_id = issuer.user_id;
 
 -- VERIFY VIEWS
 SHOW FULL TABLES WHERE Table_type = 'VIEW';

@@ -19,9 +19,9 @@ import {
 } from "lucide-react";
 
 type AdminProfile = {
+	userId?: number;
 	name?: string;
 	email?: string;
-	staffId?: string;
 	role?: string;
 	roles?: string[];
 };
@@ -80,7 +80,7 @@ export default function AdminProfilePage() {
 
 	const authHeaders = useMemo(() => {
 		if (typeof window === "undefined") return {};
-		const token = localStorage.getItem("accessToken");
+		const token = localStorage.getItem("resourcex_token");
 		return token ? { Authorization: `Bearer ${token}` } : {};
 	}, []);
 
@@ -136,7 +136,6 @@ export default function AdminProfilePage() {
 	};
 
 	const adminName = profile?.name || "System Admin";
-	const staffId = profile?.staffId || "N/A";
 	const roleText =
 		profile?.role ||
 		profile?.roles?.find((r) => r.includes("ADMIN")) ||
@@ -186,7 +185,7 @@ export default function AdminProfilePage() {
 
 						<h2 className="text-xl font-bold text-textPrimary">{adminName}</h2>
 						<p className="text-sm font-medium text-textSecondary">
-							Staff ID: {staffId}
+							User ID: {profile?.userId ?? "N/A"}
 						</p>
 
 						<div className="my-4 w-full border-t border-borderLight" />

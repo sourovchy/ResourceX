@@ -1,8 +1,141 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import Link from "next/link";
-import { ArrowLeft, Star, MessageSquare, CheckCircle2 } from "lucide-react";
+import { ArrowLeft, Star, MessageSquare, CheckCircle2, Loader2, AlertTriangle } from "lucide-react";
+
+
+type BookingSummary = {
+	bookingId: string;
+	item: string;
+	owner: string;
+	dates: string;
+	image: string;
+};
+
+type BookingApiResponse =
+	| {
+		booking?: unknown;
+		data?: unknown;
+		content?: unknown;
+	}
+	| unknown;
+
+type ReviewPayload = {
+	bookingId: string;
+	rating: number;
+	comment: string;
+};
+
+const BOOKING_ENDPOINTS = [
+	"/api/bookings",
+	"/api/bookings/",
+	"/api/booking",
+	"/api/borrow/bookings",
+];
+
+const REVIEW_ENDPOINTS = [
+	"/api/reviews",
+	"/api/reviews/create",
+	"/api/bookings/reviews",
+];
+
+function getAuthHeaders(): Record<string, string> {
+	if (typeof window === "undefined") return {};
+
+	const token =
+		localStorage.getItem("resourcex_token");
+
+	return token
+		? {
+			Authorization: `Bearer ${token}`,
+		}
+		: {};
+}
+
+async function fetchJson(url: string) {
+	const response = await fetch(url, {
+		method: "GET",
+		credentials: "include",
+		headers: {
+			"Content-Type": "application/json",
+			...getAuthHeaders(),
+		},
+	});
+
+	if (!response.ok) {
+		throw new Error(`Request failed with status ${response.status}`);
+	}
+
+	return (await response.json()) as BookingApiResponse;
+}
+
+function normalizeBooking(raw: any, fallbackId: string): BookingSummary {
+	const itemName =
+		raw?.item?.title ??
+		raw?.itemTitle ??
+		raw?.itemName ??
+		raw?.title ??
+		"Untitled Item";
+
+	const ownerName =
+		raw?.owner?.name ??
+		raw?.ownerName ??
+		raw?.sellerName ??
+		"Unknown Owner";
+
+	const startDate = raw?.startDate ?? raw?.bookingStartDate ?? raw?.fromDate;
+	const endDate = raw?.endDate ?? raw?.bookingEndDate ?? raw?.toDate;
+	const dates = startDate && endDate ? `${new Date(startDate).toLocaleDateString()} - ${new Date(endDate).toLocaleDateString()}` : "—";
+
+	return {
+		bookingId: String(raw?.bookingId ?? raw?.id ?? fallbackId),
+		item: itemName,
+		owner: ownerName,
+		dates,
+		image:
+			raw?.item?.imageUrls?.[0] ??
+			raw?.item?.images?.[0] ??
+			raw?.image ??
+			"https://placehold.co/200x150?text=Item",
+	};
+}
+
+function extractBooking(payload: BookingApiResponse, fallbackId: string) {
+	const root: any = payload && typeof payload === "object" ? payload : {};
+	const source = root.booking ?? root.data ?? root.content ?? payload;
+
+	if (Array.isArray(source)) {
+		const match = source.find((entry: any) => String(entry?.bookingId ?? entry?.id) === fallbackId);
+		return match ? normalizeBooking(match, fallbackId) : null;
+	}
+
+	if (source && typeof source === "object") {
+		return normalizeBooking(source, fallbackId);
+	}
+
+	return null;
+}
+
+async function loadBooking(bookingId: string) {
+	const endpoints = [
+		`/api/bookings/${bookingId}`,
+		`/api/booking/${bookingId}`,
+		`/api/borrow/bookings/${bookingId}`,
+	];
+
+	for (const endpoint of endpoints) {
+		try {
+			const payload = await fetchJson(endpoint);
+			const booking = extractBooking(payload, bookingId);
+			if (booking) return booking;
+		} catch {
+			// try next endpoint
+		}
+	}
+
+	throw new Error("Unable to load booking details.");
+}
 
 export default function ReviewPage({
 	params,
@@ -13,36 +146,123 @@ export default function ReviewPage({
 	const [hoverRating, setHoverRating] = useState(0);
 	const [comment, setComment] = useState("");
 	const [submitted, setSubmitted] = useState(false);
+	const [booking, setBooking] = useState<BookingSummary | null>(null);
+	const [loading, setLoading] = useState(true);
+	const [submitting, setSubmitting] = useState(false);
+	const [error, setError] = useState<string | null>(null);
 
-	// Mock booking details
-	const BOOKINGS = {
-		"b1": {
-			item: "Sony Alpha A7III",
-			owner: "Arif Hossain",
-			dates: "May 10 - May 12",
-			image: "https://images.unsplash.com/photo-1516035069371-29a1b244cc32?auto=format&fit=crop&q=80&w=200&h=150",
-		},
-		"b2": {
-			item: "Arduino Mega 2560 Kit",
-			owner: "Nusrat J.",
-			dates: "May 15 - May 20",
-			image: "https://images.unsplash.com/photo-1555664424-778a1e5e1b48?auto=format&fit=crop&q=80&w=200&h=150",
-		},
-		"b3": {
-			item: "Calculus Textbook Vol 2",
-			owner: "Sam I.",
-			dates: "Apr 1 - Apr 30",
-			image: "https://images.unsplash.com/photo-1544947950-fa07a98d237f?auto=format&fit=crop&q=80&w=200&h=150",
-		},
-	};
+	useEffect(() => {
+		let active = true;
 
-	const booking = BOOKINGS[params.bookingId as keyof typeof BOOKINGS];
+		const fetchBooking = async () => {
+			setLoading(true);
+			setError(null);
 
-	const handleSubmit = (e: React.FormEvent) => {
+			try {
+				const loadedBooking = await loadBooking(params.bookingId);
+				if (!active) return;
+
+				setBooking(loadedBooking);
+			} catch (err) {
+				if (!active) return;
+
+				setError(
+					err instanceof Error ? err.message : "Failed to load booking details.",
+				);
+			} finally {
+				if (active) setLoading(false);
+			}
+		};
+
+		void fetchBooking();
+
+		return () => {
+			active = false;
+		};
+	}, [params.bookingId]);
+
+	const handleSubmit = async (e: React.FormEvent) => {
 		e.preventDefault();
-		// In a real app, send POST request to /api/reviews
-		setSubmitted(true);
+		setError(null);
+
+		if (rating === 0 || !comment.trim()) {
+			setError("Please select a rating and enter a comment.");
+			return;
+		}
+
+		try {
+			setSubmitting(true);
+
+			const payload: ReviewPayload = {
+				bookingId: params.bookingId,
+				rating,
+				comment: comment.trim(),
+			};
+
+			let success = false;
+
+			for (const endpoint of REVIEW_ENDPOINTS) {
+				try {
+					const response = await fetch(endpoint, {
+						method: "POST",
+						credentials: "include",
+						headers: {
+							"Content-Type": "application/json",
+							...getAuthHeaders(),
+						},
+						body: JSON.stringify(payload),
+					});
+
+					if (response.ok) {
+						success = true;
+						break;
+					}
+				} catch {
+					// try next endpoint
+				}
+			}
+
+			if (!success) {
+				throw new Error("Review submission failed.");
+			}
+
+			setSubmitted(true);
+		} catch (err) {
+			setError(
+				err instanceof Error ? err.message : "Failed to submit review.",
+			);
+		} finally {
+			setSubmitting(false);
+		}
 	};
+
+	if (loading) {
+		return (
+			<div className="max-w-2xl mx-auto py-20 text-center space-y-4">
+				<Loader2 className="w-10 h-10 animate-spin mx-auto text-primary" />
+				<p className="text-textSecondary">Loading booking details...</p>
+			</div>
+		);
+	}
+
+	if (error && !booking) {
+		return (
+			<div className="max-w-2xl mx-auto py-20 text-center space-y-6">
+				<div className="w-20 h-20 bg-errorLight text-error rounded-full flex items-center justify-center mx-auto mb-4">
+					<AlertTriangle className="w-10 h-10" />
+				</div>
+				<h1 className="text-3xl font-extrabold text-textPrimary">
+					Booking Not Found
+				</h1>
+				<p className="text-textSecondary">{error}</p>
+				<Link
+					href="/my-bookings"
+					className="inline-block mt-4 px-6 py-3 bg-primary text-white font-bold rounded-xl shadow-sm hover:bg-primaryDark transition-colors">
+					Return to My Bookings
+				</Link>
+			</div>
+		);
+	}
 
 	if (submitted) {
 		return (
@@ -79,22 +299,29 @@ export default function ReviewPage({
 					Leave a Review
 				</h1>
 				<p className="text-textSecondary mt-2">
-					How was your experience renting from {booking.owner}?
+					How was your experience renting from {booking?.owner ?? "this owner"}?
 				</p>
 			</div>
 
 			<div className="bg-surface border border-borderLight rounded-2xl p-6 md:p-8 shadow-sm space-y-8">
+				{error && (
+					<div className="flex items-start gap-3 rounded-xl border border-error bg-errorLight/30 p-4 text-sm text-errorDark">
+						<AlertTriangle className="w-5 h-5 shrink-0 mt-0.5" />
+						<span>{error}</span>
+					</div>
+				)}
+
 				{/* Booking Info Card */}
 				<div className="flex items-center gap-4 bg-surfaceVariant p-4 rounded-xl border border-borderLight">
 					<img
-						src={booking.image}
-						alt={booking.item}
+						src={booking?.image ?? "https://placehold.co/200x150?text=Item"}
+						alt={booking?.item ?? "Booking item"}
 						className="w-16 h-16 rounded-lg object-cover border border-borderLight"
 					/>
 					<div>
-						<h3 className="font-bold text-textPrimary">{booking.item}</h3>
+						<h3 className="font-bold text-textPrimary">{booking?.item ?? "Untitled Item"}</h3>
 						<p className="text-xs text-textSecondary mt-0.5">
-							Rented on: {booking.dates}
+							Rented on: {booking?.dates ?? "—"}
 						</p>
 					</div>
 				</div>
@@ -158,9 +385,16 @@ export default function ReviewPage({
 					{/* Submit Button */}
 					<button
 						type="submit"
-						disabled={rating === 0 || !comment.trim()}
-						className="w-full py-4 bg-primary text-white rounded-xl font-bold hover:bg-primaryDark transition-colors disabled:opacity-50 disabled:cursor-not-allowed shadow-sm">
-						Submit Review
+						disabled={rating === 0 || !comment.trim() || submitting}
+						className="w-full py-4 bg-primary text-white rounded-xl font-bold hover:bg-primaryDark transition-colors disabled:opacity-50 disabled:cursor-not-allowed shadow-sm flex items-center justify-center gap-2">
+						{submitting ? (
+							<>
+								<Loader2 className="w-5 h-5 animate-spin" />
+								Submitting...
+							</>
+						) : (
+							"Submit Review"
+						)}
 					</button>
 				</form>
 			</div>

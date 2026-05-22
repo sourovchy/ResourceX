@@ -146,11 +146,6 @@ public class BookingServiceImpl implements BookingService {
         booking.setStatus(Booking.BookingStatus.APPROVED);
         booking.setApprovedAt(LocalDateTime.now());
 
-        LocalDate today = LocalDate.now();
-        if (!today.isBefore(booking.getStartDate()) && !today.isAfter(booking.getEndDate())) {
-            booking.setStatus(Booking.BookingStatus.ACTIVE);
-        }
-
         Booking saved = bookingRepository.save(booking);
         // Sync availability after any approval (status changed)
         syncItemAvailability(saved.getItem());
@@ -205,9 +200,8 @@ public class BookingServiceImpl implements BookingService {
 
         assertCanManageOwnerSide(booking);
 
-        if (booking.getStatus() != Booking.BookingStatus.ACTIVE
-                && booking.getStatus() != Booking.BookingStatus.APPROVED) {
-            throw new ConflictException("Only active or approved bookings can be completed");
+        if (booking.getStatus() != Booking.BookingStatus.APPROVED) {
+            throw new ConflictException("Only approved bookings can be completed");
         }
 
         booking.setStatus(Booking.BookingStatus.COMPLETED);
@@ -224,21 +218,13 @@ public class BookingServiceImpl implements BookingService {
         LocalDate today = LocalDate.now();
         boolean itemSyncNeeded = false;
 
-        // TODO: replace with a query that fetches only APPROVED/ACTIVE bookings
+        // TODO: replace with a query that fetches only approved bookings
         List<Booking> bookings = bookingRepository.findAll();
 
         for (Booking booking : bookings) {
             boolean changed = false;
 
             if (booking.getStatus() == Booking.BookingStatus.APPROVED
-                    && !today.isBefore(booking.getStartDate())
-                    && !today.isAfter(booking.getEndDate())) {
-                booking.setStatus(Booking.BookingStatus.ACTIVE);
-                changed = true;
-                itemSyncNeeded = true;
-            }
-
-            if (booking.getStatus() == Booking.BookingStatus.ACTIVE
                     && today.isAfter(booking.getEndDate())) {
                 booking.setStatus(Booking.BookingStatus.COMPLETED);
                 booking.setReturnedDate(booking.getEndDate());
@@ -346,7 +332,7 @@ public class BookingServiceImpl implements BookingService {
         boolean hasActiveBooking = bookingRepository.findAll().stream()
                 .filter(b -> b.getItem() != null
                         && b.getItem().getItemId().equals(item.getItemId()))
-                .anyMatch(b -> b.getStatus() == Booking.BookingStatus.ACTIVE
+                .anyMatch(b -> b.getStatus() == Booking.BookingStatus.APPROVED
                         && !today.isBefore(b.getStartDate())
                         && !today.isAfter(b.getEndDate()));
 

@@ -23,10 +23,7 @@ public class DisputeResponse {
 
     private String resolution;
 
-    private UserResponse resolvedBy;
-
     private LocalDateTime createdAt;
 
     private LocalDateTime resolvedAt;
-    private String description;
 }

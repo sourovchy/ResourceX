@@ -19,8 +19,8 @@ public class Payment {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long paymentId;
 
-    @OneToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "booking_id", nullable = false, unique = true)
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "booking_id", nullable = false)
     private Booking booking;
 
     @Column(nullable = false, precision = 10, scale = 2)
@@ -31,7 +31,7 @@ public class Payment {
     @Builder.Default
     private PaymentStatus status = PaymentStatus.PENDING;
 
-    @Column(name = "method", nullable = false, length = 50)
+    @Column(name = "method", length = 50)
     private String method;
 
     @Column(name = "transaction_ref", unique = true)

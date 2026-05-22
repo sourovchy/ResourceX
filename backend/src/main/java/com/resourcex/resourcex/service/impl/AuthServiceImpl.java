@@ -5,12 +5,17 @@ import com.resourcex.resourcex.dto.request.RegisterRequest;
 import com.resourcex.resourcex.dto.response.AuthResponse;
 import com.resourcex.resourcex.dto.response.CurrentUserResponse;
 import com.resourcex.resourcex.entity.PendingUser;
+import com.resourcex.resourcex.entity.PendingUserStatus;
+import com.resourcex.resourcex.entity.StudentProfile;
+import com.resourcex.resourcex.entity.University;
 import com.resourcex.resourcex.entity.User;
 import com.resourcex.resourcex.entity.UserStatus;
 import com.resourcex.resourcex.exception.ConflictException;
 import com.resourcex.resourcex.exception.UnauthorizedException;
 import com.resourcex.resourcex.mapper.UserMapper;
 import com.resourcex.resourcex.repository.PendingUserRepository;
+import com.resourcex.resourcex.repository.StudentProfileRepository;
+import com.resourcex.resourcex.repository.UniversityRepository;
 import com.resourcex.resourcex.repository.UserRoleRepository;
 import com.resourcex.resourcex.repository.UserRepository;
 import com.resourcex.resourcex.security.JwtService;
@@ -31,6 +36,8 @@ public class AuthServiceImpl implements AuthService {
 
     private final UserRepository userRepository;
     private final PendingUserRepository pendingUserRepository;
+    private final StudentProfileRepository studentProfileRepository;
+    private final UniversityRepository universityRepository;
     private final UserRoleRepository userRoleRepository;
     private final PasswordEncoder passwordEncoder;
     private final JwtService jwtService;
@@ -44,34 +51,34 @@ public class AuthServiceImpl implements AuthService {
             throw new ConflictException("Email already exists");
         }
 
-        if (userRepository.existsByStudentId(request.getStudentId())
+        if (studentProfileRepository.existsByStudentId(request.getStudentId())
                 || pendingUserRepository.existsByStudentId(request.getStudentId())) {
             throw new ConflictException("Student ID already exists");
         }
 
-        if (userRepository.existsByPhone(request.getPhone())
+        if (studentProfileRepository.existsByPhone(request.getPhone())
                 || pendingUserRepository.existsByPhone(request.getPhone())) {
             throw new ConflictException("Phone number already exists");
         }
+
+        University university = resolveUniversity(request.getUniversity());
 
         PendingUser pendingUser = PendingUser.builder()
                 .studentId(request.getStudentId())
                 .name(request.getName())
                 .email(request.getEmail())
-                .password(passwordEncoder.encode(request.getPassword()))
+                .passwordHash(passwordEncoder.encode(request.getPassword()))
                 .phone(request.getPhone())
-                .university(request.getUniversity())
+                .university(university)
                 .department(request.getDepartment())
                 .idCardDataUrl(request.getIdCardDataUrl())
-                .status(UserStatus.PENDING_VERIFICATION)
-                .emailVerified(false)
-                .phoneVerified(false)
+                .status(PendingUserStatus.PENDING)
                 .build();
 
         pendingUserRepository.save(pendingUser);
 
         return AuthResponse.builder()
-                .message("Registration successful. Please verify your email and wait for approval.")
+                .message("Registration successful. Your request is pending review.")
                 .token(null)
                 .user(null)
                 .roles(List.of())
@@ -89,15 +96,6 @@ public class AuthServiceImpl implements AuthService {
         }
 
         if (user.getStatus() != UserStatus.ACTIVE) {
-            if (user.getStatus() == UserStatus.PENDING_VERIFICATION) {
-                throw new UnauthorizedException("Account not verified yet.");
-            }
-            if (user.getStatus() == UserStatus.PENDING_APPROVAL) {
-                throw new UnauthorizedException("Account is waiting for admin approval.");
-            }
-            if (user.getStatus() == UserStatus.REJECTED) {
-                throw new UnauthorizedException("Account registration was rejected.");
-            }
             if (user.getStatus() == UserStatus.SUSPENDED) {
                 throw new UnauthorizedException("Account is suspended.");
             }
@@ -107,30 +105,45 @@ public class AuthServiceImpl implements AuthService {
             throw new UnauthorizedException("Account is not active.");
         }
 
-        String token = jwtService.generateToken(user.getEmail());
+        List<String> roles = resolveRoles(user);
+        String token = jwtService.generateToken(user.getUserId(), user.getEmail(), roles);
+        StudentProfile profile = studentProfileRepository.findByUser(user).orElse(null);
 
         return AuthResponse.builder()
                 .message("Login successful")
                 .token(token)
                 .user(UserMapper.toResponse(
-    user,
-    userRoleRepository.findAllByUser(user)
-))
-                .roles(resolveRoles(user))
+                        user,
+                        userRoleRepository.findAllByUser(user),
+                        profile))
+                .roles(roles)
                 .build();
     }
 
     @Override
     public CurrentUserResponse getCurrentUser() {
         User user = resolveCurrentUser();
+        StudentProfile profile = studentProfileRepository.findByUser(user).orElse(null);
 
         return CurrentUserResponse.builder()
                 .user(UserMapper.toResponse(
-    user,
-    userRoleRepository.findAllByUser(user)
-))
+                        user,
+                        userRoleRepository.findAllByUser(user),
+                        profile))
                 .roles(resolveRoles(user))
                 .build();
+    }
+
+    private University resolveUniversity(String universityName) {
+        if (universityName == null || universityName.isBlank()) {
+            return null;
+        }
+
+        return universityRepository.findByName(universityName.trim())
+                .orElseGet(() -> universityRepository.save(
+                        University.builder()
+                                .name(universityName.trim())
+                                .build()));
     }
 
     private User resolveCurrentUser() {

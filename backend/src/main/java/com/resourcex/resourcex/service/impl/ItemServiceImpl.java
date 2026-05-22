@@ -133,8 +133,7 @@ public class ItemServiceImpl implements ItemService {
 
         boolean hasActiveOrPendingBooking = bookings.stream().anyMatch(booking ->
                 booking.getStatus() == Booking.BookingStatus.PENDING ||
-                        booking.getStatus() == Booking.BookingStatus.APPROVED ||
-                        booking.getStatus() == Booking.BookingStatus.ACTIVE
+                        booking.getStatus() == Booking.BookingStatus.APPROVED
         );
 
         if (hasActiveOrPendingBooking) {

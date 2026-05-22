@@ -16,4 +16,6 @@ public class OtpResponse {
     private String email;
 
     private Long expiresInSeconds;
+
+    private Integer attemptsRemaining;
 }

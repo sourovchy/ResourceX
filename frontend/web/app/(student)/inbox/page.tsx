@@ -1,8 +1,8 @@
-// app/(student)/inbox/page.tsx
+
 "use client";
 
-import { useChat } from "@/hooks/useChat";
-import ConversationList from "./components/ConversationList";
+import { useChat } from "./hooks/useChat";
+import ChatSidebar from "./components/ChatSidebar";
 import ChatWindow from "./components/ChatWindow";
 
 export default function InboxPage() {
@@ -15,22 +15,20 @@ export default function InboxPage() {
 		setSearchQuery,
 		selectConversation,
 		sendMessage,
-		toggleBlock,
-		isBlocked,
+		currentUserId,
+		loading,
 	} = useChat();
 
-	const blocked = selectedConversation
-		? isBlocked(selectedConversation.participant.id)
-		: false;
-
 	return (
-		<div className="max-w-6xl mx-auto h-[calc(100vh-120px)] flex bg-surface border border-borderLight rounded-2xl shadow-sm overflow-hidden text-sm md:text-base">
+		<div className="max-w-7xl mx-auto h-[calc(100vh-120px)] flex bg-surface border border-borderLight rounded-2xl shadow-sm overflow-hidden text-sm md:text-base">
 			{/* Sidebar */}
-			<ConversationList
+			<ChatSidebar
 				conversations={filteredConversations}
-				selectedId={selectedId}
+				selectedConversationId={selectedId}
 				searchQuery={searchQuery}
-				onSelect={selectConversation}
+				currentUserId={currentUserId}
+				loading={loading}
+				onConversationSelect={selectConversation}
 				onSearchChange={setSearchQuery}
 			/>
 
@@ -38,9 +36,8 @@ export default function InboxPage() {
 			<ChatWindow
 				conversation={selectedConversation}
 				messages={currentMessages}
-				isBlocked={blocked}
+				currentUserId={currentUserId}
 				onSend={sendMessage}
-				onToggleBlock={toggleBlock}
 			/>
 		</div>
 	);

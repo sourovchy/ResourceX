@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import api from "@/lib/api";
 import {
@@ -16,27 +16,129 @@ import {
 	Loader2,
 } from "lucide-react";
 
+type ItemOwner = {
+	userId?: string | number;
+	name?: string;
+	verified?: boolean;
+	trustScore?: number;
+};
+
+type ItemResponse = {
+	id?: string | number;
+	itemId?: string | number;
+	title?: string;
+	name?: string;
+	description?: string;
+	category?: string;
+	itemCondition?: string;
+	condition?: string;
+	dailyRate?: number;
+	pricePerDay?: number;
+	rentalPricePerDay?: number;
+	deposit?: number;
+	securityDeposit?: number;
+	imageUrls?: string[];
+	images?: string[];
+	owner?: ItemOwner;
+	ownerName?: string;
+	ownerId?: string | number;
+};
+
+function normalizeItem(raw: any) {
+	const imageList =
+		raw?.imageUrls ?? raw?.images ?? raw?.imageUrl ?? [];
+
+	return {
+		itemId: String(raw?.itemId ?? raw?.id ?? ""),
+		title: raw?.title ?? raw?.name ?? "Untitled Item",
+		description:
+			raw?.description ?? "No description provided for this item.",
+		category: raw?.category ?? "General",
+		itemCondition:
+			raw?.itemCondition ?? raw?.condition ?? "Good",
+		dailyRate: Number(
+			raw?.dailyRate ??
+				raw?.pricePerDay ??
+				raw?.rentalPricePerDay ??
+				0,
+		),
+		deposit: Number(raw?.deposit ?? raw?.securityDeposit ?? 0),
+		imageUrls: Array.isArray(imageList)
+			? imageList
+			: imageList
+				? [imageList]
+				: [],
+		owner: {
+			userId:
+				raw?.owner?.userId ?? raw?.ownerId ?? raw?.user?.userId,
+			name:
+				raw?.owner?.name ??
+				raw?.ownerName ??
+				raw?.user?.name ??
+				"Unknown Owner",
+			verified: Boolean(raw?.owner?.verified ?? true),
+			trustScore: Number(raw?.owner?.trustScore ?? 100),
+		},
+	};
+}
+
 export default function ItemDetailPage({ params }: { params: { id: string } }) {
-	const [item, setItem] = useState<any>(null);
+	const [item, setItem] = useState<ItemResponse | null>(null);
 	const [loading, setLoading] = useState(true);
 	const [error, setError] = useState<string | null>(null);
 
 	useEffect(() => {
+		let active = true;
+
 		const fetchItem = async () => {
+			setLoading(true);
+			setError(null);
+
+			const endpoints = [
+				`/items/${params.id}`,
+				`/item/${params.id}`,
+				`/borrow/items/${params.id}`,
+			];
+
 			try {
-				setLoading(true);
-				const response = await api.get(`/items/${params.id}`);
-				setItem(response.data);
-				setError(null);
+				for (const endpoint of endpoints) {
+					try {
+						const response = await api.get(endpoint);
+						const normalized = normalizeItem(response.data);
+
+						if (!active) return;
+
+						setItem(normalized);
+						setLoading(false);
+						return;
+					} catch {
+						// Try next endpoint.
+					}
+				}
+
+				throw new Error("Failed to load item details.");
 			} catch (err) {
 				console.error("Error fetching item details:", err);
-				setError("Failed to load item details. It may have been removed.");
+
+				if (!active) return;
+
+				setError(
+					err instanceof Error
+						? err.message
+						: "Failed to load item details.",
+				);
 			} finally {
-				setLoading(false);
+				if (active) {
+					setLoading(false);
+				}
 			}
 		};
 
-		fetchItem();
+		void fetchItem();
+
+		return () => {
+			active = false;
+		};
 	}, [params.id]);
 
 	if (loading) {
@@ -68,8 +170,12 @@ export default function ItemDetailPage({ params }: { params: { id: string } }) {
 
 	const itemImage =
 		item.imageUrls?.[0] ||
-		"https://images.unsplash.com/photo-1586769852836-bc069f19e1b6?auto=format&fit=crop&q=80&w=800&h=500";
-	const allImages = item.imageUrls?.length > 0 ? item.imageUrls : [itemImage];
+		"https://placehold.co/800x500?text=No+Image";
+	const allImages = (item.imageUrls?.length ?? 0) > 0 ? item.imageUrls ?? [] : [itemImage];
+
+	const ownerTrustScore = useMemo(() => {
+		return Number(item.owner?.trustScore ?? 100);
+	}, [item.owner?.trustScore]);
 
 	return (
 		<div className="max-w-4xl mx-auto space-y-6 pb-20">
@@ -121,8 +227,10 @@ export default function ItemDetailPage({ params }: { params: { id: string } }) {
 						<div className="flex items-center gap-4 text-sm text-textSecondary">
 							<span className="flex items-center gap-1">
 								<Star className="w-4 h-4 text-warning fill-warning" />
-								<span className="font-bold text-textPrimary">4.5</span> (0
-								reviews)
+								<span className="font-bold text-textPrimary">
+									{ownerTrustScore >= 90 ? "4.9" : ownerTrustScore >= 75 ? "4.5" : "4.0"}
+								</span>
+								(owner reputation)
 							</span>
 						</div>
 					</div>
@@ -134,7 +242,7 @@ export default function ItemDetailPage({ params }: { params: { id: string } }) {
 									Rental Price
 								</div>
 								<div className="text-3xl font-extrabold text-primary">
-									৳ {item.dailyRate}
+									৳ {item.dailyRate?.toLocaleString() || 0}
 									<span className="text-sm text-textSecondary font-medium">
 										{" "}
 										/ day
@@ -145,11 +253,13 @@ export default function ItemDetailPage({ params }: { params: { id: string } }) {
 								<div className="text-sm font-semibold text-textSecondary mb-1">
 									Deposit
 								</div>
-								<div className="text-xl font-bold text-textPrimary">৳ 0</div>
+								<div className="text-xl font-bold text-textPrimary">
+									৳ {item.deposit?.toLocaleString() || 0}
+								</div>
 							</div>
 						</div>
 						<Link
-							href={`/borrow/book/${item.itemId}`}
+							href={`/borrow/book/${item.itemId || params.id}`}
 							className="block w-full py-3.5 bg-primary text-white text-center rounded-xl font-bold hover:bg-primaryDark transition-colors shadow-sm">
 							Book This Item
 						</Link>
@@ -180,14 +290,16 @@ export default function ItemDetailPage({ params }: { params: { id: string } }) {
 										)}
 									</div>
 									<div className="text-xs text-textSecondary mt-0.5">
-										Verified Campus Student
+										{item.owner?.verified
+											? "Verified Campus Student"
+											: "Campus Member"}
 									</div>
 								</div>
 							</div>
 							<div className="text-right flex flex-col items-end">
 								<div className="flex items-center gap-1.5 bg-successLight text-success px-2 py-1 rounded-md text-xs font-bold leading-none mb-1">
 									<Shield className="w-3.5 h-3.5" />{" "}
-									{item.owner?.trustScore || 100} Trust
+									{ownerTrustScore} Trust
 								</div>
 							</div>
 						</Link>

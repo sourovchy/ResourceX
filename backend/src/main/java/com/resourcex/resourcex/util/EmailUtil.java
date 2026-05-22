@@ -4,11 +4,9 @@ import java.util.regex.Pattern;
 
 public class EmailUtil {
 
-    private static final String EMAIL_REGEX =
-            "^[A-Za-z0-9+_.-]+@[A-Za-z0-9.-]+$";
+    private static final String EMAIL_REGEX = "^[A-Za-z0-9+_.-]+@[A-Za-z0-9.-]+$";
 
-    private static final Pattern PATTERN =
-            Pattern.compile(EMAIL_REGEX);
+    private static final Pattern PATTERN = Pattern.compile(EMAIL_REGEX);
 
     private EmailUtil() {
     }

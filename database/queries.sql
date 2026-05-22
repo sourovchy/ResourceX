@@ -97,10 +97,13 @@ LEFT JOIN Bookings b ON i.item_id = b.item_id
 WHERE b.booking_id IS NULL
   AND i.status = 'AVAILABLE';
 
--- 12. View all Staff members and their roles
-SELECT staff_id, name, email, role, status
-FROM Staff
-ORDER BY created_at DESC;
+-- 12. View all privileged users and their roles
+SELECT u.user_id, u.name, u.email, r.name AS role, u.status
+FROM users u
+JOIN user_roles ur ON u.user_id = ur.user_id
+JOIN roles r ON ur.role_id = r.role_id
+WHERE r.name IN ('ROLE_ADMIN', 'ROLE_MODERATOR', 'ROLE_SUPER_ADMIN')
+ORDER BY u.created_at DESC;
 
 -- 13. View all active/open disputes and their related booking info
 SELECT d.dispute_id, d.status AS dispute_status, d.reason,
@@ -113,11 +116,12 @@ ORDER BY d.created_at ASC;
 
 -- 14. View penalties assigned to a user
 SELECT p.penalty_id, p.amount, p.reason, p.status,
-       u.name AS user_name, s.name AS issued_by_staff
+       u.name AS user_name, issuer.name AS issued_by_user
 FROM Penalties p
 JOIN Users u ON p.user_id = u.user_id
-JOIN Staff s ON p.issued_by = s.staff_id
-WHERE u.student_id = 'S1002';
+JOIN Users issuer ON p.issued_by_user_id = issuer.user_id
+JOIN student_profiles sp ON u.user_id = sp.user_id
+WHERE sp.student_id = 'S1002';
 
 -- 15. View audit logs
 SELECT audit_id, actor_type, actor_id, action_type, entity_type, entity_id, outcome, details, created_at

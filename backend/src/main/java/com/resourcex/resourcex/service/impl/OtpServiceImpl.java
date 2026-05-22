@@ -6,7 +6,7 @@ import com.resourcex.resourcex.dto.response.OtpResponse;
 import com.resourcex.resourcex.entity.OtpStatus;
 import com.resourcex.resourcex.entity.OtpToken;
 import com.resourcex.resourcex.entity.PendingUser;
-import com.resourcex.resourcex.entity.UserStatus;
+import com.resourcex.resourcex.entity.PendingUserStatus;
 import com.resourcex.resourcex.exception.ConflictException;
 import com.resourcex.resourcex.exception.ResourceNotFoundException;
 import com.resourcex.resourcex.exception.UnauthorizedException;
@@ -16,6 +16,7 @@ import com.resourcex.resourcex.repository.UserRepository;
 import com.resourcex.resourcex.service.EmailService;
 import com.resourcex.resourcex.service.OtpService;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -32,6 +33,7 @@ import java.util.Optional;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class OtpServiceImpl implements OtpService {
 
     private static final int OTP_LENGTH = 6;
@@ -101,29 +103,35 @@ public class OtpServiceImpl implements OtpService {
         token.setUsedAt(now);
         otpRepository.save(token);
 
-        PendingUser pendingUser = pendingUserRepository.findByEmailIgnoreCase(email)
+        pendingUserRepository.findByEmailIgnoreCase(email)
                 .orElseThrow(() -> new ResourceNotFoundException("Pending user not found"));
 
-        pendingUser.setEmailVerified(true);
-        if (pendingUser.getStatus() == UserStatus.PENDING_VERIFICATION) {
-            pendingUser.setStatus(UserStatus.PENDING_APPROVAL);
-        }
-        pendingUserRepository.save(pendingUser);
+        log.info("OTP verified successfully for email: {}, resend attempts used: {}/{}",
+                email, token.getResendCount(), MAX_OTP_REQUESTS_PER_DAY);
 
         return OtpResponse.builder()
                 .success(true)
                 .message("OTP verified successfully")
                 .email(email)
                 .expiresInSeconds(0L)
+                .attemptsRemaining(MAX_OTP_REQUESTS_PER_DAY - token.getResendCount())
                 .build();
     }
 
     private OtpResponse issueOtp(String rawEmail, String successMessage) {
-        IssuedOtp issuedOtp = transactionTemplate.execute(status -> createOtp(rawEmail));
+        String email = normalizeEmail(rawEmail);
+
+        // Validate user can request OTP
+        validateOtpRequest(email);
+
+        IssuedOtp issuedOtp = transactionTemplate.execute(status -> createOrUpdateOtp(email));
 
         try {
+            log.info("Sending OTP to email: {}", email);
             emailService.sendOtpEmail(issuedOtp.email(), issuedOtp.rawOtp());
+            log.info("OTP successfully sent to: {}", email);
         } catch (RuntimeException ex) {
+            log.error("OTP email send failed for: {}, rolling back token creation", email, ex);
             cancelIssuedOtp(issuedOtp.tokenId());
             throw ex;
         }
@@ -133,11 +141,26 @@ public class OtpServiceImpl implements OtpService {
                 .message(successMessage)
                 .email(issuedOtp.email())
                 .expiresInSeconds(issuedOtp.expiresInSeconds())
+                .attemptsRemaining(MAX_OTP_REQUESTS_PER_DAY - issuedOtp.resendCount())
                 .build();
     }
 
-    private IssuedOtp createOtp(String rawEmail) {
-        String email = normalizeEmail(rawEmail);
+    private void validateOtpRequest(String email) {
+        Instant now = now();
+
+        // Check 24-hour daily limit
+        long dailyRequestCount = otpRepository.countByEmailAndCreatedAtAfter(
+                email,
+                now.minus(24, ChronoUnit.HOURS));
+
+        if (dailyRequestCount >= MAX_OTP_REQUESTS_PER_DAY) {
+            log.warn("Daily OTP request limit exceeded for email: {}", email);
+            throw new UnauthorizedException(
+                    "Maximum " + MAX_OTP_REQUESTS_PER_DAY + " OTP requests allowed per day. Try again tomorrow.");
+        }
+    }
+
+    private IssuedOtp createOrUpdateOtp(String email) {
         Instant now = now();
 
         if (userRepository.existsByEmailIgnoreCase(email)) {
@@ -147,46 +170,54 @@ public class OtpServiceImpl implements OtpService {
         PendingUser pendingUser = pendingUserRepository.findByEmailIgnoreCase(email)
                 .orElseThrow(() -> new ResourceNotFoundException("Please register first"));
 
-        if (Boolean.TRUE.equals(pendingUser.getEmailVerified())) {
-            throw new UnauthorizedException("Email is already verified. Awaiting admin approval.");
-        }
-
-        if (pendingUser.getStatus() == UserStatus.REJECTED) {
+        if (pendingUser.getStatus() == PendingUserStatus.REJECTED) {
             throw new UnauthorizedException("Registration was rejected");
-        }
-
-        if (pendingUser.getStatus() == UserStatus.PENDING_APPROVAL) {
-            throw new UnauthorizedException("Email is already verified. Awaiting admin approval.");
-        }
-
-        long requestCount = otpRepository.countByEmailAndCreatedAtAfter(
-                email,
-                now.minus(24, ChronoUnit.HOURS)
-        );
-
-        if (requestCount >= MAX_OTP_REQUESTS_PER_DAY) {
-            throw new UnauthorizedException("Maximum OTP request limit reached");
         }
 
         expireExpiredPendingTokens(email, now);
 
-        Optional<OtpToken> latestPendingOtp = findLatestPendingTokenForUpdate(email);
+        Optional<OtpToken> existingPendingOtp = findLatestPendingTokenForUpdate(email);
 
-        if (latestPendingOtp.isPresent()) {
-            OtpToken latest = latestPendingOtp.get();
-            if (latest.getLastSentAt() != null &&
-                    latest.getLastSentAt().plusSeconds(RESEND_COOLDOWN_SECONDS).isAfter(now)) {
+        if (existingPendingOtp.isPresent()) {
+            OtpToken existing = existingPendingOtp.get();
+
+            if (existing.getLastSentAt() != null &&
+                    existing.getLastSentAt().plusSeconds(RESEND_COOLDOWN_SECONDS).isAfter(now)) {
                 long secondsRemaining = ChronoUnit.SECONDS.between(
                         now,
-                        latest.getLastSentAt().plusSeconds(RESEND_COOLDOWN_SECONDS)
-                );
+                        existing.getLastSentAt().plusSeconds(RESEND_COOLDOWN_SECONDS));
+                log.warn("Resend cooldown active for email: {}, seconds remaining: {}", email, secondsRemaining);
                 throw new UnauthorizedException(
-                        "Please wait " + secondsRemaining + " seconds before requesting another OTP"
-                );
+                        "Please wait " + secondsRemaining + " seconds before requesting another OTP");
             }
 
-            latest.setStatus(OtpStatus.EXPIRED);
-            otpRepository.save(latest);
+            if (existing.getResendCount() >= MAX_OTP_REQUESTS_PER_DAY) {
+                existing.setStatus(OtpStatus.CANCELLED);
+                otpRepository.save(existing);
+                log.warn("Resend attempt limit exceeded for email: {}", email);
+                throw new UnauthorizedException(
+                        "Maximum resend attempts (" + MAX_OTP_REQUESTS_PER_DAY + ") exceeded. Try again later.");
+            }
+
+            String rawOtp = generateOtp();
+            String hashedOtp = passwordEncoder.encode(rawOtp);
+
+            existing.setOtpHash(hashedOtp);
+            existing.setResendCount(existing.getResendCount() + 1);
+            existing.setLastSentAt(now);
+            existing.setExpiresAt(now.plus(OTP_TTL_MINUTES, ChronoUnit.MINUTES));
+            existing.setAttemptCount(0);
+
+            OtpToken updatedToken = otpRepository.save(existing);
+
+            log.info("OTP resent for email: {}, resend count: {}", email, updatedToken.getResendCount());
+
+            return new IssuedOtp(
+                    email,
+                    rawOtp,
+                    OTP_TTL_MINUTES * 60,
+                    updatedToken.getId(),
+                    updatedToken.getResendCount());
         }
 
         String rawOtp = generateOtp();
@@ -197,6 +228,7 @@ public class OtpServiceImpl implements OtpService {
                 .otpHash(hashedOtp)
                 .status(OtpStatus.PENDING)
                 .attemptCount(0)
+                .resendCount(0)
                 .createdAt(now)
                 .expiresAt(now.plus(OTP_TTL_MINUTES, ChronoUnit.MINUTES))
                 .lastSentAt(now)
@@ -204,12 +236,14 @@ public class OtpServiceImpl implements OtpService {
 
         OtpToken savedToken = otpRepository.save(token);
 
+        log.info("New OTP created for email: {}", email);
+
         return new IssuedOtp(
                 email,
                 rawOtp,
                 OTP_TTL_MINUTES * 60,
-                savedToken.getId()
-        );
+                savedToken.getId(),
+                0);
     }
 
     @Scheduled(fixedDelayString = "${app.otp.cleanup.fixed-delay-ms:3600000}")
@@ -219,23 +253,19 @@ public class OtpServiceImpl implements OtpService {
         otpRepository.expireExpiredOtp(
                 OtpStatus.EXPIRED,
                 OtpStatus.PENDING,
-                now
-        );
+                now);
         otpRepository.deleteByStatusInAndExpiresAtBefore(
                 List.copyOf(EnumSet.of(
                         OtpStatus.EXPIRED,
                         OtpStatus.USED,
-                        OtpStatus.CANCELLED
-                )),
-                now.minus(RETAIN_FINISHED_TOKENS_HOURS, ChronoUnit.HOURS)
-        );
+                        OtpStatus.CANCELLED)),
+                now.minus(RETAIN_FINISHED_TOKENS_HOURS, ChronoUnit.HOURS));
     }
 
     private Optional<OtpToken> findLatestPendingTokenForUpdate(String email) {
         return otpRepository.findByEmailAndStatusForUpdate(
-                        email,
-                        OtpStatus.PENDING
-                ).stream()
+                email,
+                OtpStatus.PENDING).stream()
                 .findFirst();
     }
 
@@ -244,8 +274,7 @@ public class OtpServiceImpl implements OtpService {
                 email,
                 OtpStatus.EXPIRED,
                 OtpStatus.PENDING,
-                now
-        );
+                now);
     }
 
     private boolean isExpired(OtpToken token, Instant now) {
@@ -253,12 +282,10 @@ public class OtpServiceImpl implements OtpService {
     }
 
     private void cancelIssuedOtp(Long tokenId) {
-        transactionTemplate.executeWithoutResult(status ->
-                otpRepository.findById(tokenId).ifPresent(token -> {
-                    token.setStatus(OtpStatus.CANCELLED);
-                    otpRepository.save(token);
-                })
-        );
+        transactionTemplate.executeWithoutResult(status -> otpRepository.findById(tokenId).ifPresent(token -> {
+            token.setStatus(OtpStatus.CANCELLED);
+            otpRepository.save(token);
+        }));
     }
 
     private String generateOtp() {
@@ -297,7 +324,7 @@ public class OtpServiceImpl implements OtpService {
             String email,
             String rawOtp,
             Long expiresInSeconds,
-            Long tokenId
-    ) {
+            Long tokenId,
+            int resendCount) {
     }
 }

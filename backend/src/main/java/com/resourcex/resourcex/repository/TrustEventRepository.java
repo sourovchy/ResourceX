@@ -13,14 +13,14 @@ public interface TrustEventRepository extends JpaRepository<TrustEvent, Long> {
 
     List<TrustEvent> findByUser_UserId(Long userId);
 
-    List<TrustEvent> findByEventType(TrustEventType eventType);
+    List<TrustEvent> findBySourceType(TrustEventType sourceType);
 
     long countByUser_UserId(Long userId);
 
-    long countByEventType(TrustEventType eventType);
+    long countBySourceType(TrustEventType sourceType);
 
     @Query("""
-            SELECT COALESCE(SUM(t.points), 0)
+            SELECT COALESCE(SUM(t.changeAmount), 0)
             FROM TrustEvent t
             WHERE t.user.userId = :userId
             """)

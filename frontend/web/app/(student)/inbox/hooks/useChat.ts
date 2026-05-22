@@ -1,85 +1,134 @@
-// hooks/useChat.ts
 "use client";
 
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback, useEffect, useMemo } from "react";
 import { Conversation, Message } from "../types/chat";
 import { chatService } from "../services/chatService";
 
 export function useChat() {
 	const [conversations, setConversations] = useState<Conversation[]>([]);
-	const [selectedId, setSelectedId] = useState<string | null>(null);
-	const [messages, setMessages] = useState<Record<string, Message[]>>({});
-	const [blockedUsers, setBlockedUsers] = useState<Set<string>>(new Set());
+	const [selectedId, setSelectedId] = useState<number | null>(null);
+	const [messages, setMessages] = useState<Record<number, Message[]>>({});
 	const [searchQuery, setSearchQuery] = useState("");
 	const [loading, setLoading] = useState(true);
+	const [sending, setSending] = useState(false);
+	const [currentUserId, setCurrentUserId] = useState<number | undefined>(undefined);
 
 	// Load conversations on mount
 	useEffect(() => {
-		chatService.getConversations().then((data) => {
-			setConversations(data);
-			setLoading(false);
-		});
-	}, []);
+		let isMounted = true;
 
-	// Filtered conversations based on search
-	const filteredConversations = conversations.filter((c) =>
-		c.participant.name.toLowerCase().includes(searchQuery.toLowerCase()),
+		const load = async () => {
+			try {
+				setLoading(true);
+				const data = await chatService.getConversations();
+				if (!isMounted) return;
+
+				setConversations(data);
+
+				if (data.length > 0 && selectedId === null) {
+					setSelectedId(data[0].conversationId);
+				}
+			} finally {
+				if (isMounted) setLoading(false);
+			}
+		};
+
+		void load();
+
+		return () => {
+			isMounted = false;
+		};
+	}, [selectedId]);
+
+	const selectedConversation = useMemo(
+		() => conversations.find((c) => c.conversationId === selectedId) ?? null,
+		[conversations, selectedId],
 	);
 
-	const selectedConversation =
-		conversations.find((c) => c.id === selectedId) ?? null;
+	const filteredConversations = useMemo(() => {
+		const query = searchQuery.trim().toLowerCase();
+		if (!query) return conversations;
+
+		return conversations.filter((conversation) => {
+			const haystack = [
+				conversation.participantOneName,
+				conversation.participantOneEmail,
+				conversation.participantTwoName,
+				conversation.participantTwoEmail,
+				conversation.lastMessageContent ?? "",
+				conversation.bookingId ? `booking ${conversation.bookingId}` : "",
+				conversation.disputeId ? `dispute ${conversation.disputeId}` : "",
+			]
+				.join(" ")
+				.toLowerCase();
+
+			return haystack.includes(query);
+		});
+	}, [conversations, searchQuery]);
 
 	const currentMessages = selectedId ? messages[selectedId] || [] : [];
 
-	const selectConversation = useCallback((id: string) => {
+	const selectConversation = useCallback(async (id: number) => {
 		setSelectedId(id);
-		chatService.getMessages(id).then((data) => {
-			setMessages((prev) => ({ ...prev, [id]: data }));
-		});
+
+		const existing = messages[id];
+		if (existing) {
+			setConversations((prev) =>
+				prev.map((c) => (c.conversationId === id ? { ...c, unreadCount: 0 } : c)),
+			);
+			return;
+		}
+
+		const data = await chatService.getMessages(id);
+		setMessages((prev) => ({ ...prev, [id]: data }));
 		setConversations((prev) =>
-			prev.map((c) => (c.id === id ? { ...c, unreadCount: 0 } : c)),
+			prev.map((c) => (c.conversationId === id ? { ...c, unreadCount: 0 } : c)),
 		);
-	}, []);
+	}, [messages]);
 
 	const sendMessage = useCallback(
 		async (text: string) => {
 			if (!selectedId || !text.trim()) return;
 
-			const newMsg = await chatService.sendMessage(selectedId, text);
+			setSending(true);
+			try {
+				const newMsg = await chatService.sendMessage(selectedId, text.trim());
 
-			setMessages((prev) => ({
-				...prev,
-				[selectedId]: [...(prev[selectedId] || []), newMsg],
-			}));
+				setMessages((prev) => ({
+					...prev,
+					[selectedId]: [...(prev[selectedId] || []), newMsg],
+				}));
 
-			// Update last message in conversation list
-			setConversations((prev) =>
-				prev.map((c) =>
-					c.id === selectedId
-						? { ...c, lastMessage: text, lastMessageTime: newMsg.time }
-						: c,
-				),
-			);
+				setConversations((prev) =>
+					prev.map((c) =>
+						c.conversationId === selectedId
+							? {
+								...c,
+								lastMessageId: newMsg.messageId,
+								lastMessageContent: newMsg.content,
+								lastMessageSenderId: newMsg.senderUserId,
+								lastMessageSenderName: newMsg.senderName,
+								lastMessageAt: newMsg.createdAt,
+							}
+							: c,
+					),
+				);
+			} finally {
+				setSending(false);
+			}
 		},
 		[selectedId],
 	);
 
-	const toggleBlock = useCallback((userId: string) => {
-		setBlockedUsers((prev) => {
-			const next = new Set(prev);
-			if (next.has(userId)) {
-				next.delete(userId);
-			} else {
-				next.add(userId);
-			}
-			return next;
-		});
+	const refreshConversations = useCallback(async () => {
+		setLoading(true);
+		try {
+			const data = await chatService.getConversations();
+			setConversations(data);
+		} finally {
+			setLoading(false);
+		}
 	}, []);
-
-	const isBlocked = useCallback(
-		(userId: string) => blockedUsers.has(userId),
-		[blockedUsers],
-	);
 
 	return {
 		conversations,
@@ -89,10 +138,12 @@ export function useChat() {
 		currentMessages,
 		searchQuery,
 		loading,
+		sending,
+		currentUserId,
 		setSearchQuery,
+		setCurrentUserId,
 		selectConversation,
 		sendMessage,
-		toggleBlock,
-		isBlocked,
+		refreshConversations,
 	};
 }
