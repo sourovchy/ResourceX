@@ -1,31 +1,32 @@
-# Dependencies
-node_modules/
+/ shelf/
+/workspace.xml
 
-# Next.js
-.next/
-out/
+/httpRequests/
 
-# Build output
-dist/
-build/
-target/
-*.tsbuildinfo
+/queries/
 
-# Logs
-*.log
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-pnpm-debug.log*
+/dataSources/
+/dataSources.local.xml
 
-# Environment files
+.idea/
+*.iml
+
+.vscode/
+
+/target/
+
 .env
-.env.*
-!.env.example
+*.env
 
 application-local.properties
 application-test.properties
 application-prod.properties
+
+*.log
+logs/
+
+.DS_Store
+Thumbs.db
 
 *.db
 *.sqlite
@@ -37,13 +38,15 @@ dump.sql
 /uploads/
 /storage/
 
-temp/
 tmp/
+temp/
 .cache/
 
-*.iml
-Thumbs.db
-backend/src/main/resources/application.properties
+node_modules/
+.next/
+out/
+dist/
+build/
 
 # Security: ignore sensitive configuration and key files
 # Ignore common application property files (local/test/prod) anywhere in the repo
