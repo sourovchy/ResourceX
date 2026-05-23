@@ -25,6 +25,8 @@ import {
 	UserRole,
 } from "@/types/auth";
 
+type AccessibleRole = "admin" | "student" | "moderator" | "super_admin";
+
 type AuthContextValue = {
 	user: AuthUser | null;
 	roles: UserRole[];
@@ -36,7 +38,7 @@ type AuthContextValue = {
 	) => Promise<AuthResponse>;
 	logout: () => void;
 	refresh: () => Promise<void>;
-	canAccess: (role: "admin" | "student") => boolean;
+	canAccess: (role: AccessibleRole) => boolean;
 };
 
 const AuthContext =
@@ -154,7 +156,7 @@ export function AuthProvider({
 			login,
 			logout,
 			refresh,
-			canAccess: (role) => hasRole(roles, role),
+			canAccess: (role: AccessibleRole) => hasRole(roles, role),
 		}),
 		[user, roles, loading, login, logout, refresh],
 	);

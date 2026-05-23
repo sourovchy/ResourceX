@@ -21,14 +21,14 @@ public class PenaltyController {
     private final PenaltyService penaltyService;
 
     @PostMapping
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN','MODERATOR','SUPER_ADMIN')")
     public ResponseEntity<PenaltyResponse> createPenalty(@Valid @RequestBody PenaltyRequest request) {
         PenaltyResponse response = penaltyService.createPenalty(request);
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
     @PutMapping("/{penaltyId}")
-    @PreAuthorize("hasRole('ADMIN')")
+   @PreAuthorize("hasAnyRole('ADMIN','MODERATOR','SUPER_ADMIN')")
     public ResponseEntity<PenaltyResponse> updatePenalty(
             @PathVariable Long penaltyId,
             @Valid @RequestBody PenaltyRequest request
@@ -37,55 +37,55 @@ public class PenaltyController {
     }
 
     @GetMapping("/{penaltyId}")
-    @PreAuthorize("hasRole('ADMIN')")
+   @PreAuthorize("hasAnyRole('ADMIN','MODERATOR','SUPER_ADMIN')")
     public ResponseEntity<PenaltyResponse> getPenaltyById(@PathVariable Long penaltyId) {
         return ResponseEntity.ok(penaltyService.getPenaltyById(penaltyId));
     }
 
     @GetMapping
-    @PreAuthorize("hasRole('ADMIN')")
+   @PreAuthorize("hasAnyRole('ADMIN','MODERATOR','SUPER_ADMIN')")
     public ResponseEntity<List<PenaltyResponse>> getAllPenalties() {
         return ResponseEntity.ok(penaltyService.getAllPenalties());
     }
 
     @GetMapping("/user/{userId}")
-    @PreAuthorize("hasRole('ADMIN')")
+   @PreAuthorize("hasAnyRole('ADMIN','MODERATOR','SUPER_ADMIN')")
     public ResponseEntity<List<PenaltyResponse>> getPenaltiesByUserId(@PathVariable Long userId) {
         return ResponseEntity.ok(penaltyService.getPenaltiesByUserId(userId));
     }
 
     @GetMapping("/booking/{bookingId}")
-    @PreAuthorize("hasRole('ADMIN')")
+   @PreAuthorize("hasAnyRole('ADMIN','MODERATOR','SUPER_ADMIN')")
     public ResponseEntity<List<PenaltyResponse>> getPenaltiesByBookingId(@PathVariable Long bookingId) {
         return ResponseEntity.ok(penaltyService.getPenaltiesByBookingId(bookingId));
     }
 
     @GetMapping("/dispute/{disputeId}")
-    @PreAuthorize("hasRole('ADMIN')")
+   @PreAuthorize("hasAnyRole('ADMIN','MODERATOR','SUPER_ADMIN')")
     public ResponseEntity<List<PenaltyResponse>> getPenaltiesByDisputeId(@PathVariable Long disputeId) {
         return ResponseEntity.ok(penaltyService.getPenaltiesByDisputeId(disputeId));
     }
 
     @GetMapping("/status/{status}")
-    @PreAuthorize("hasRole('ADMIN')")
+   @PreAuthorize("hasAnyRole('ADMIN','MODERATOR','SUPER_ADMIN')")
     public ResponseEntity<List<PenaltyResponse>> getPenaltiesByStatus(@PathVariable Penalty.PenaltyStatus status) {
         return ResponseEntity.ok(penaltyService.getPenaltiesByStatus(status));
     }
 
     @PatchMapping("/{penaltyId}/apply")
-    @PreAuthorize("hasRole('ADMIN')")
+   @PreAuthorize("hasAnyRole('ADMIN','MODERATOR','SUPER_ADMIN')")
     public ResponseEntity<PenaltyResponse> applyPenalty(@PathVariable Long penaltyId) {
         return ResponseEntity.ok(penaltyService.applyPenalty(penaltyId));
     }
 
     @PatchMapping("/{penaltyId}/waive")
-    @PreAuthorize("hasRole('ADMIN')")
+   @PreAuthorize("hasAnyRole('ADMIN','MODERATOR','SUPER_ADMIN')")
     public ResponseEntity<PenaltyResponse> waivePenalty(@PathVariable Long penaltyId) {
         return ResponseEntity.ok(penaltyService.waivePenalty(penaltyId));
     }
 
     @DeleteMapping("/{penaltyId}")
-    @PreAuthorize("hasRole('ADMIN')")
+   @PreAuthorize("hasAnyRole('ADMIN','MODERATOR','SUPER_ADMIN')")
     public ResponseEntity<Void> deletePenalty(@PathVariable Long penaltyId) {
         penaltyService.deletePenalty(penaltyId);
         return ResponseEntity.noContent().build();

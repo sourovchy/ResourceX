@@ -5,7 +5,14 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useTheme } from "@/context/ThemeContext";
 import { useAuth } from "@/context/AuthContext";
+
 import { Sun, Moon, Menu, LogOut, User } from "lucide-react";
+
+const PRIVILEGED_ROLES = ["admin", "moderator", "super_admin"] as const;
+
+function isPrivilegedRole(role: string) {
+	return PRIVILEGED_ROLES.includes(role as (typeof PRIVILEGED_ROLES)[number]);
+}
 
 export default function AppShell({
 	children,
@@ -14,7 +21,7 @@ export default function AppShell({
 }: {
 	children: React.ReactNode;
 	navItems: any[];
-	role: "admin" | "student";
+	role: "admin" | "student" | "moderator" | "super_admin";
 }) {
 	const pathname = usePathname();
 	const { theme, toggleTheme } = useTheme();
@@ -39,7 +46,7 @@ export default function AppShell({
 				<div className="h-16 flex items-center px-6 mb-4">
 					<div className="flex items-center gap-3">
 						<div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center text-onPrimary font-bold shrink-0">
-								{role === "admin" ? "A" : "S"}
+								{isPrivilegedRole(role) ? "A" : "S"}
 						</div>
 						{!collapsed && (
 							<span className="font-bold text-lg tracking-tight transition-opacity duration-300">
@@ -127,7 +134,7 @@ export default function AppShell({
 
 						{/* Profile Link */}
 						<Link
-							href={role === "admin" ? "/adminProfile" : "/profile"}
+							href={isPrivilegedRole(role) ? "/adminProfile" : "/profile"}
 							className="flex items-center gap-2 pl-2 group">
 							<div className="w-9 h-9 rounded-full bg-primary/10 border border-primary/20 text-primary flex items-center justify-center group-hover:ring-4 ring-primary/10 transition-all">
 								<User className="w-5 h-5" />

@@ -23,5 +23,7 @@ public interface BookingService {
 
     BookingResponse cancelBooking(Long bookingId);
 
+    BookingResponse moderateCancelBooking(Long bookingId);
+
     BookingResponse completeBooking(Long bookingId);
 }

@@ -9,10 +9,13 @@ import {
 	Loader2,
 	RefreshCw,
 	AlertCircle,
+	ArrowUp,
+	ArrowDown,
 } from "lucide-react";
+import { useAuth } from "@/context/AuthContext";
 import api from "@/lib/api";
 
-type StaffRole = "ADMIN" | "MODERATOR";
+type StaffRole = "ADMIN" | "MODERATOR" | "SUPER_ADMIN";
 
 type StaffMember = {
 	id: string;
@@ -40,11 +43,13 @@ const initialForm: CreateStaffForm = {
 const roleLabel: Record<StaffRole, string> = {
 	ADMIN: "Admin",
 	MODERATOR: "Moderator",
+	SUPER_ADMIN: "Super Admin",
 };
 
 const roleBadgeClass: Record<StaffRole, string> = {
 	ADMIN: "bg-indigo-50 text-indigo-700",
 	MODERATOR: "bg-slate-100 text-slate-700",
+	SUPER_ADMIN: "bg-amber-50 text-amber-700",
 };
 
 export default function StaffManagementPage() {
@@ -56,6 +61,10 @@ export default function StaffManagementPage() {
 	const [error, setError] = useState<string | null>(null);
 	const [success, setSuccess] = useState<string | null>(null);
 	const [removingId, setRemovingId] = useState<string | null>(null);
+	const [actionId, setActionId] = useState<string | null>(null);
+
+	const { user } = useAuth();
+	const currentUserId = user?.userId ? String(user.userId) : null;
 
 	const stats = useMemo(() => {
 		const admins = staff.filter((member) => member.role === "ADMIN").length;
@@ -68,15 +77,14 @@ export default function StaffManagementPage() {
 
 	const normalizeMember = (member: any): StaffMember => {
 		const roles: string[] = Array.isArray(member.roles) ? member.roles : [];
-		const isAdmin = roles.some(
-			(role) => role.includes("ADMIN") || role.includes("SUPER_ADMIN"),
-		);
+		const isSuperAdmin = roles.some((role) => role === "ROLE_SUPER_ADMIN");
+		const isAdmin = roles.some((role) => role === "ROLE_ADMIN");
 
 		return {
 			id: String(member.userId ?? member.id ?? ""),
 			name: member.name ?? "Unknown",
 			email: member.email ?? "",
-			role: isAdmin ? "ADMIN" : "MODERATOR",
+			role: isSuperAdmin ? "SUPER_ADMIN" : isAdmin ? "ADMIN" : "MODERATOR",
 			status: String(member.status ?? "ACTIVE"),
 			createdAt: member.createdAt ?? undefined,
 		};
@@ -144,20 +152,11 @@ export default function StaffManagementPage() {
 	};
 
 	const handleRemoveStaff = async (member: StaffMember) => {
-		const confirmed = window.confirm(
-			member.role === "ADMIN"
-				? `Remove admin privileges from ${member.name}?`
-				: `Removal of moderator access is not currently supported by the backend.`,
-		);
-
-		if (!confirmed) {
-			return;
-		}
-
-		if (member.role !== "ADMIN") {
-			setError(
-				"Moderator removal is not available in the current backend API.",
-			);
+		if (
+			!window.confirm(
+				`Delete ${member.role === "ADMIN" ? "admin" : member.role === "MODERATOR" ? "moderator" : "super admin"} account for ${member.name}?`,
+			)
+		) {
 			return;
 		}
 
@@ -166,8 +165,8 @@ export default function StaffManagementPage() {
 		setRemovingId(member.id);
 
 		try {
-			await api.post(`/superadmin/demote-from-admin/${member.id}`);
-			setSuccess(`${member.name} has been demoted from admin.`);
+			await api.delete(`/superadmin/privileged-users/${member.id}`);
+			setSuccess(`${member.name} has been deleted successfully.`);
 			await loadStaff();
 		} catch (err) {
 			setError(
@@ -175,6 +174,46 @@ export default function StaffManagementPage() {
 			);
 		} finally {
 			setRemovingId(null);
+		}
+	};
+
+	const handlePromoteStaff = async (member: StaffMember) => {
+		setError(null);
+		setSuccess(null);
+		setActionId(member.id);
+
+		try {
+			await api.post(`/superadmin/promote-to-admin/${member.id}`);
+			setSuccess(`${member.name} is now an admin.`);
+			await loadStaff();
+		} catch (err) {
+			setError(
+				err instanceof Error ? err.message : "Unable to promote staff account.",
+			);
+		} finally {
+			setActionId(null);
+		}
+	};
+
+	const handleDemoteStaff = async (member: StaffMember) => {
+		if (!window.confirm(`Demote ${member.name} from admin to moderator?`)) {
+			return;
+		}
+
+		setError(null);
+		setSuccess(null);
+		setActionId(member.id);
+
+		try {
+			await api.post(`/superadmin/demote-from-admin/${member.id}`);
+			setSuccess(`${member.name} has been demoted to moderator.`);
+			await loadStaff();
+		} catch (err) {
+			setError(
+				err instanceof Error ? err.message : "Unable to demote staff account.",
+			);
+		} finally {
+			setActionId(null);
 		}
 	};
 
@@ -248,15 +287,18 @@ export default function StaffManagementPage() {
 									id="name"
 									value={form.name}
 									onChange={(e) => {
-										const sanitizedValue = e.target.value.replace(/[^A-Za-z. ]/g, "");
+										const sanitizedValue = e.target.value.replace(
+											/[^A-Za-z. ]/g,
+											"",
+										);
 										handleChange("name", sanitizedValue);
 									}}
 									placeholder="Md. Samiul Mirja Arif"
 									className="h-11 w-full rounded-xl border border-borderLight bg-surface px-4 text-sm text-textPrimary outline-none transition focus:border-primary focus:ring-4 focus:ring-primary/10"
 									required
 									maxLength={100}
-									pattern="^[A-Za-z]+(?:[ .][A-Za-z]+)*$"
-									title="Only alphabets, spaces, and dot (.) are allowed"
+									pattern="^[A-Za-z]+(?:[. ]+[A-Za-z]+)*$"
+									title="Only alphabets, spaces, and dots between words are allowed"
 								/>
 							</Field>
 
@@ -300,7 +342,8 @@ export default function StaffManagementPage() {
 							<div className="rounded-2xl border border-borderLight bg-surfaceVariant px-4 py-3 text-sm text-textSecondary">
 								<p className="font-medium text-textPrimary">Permissions</p>
 								<p className="mt-1 leading-6">
-									Only Super Admin can create or remove privileged accounts.
+									Only Super Admin can create, delete, or manage privileged
+									accounts.
 								</p>
 							</div>
 
@@ -325,7 +368,8 @@ export default function StaffManagementPage() {
 									Existing Staff
 								</h2>
 								<p className="mt-1 text-sm text-textSecondary">
-									Review current admin and moderator accounts.
+									Review current admin and moderator accounts. Super Admin can
+									delete either role.
 								</p>
 							</div>
 
@@ -355,7 +399,8 @@ export default function StaffManagementPage() {
 									No staff accounts found
 								</h3>
 								<p className="mt-2 max-w-md text-sm text-textSecondary">
-									Create the first admin or moderator account using the form on the left.
+									Create the first admin or moderator account using the form on
+									the left.
 								</p>
 							</div>
 						) : (
@@ -385,7 +430,8 @@ export default function StaffManagementPage() {
 													</div>
 												</Td>
 												<Td>
-													<span className="inline-flex rounded-full bg-indigo-50 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-indigo-700">
+													<span
+														className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-wide ${roleBadgeClass[member.role]}`}>
 														{roleLabel[member.role]}
 													</span>
 												</Td>
@@ -395,23 +441,18 @@ export default function StaffManagementPage() {
 													</span>
 												</Td>
 												<Td>
-													<div className="flex justify-end">
+													<div className="flex flex-wrap justify-end gap-2">
 														<button
 															type="button"
 															onClick={() => void handleRemoveStaff(member)}
-															disabled={
-																removingId === member.id ||
-																member.role !== "ADMIN"
-															}
+															disabled={removingId === member.id}
 															className="inline-flex items-center gap-2 rounded-xl border border-rose-200 bg-rose-50 px-4 py-2 text-sm font-medium text-rose-700 transition hover:bg-rose-100 disabled:cursor-not-allowed disabled:opacity-50">
 															{removingId === member.id ? (
 																<Loader2 className="h-4 w-4 animate-spin" />
 															) : (
 																<Trash2 className="h-4 w-4" />
 															)}
-															{member.role === "ADMIN"
-																? "Demote"
-																: "Unavailable"}
+															Delete
 														</button>
 													</div>
 												</Td>

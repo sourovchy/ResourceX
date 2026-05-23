@@ -15,7 +15,7 @@ public class AnalyticsController {
     private final AnalyticsService analyticsService;
 
     @GetMapping
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN','SUPER_ADMIN','MODERATOR')") // WHO CAN SEE THE ANALYTICS PAGE
     public ResponseEntity<AnalyticsResponse> getAnalytics() {
 
         return ResponseEntity.ok(

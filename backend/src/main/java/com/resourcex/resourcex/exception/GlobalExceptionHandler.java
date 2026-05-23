@@ -1,6 +1,9 @@
 package com.resourcex.resourcex.exception;
 
 import com.resourcex.resourcex.dto.response.ApiResponse;
+import com.resourcex.resourcex.exception.custom.DuplicateResourceException;
+import com.resourcex.resourcex.exception.custom.InvalidTokenException;
+import com.resourcex.resourcex.exception.custom.ValidationException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.DataAccessException;
 import org.springframework.http.HttpStatus;
@@ -46,6 +49,46 @@ public class GlobalExceptionHandler {
         public ResponseEntity<ApiResponse<?>> handleUnauthorized(
                         UnauthorizedException ex) {
                 return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                                .body(ApiResponse.builder()
+                                                .success(false)
+                                                .message(ex.getMessage())
+                                                .build());
+        }
+
+        @ExceptionHandler(ForbiddenException.class)
+        public ResponseEntity<ApiResponse<?>> handleForbidden(
+                        ForbiddenException ex) {
+                return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                                .body(ApiResponse.builder()
+                                                .success(false)
+                                                .message(ex.getMessage())
+                                                .build());
+        }
+
+        @ExceptionHandler(InvalidTokenException.class)
+        public ResponseEntity<ApiResponse<?>> handleInvalidToken(
+                        InvalidTokenException ex) {
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                                .body(ApiResponse.builder()
+                                                .success(false)
+                                                .message(ex.getMessage())
+                                                .build());
+        }
+
+        @ExceptionHandler(ValidationException.class)
+        public ResponseEntity<ApiResponse<?>> handleBusinessValidation(
+                        ValidationException ex) {
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                                .body(ApiResponse.builder()
+                                                .success(false)
+                                                .message(ex.getMessage())
+                                                .build());
+        }
+
+        @ExceptionHandler(DuplicateResourceException.class)
+        public ResponseEntity<ApiResponse<?>> handleDuplicateResource(
+                        DuplicateResourceException ex) {
+                return ResponseEntity.status(HttpStatus.CONFLICT)
                                 .body(ApiResponse.builder()
                                                 .success(false)
                                                 .message(ex.getMessage())

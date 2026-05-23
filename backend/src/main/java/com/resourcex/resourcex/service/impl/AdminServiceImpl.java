@@ -32,6 +32,7 @@ public class AdminServiceImpl implements AdminService {
         private final UserRoleRepository userRoleRepository;
 
         @Override
+        //To get dashboard stat
         public DashboardStatsResponse getDashboardStats() {
                 long approvedBookings = bookingRepository.countByStatus(Booking.BookingStatus.APPROVED);
 
@@ -52,6 +53,7 @@ public class AdminServiceImpl implements AdminService {
 
         @Override
         @Transactional
+        //to approve user
         public void approveUser(Long pendingId) {
                 PendingUser pending = pendingUserRepository.findByIdForUpdate(pendingId)
                                 .orElseThrow(() -> new ResourceNotFoundException("Pending user not found"));
@@ -113,6 +115,7 @@ public class AdminServiceImpl implements AdminService {
 
         @Override
         @Transactional
+        //reject user
         public void rejectUser(Long pendingId, String reason) {
                 PendingUser pending = pendingUserRepository.findByIdForUpdate(pendingId)
                                 .orElseThrow(() -> new ResourceNotFoundException("Pending user not found"));
@@ -143,6 +146,7 @@ public class AdminServiceImpl implements AdminService {
 
         @Override
         @Transactional
+        //block inappropriate item
         public void blockItem(Long itemId, String reason) {
                 Item item = itemRepository.findById(itemId)
                                 .orElseThrow(() -> new IllegalArgumentException("Item not found"));

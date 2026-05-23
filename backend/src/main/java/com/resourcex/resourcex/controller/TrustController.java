@@ -18,7 +18,7 @@ public class TrustController {
     private final TrustService trustService;
 
     @PostMapping("/events")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN','MODERATOR','SUPER_ADMIN')")
     public ResponseEntity<TrustEventResponse> createTrustEvent(
             @RequestParam Long userId,
             @RequestParam TrustEvent.TrustEventType eventType,
@@ -29,25 +29,25 @@ public class TrustController {
     }
 
     @GetMapping("/events")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN','MODERATOR','SUPER_ADMIN')")
     public ResponseEntity<List<TrustEventResponse>> getAllTrustEvents() {
         return ResponseEntity.ok(trustService.getAllTrustEvents());
     }
 
     @GetMapping("/events/user/{userId}")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN','MODERATOR','SUPER_ADMIN')")
     public ResponseEntity<List<TrustEventResponse>> getTrustEventsByUserId(@PathVariable Long userId) {
         return ResponseEntity.ok(trustService.getTrustEventsByUserId(userId));
     }
 
     @GetMapping("/score/{userId}")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN','MODERATOR','SUPER_ADMIN')")
     public ResponseEntity<Long> getTrustScore(@PathVariable Long userId) {
         return ResponseEntity.ok(trustService.getTrustScore(userId));
     }
 
     @PostMapping("/penalty-impact")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN','MODERATOR','SUPER_ADMIN')")
     public ResponseEntity<Void> applyPenaltyImpact(
             @RequestParam Long userId,
             @RequestParam Long penaltyId,

@@ -17,9 +17,20 @@ public interface SuperAdminService {
      */
     UserResponse demoteFromAdmin(Long userId);
 
+    /**
+     * Create a new ADMIN account
+     */
     UserResponse createAdmin(CreatePrivilegedUserRequest request);
 
+    /**
+     * Create a new MODERATOR account
+     */
     UserResponse createModerator(CreatePrivilegedUserRequest request);
+
+    /**
+     * Delete an ADMIN or MODERATOR account
+     */
+    void deletePrivilegedUser(Long userId);
 
     /**
      * Get all users with ADMIN or MODERATOR role

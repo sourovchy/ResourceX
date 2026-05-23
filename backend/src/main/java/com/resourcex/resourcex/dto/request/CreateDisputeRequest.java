@@ -12,13 +12,13 @@ import lombok.*;
 @Builder
 public class CreateDisputeRequest {
 
-    @NotNull
+    @NotNull(message = "Booking ID is required")
     private Long bookingId;
 
-    @NotBlank
-    @Size(max = 1000)
+    @NotBlank(message = "Reason is required")
+    @Size(max = 1000,message = "Reason must not exceed 1000 characters")
     private String reason;
 
-    @Size(max = 3000)
+    @Size(max = 3000,message = "Description must not exceed 1000 characters")
     private String description;
 }

@@ -12,6 +12,6 @@ import lombok.*;
 public class MessageRequest {
 
     @NotBlank(message = "Message content is required")
-    @Size(max = 4000, message = "Message content must not exceed 4000 characters")
+    @Size(min = 1, max = 4000, message = "Message content must be between 1 and 4000 characters")
     private String content;
 }

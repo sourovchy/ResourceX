@@ -31,10 +31,6 @@ public class ItemResponse {
 
     private List<String> imageUrls;
 
-    /*
-     Recommended additions
-     for frontend sorting/filtering.
-    */
     private LocalDateTime createdAt;
 
     private LocalDateTime updatedAt;

@@ -68,7 +68,7 @@ public class SecurityConfig {
 
                                                 // Analytics endpoints
                                                 .requestMatchers("/api/analytics/**")
-                                                .hasAnyRole("SUPER_ADMIN", "ADMIN")
+                                                .hasAnyRole("SUPER_ADMIN", "ADMIN", "MODERATOR")
 
                                                 // User endpoints
                                                 .requestMatchers("/api/users/**")

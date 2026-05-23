@@ -24,9 +24,7 @@ public class UserResponse {
 
     private StudentProfileResponse studentProfile;
 
-    // Important for frontend auth routing
     private List<String> roles;
 
-    // Helpful for admin/dashboard/history features
     private LocalDateTime createdAt;
 }

@@ -18,7 +18,7 @@ public class UserController {
     private final UserService userService;
 
     @GetMapping
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN','MODERATOR','SUPER_ADMIN')")
     public List<UserResponse> getAllUsers() {
         return userService.getAllUsers();
     }
@@ -29,7 +29,7 @@ public class UserController {
     }
 
     @GetMapping("/{userId}")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN','MODERATOR','SUPER_ADMIN')")
     public UserResponse getUserById(
             @PathVariable Long userId
     ) {
@@ -44,7 +44,7 @@ public class UserController {
     }
 
     @PutMapping("/{userId}")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN','MODERATOR','SUPER_ADMIN')")
     public UserResponse updateUser(
             @PathVariable Long userId,
             @Valid @RequestBody UpdateUserRequest request

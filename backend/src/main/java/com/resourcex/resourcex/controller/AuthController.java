@@ -29,5 +29,5 @@ public class AuthController {
     @GetMapping("/me")
     public CurrentUserResponse me() {
         return authService.getCurrentUser();
-    }
+    } // is it present?
 }

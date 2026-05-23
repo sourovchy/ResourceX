@@ -1,5 +1,8 @@
 package com.resourcex.resourcex.exception;
 
+/**
+ * Thrown when the system fails to send or deliver an email.
+ */
 public class EmailDeliveryException extends RuntimeException {
 
     public EmailDeliveryException(String message) {

@@ -1,32 +1,37 @@
 package com.resourcex.resourcex.filter;
 
-import jakarta.servlet.*;
+import jakarta.servlet.FilterChain;
+import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
+import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
 
 @Slf4j
 @Component
-public class RequestLoggingFilter implements Filter {
+public class RequestLoggingFilter extends OncePerRequestFilter {
 
     @Override
-    public void doFilter(
-            ServletRequest request,
-            ServletResponse response,
-            FilterChain chain
-    ) throws IOException, ServletException {
+    protected void doFilterInternal(
+            HttpServletRequest request,
+            HttpServletResponse response,
+            FilterChain filterChain
+    ) throws ServletException, IOException {
 
-        HttpServletRequest httpRequest =
-                (HttpServletRequest) request;
+        String queryString = request.getQueryString();
+        String path = request.getRequestURI();
+        String fullPath = queryString == null ? path : path + "?" + queryString;
 
         log.info(
-                "Incoming Request: {} {}",
-                httpRequest.getMethod(),
-                httpRequest.getRequestURI()
+                "Incoming Request: {} {} from {}",
+                request.getMethod(),
+                fullPath,
+                request.getRemoteAddr()
         );
 
-        chain.doFilter(request, response);
+        filterChain.doFilter(request, response);
     }
 }

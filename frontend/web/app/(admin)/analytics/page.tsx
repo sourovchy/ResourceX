@@ -12,23 +12,6 @@ import {
 } from "lucide-react";
 import { analyticsService, AnalyticsResponse } from "../../../lib/services/analyticsService";
 
-type ChartItem = {
-	label: string;
-	value: number;
-};
-
-type ChartBarItem = {
-	label: string;
-	value: number;
-	color: string;
-};
-
-type DonutSlice = {
-	label: string;
-	pct: number;
-	color: string;
-};
-
 const getTailwindColor = (colorClass: string) => {
 	const colors: Record<string, string> = {
 		"bg-primary": "bg-primary",
@@ -53,10 +36,6 @@ function formatCurrency(value?: number) {
 		.format(value)
 		.replace("BDT", "")
 		.trim();
-}
-
-function formatNumber(value?: number) {
-	return new Intl.NumberFormat("en-US").format(value ?? 0);
 }
 
 // BAR CHART
@@ -278,6 +257,82 @@ export default function AdminAnalyticsPage() {
 	const bookingRatio = analytics?.bookingRatio ?? [];
 	const categoryDistribution = analytics?.categoryDistribution ?? [];
 
+	const summaryCards = [
+		{
+			label: "Total Revenue",
+			value: formatCurrency(summary?.totalRevenue),
+			valueClass: "text-success",
+			accentClass: "bg-success/10",
+			iconClass: "bg-success",
+		},
+		{
+			label: "Avg Rental / Day",
+			value: formatCurrency(summary?.averageRentalPerDay),
+			valueClass: "text-primary",
+			accentClass: "bg-primary/10",
+			iconClass: "bg-primary",
+		},
+		{
+			label: "Late Return Rate",
+			value: `${summary?.lateReturnRate ?? 0}%`,
+			valueClass: "text-warning",
+			accentClass: "bg-warning/10",
+			iconClass: "bg-warning",
+		},
+		{
+			label: "Dispute Rate",
+			value: `${summary?.disputeRate ?? 0}%`,
+			valueClass: "text-error",
+			accentClass: "bg-error/10",
+			iconClass: "bg-error",
+		},
+	];
+
+	const chartConfigs = [
+		{
+			title: "Top 5 Most Rented Items",
+			icon: <BarChart3 className="w-4 h-4 text-primary" />,
+			content: (
+				<BarChart
+					data={topItems}
+					maxVal={Math.max(...topItems.map((d) => d.value), 1)}
+					color="bg-primary"
+				/>
+			),
+		},
+		{
+			title: "Monthly Rental Revenue (৳)",
+			icon: <TrendingUp className="w-4 h-4 text-success" />,
+			content: (
+				<BarChart
+					data={monthlyRevenue}
+					maxVal={Math.max(...monthlyRevenue.map((d) => d.value), 1)}
+					color="bg-success"
+				/>
+			),
+		},
+		{
+			title: "Late Return Stats by User",
+			icon: <Clock className="w-4 h-4 text-warning" />,
+			content: (
+				<HBarChart
+					data={lateReturns}
+					maxVal={Math.max(...lateReturns.map((d) => d.value), 1)}
+				/>
+			),
+		},
+		{
+			title: "Booking Status Distribution",
+			icon: <CheckCircle2 className="w-4 h-4 text-accent" />,
+			content: <DonutChart slices={bookingRatio} />,
+		},
+		{
+			title: "Category Distribution",
+			icon: <PieChart className="w-4 h-4 text-textSecondary" />,
+			content: <DonutChart slices={categoryDistribution} />,
+		},
+	];
+
 	return (
 		<div className="mx-auto max-w-7xl space-y-8 pb-10">
 			<div className="flex items-center justify-between gap-3">
@@ -286,7 +341,7 @@ export default function AdminAnalyticsPage() {
 						Analytics
 					</h1>
 					<p className="mt-1 text-sm text-textSecondary">
-						Platform-wide insights and performance metrics for the current period.
+						Live platform-wide insights and performance metrics for the current period.
 					</p>
 				</div>
 
@@ -305,9 +360,29 @@ export default function AdminAnalyticsPage() {
 			</div>
 
 			{loading ? (
-				<div className="rounded-2xl border border-borderLight bg-surface p-8 text-center text-textSecondary shadow-sm">
-					<Loader2 className="mx-auto mb-3 h-6 w-6 animate-spin text-primary" />
-					Loading analytics...
+				<div className="space-y-6">
+					<div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
+						{Array.from({ length: 4 }).map((_, index) => (
+							<div
+								key={index}
+								className="h-28 animate-pulse rounded-2xl border border-border/50 bg-surface p-5 shadow-sm">
+								<div className="h-3 w-24 rounded-full bg-surfaceVariant" />
+								<div className="mt-4 h-8 w-32 rounded-full bg-surfaceVariant" />
+								<div className="mt-4 h-10 w-10 rounded-full bg-surfaceVariant" />
+							</div>
+						))}
+					</div>
+
+					<div className="grid grid-cols-1 gap-8 lg:grid-cols-2">
+						{Array.from({ length: 5 }).map((_, index) => (
+							<div
+								key={index}
+								className="rounded-2xl border border-border/50 bg-surface p-6 shadow-sm">
+								<div className="h-4 w-44 animate-pulse rounded-full bg-surfaceVariant" />
+								<div className="mt-6 h-56 animate-pulse rounded-2xl bg-surfaceVariant" />
+							</div>
+						))}
+					</div>
 				</div>
 			) : error ? (
 				<div className="rounded-2xl border border-error bg-errorLight p-4 text-sm text-error">
@@ -316,88 +391,28 @@ export default function AdminAnalyticsPage() {
 			) : null}
 
 			<div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
-				<div className="relative overflow-hidden rounded-2xl border border-border/50 bg-surface p-5 shadow-sm">
-					<div className="text-xs font-bold uppercase tracking-wider text-textSecondary">
-						Total Revenue
+				{summaryCards.map((card) => (
+					<div
+						key={card.label}
+						className="relative overflow-hidden rounded-2xl border border-border/50 bg-surface p-5 shadow-sm transition-transform duration-200 hover:-translate-y-0.5 hover:shadow-md">
+						<div className="text-xs font-bold uppercase tracking-wider text-textSecondary">
+							{card.label}
+						</div>
+						<div className={`mt-2 text-3xl font-black ${card.valueClass}`}>
+							{card.value}
+						</div>
+						<div className={`absolute -right-4 -bottom-4 h-16 w-16 rounded-full ${card.accentClass}`} />
+						<div className={`absolute right-5 top-5 h-2.5 w-2.5 rounded-full ${card.iconClass}`} />
 					</div>
-					<div className="mt-2 text-3xl font-black text-success">
-						{formatCurrency(summary?.totalRevenue)}
-					</div>
-					<div className="absolute -right-4 -bottom-4 h-16 w-16 rounded-full bg-success/10" />
-				</div>
-
-				<div className="relative overflow-hidden rounded-2xl border border-border/50 bg-surface p-5 shadow-sm">
-					<div className="text-xs font-bold uppercase tracking-wider text-textSecondary">
-						Avg Rental / Day
-					</div>
-					<div className="mt-2 text-3xl font-black text-primary">
-						{formatCurrency(summary?.averageRentalPerDay)}
-					</div>
-					<div className="absolute -right-4 -bottom-4 h-16 w-16 rounded-full bg-primary/10" />
-				</div>
-
-				<div className="relative overflow-hidden rounded-2xl border border-border/50 bg-surface p-5 shadow-sm">
-					<div className="text-xs font-bold uppercase tracking-wider text-textSecondary">
-						Late Return Rate
-					</div>
-					<div className="mt-2 text-3xl font-black text-warning">
-						{summary?.lateReturnRate ?? 0}%
-					</div>
-					<div className="absolute -right-4 -bottom-4 h-16 w-16 rounded-full bg-warning/10" />
-				</div>
-
-				<div className="relative overflow-hidden rounded-2xl border border-border/50 bg-surface p-5 shadow-sm">
-					<div className="text-xs font-bold uppercase tracking-wider text-textSecondary">
-						Dispute Rate
-					</div>
-					<div className="mt-2 text-3xl font-black text-error">
-						{summary?.disputeRate ?? 0}%
-					</div>
-					<div className="absolute -right-4 -bottom-4 h-16 w-16 rounded-full bg-error/10" />
-				</div>
+				))}
 			</div>
 
 			<div className="grid grid-cols-1 gap-8 lg:grid-cols-2">
-				<ChartCard
-					title="Top 5 Most Rented Items"
-					icon={<BarChart3 className="w-4 h-4 text-primary" />}>
-					<BarChart
-						data={topItems}
-						maxVal={Math.max(...topItems.map((d) => d.value), 1)}
-						color="bg-primary"
-					/>
-				</ChartCard>
-
-				<ChartCard
-					title="Monthly Rental Revenue (৳)"
-					icon={<TrendingUp className="w-4 h-4 text-success" />}>
-					<BarChart
-						data={monthlyRevenue}
-						maxVal={Math.max(...monthlyRevenue.map((d) => d.value), 1)}
-						color="bg-success"
-					/>
-				</ChartCard>
-
-				<ChartCard
-					title="Late Return Stats by User"
-					icon={<Clock className="w-4 h-4 text-warning" />}>
-					<HBarChart
-						data={lateReturns}
-						maxVal={Math.max(...lateReturns.map((d) => d.value), 1)}
-					/>
-				</ChartCard>
-
-				<ChartCard
-					title="Booking Status Distribution"
-					icon={<CheckCircle2 className="w-4 h-4 text-accent" />}>
-					<DonutChart slices={bookingRatio} />
-				</ChartCard>
-
-				<ChartCard
-					title="Category Distribution"
-					icon={<PieChart className="w-4 h-4 text-textSecondary" />}>
-					<DonutChart slices={categoryDistribution} />
-				</ChartCard>
+				{chartConfigs.map((chart) => (
+					<ChartCard key={chart.title} title={chart.title} icon={chart.icon}>
+						{chart.content}
+					</ChartCard>
+				))}
 			</div>
 		</div>
 	);

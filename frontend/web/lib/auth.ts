@@ -35,8 +35,9 @@ export function storeSession(
 	user: AuthUser,
 	roles: UserRole[] = [],
 ) {
+	const userWithRoles = roles.length ? { ...user, roles } : user;
 	localStorage.setItem(AUTH_TOKEN_KEY, token);
-	localStorage.setItem(AUTH_USER_KEY, JSON.stringify(user));
+	localStorage.setItem(AUTH_USER_KEY, JSON.stringify(userWithRoles));
 	localStorage.setItem(AUTH_ROLES_KEY, JSON.stringify(roles));
 
 	document.cookie = `${AUTH_TOKEN_KEY}=${token}; path=/; max-age=86400; SameSite=Lax`;
@@ -53,10 +54,7 @@ export function clearSession() {
 	}
 }
 
-export function hasRole(
-	roles: UserRole[] | undefined,
-	role: "admin" | "student",
-) {
+export function hasRole(roles: UserRole[] | undefined, role: AccessibleRole) {
 	if (!roles) return false;
 	return role === "admin"
 		? roles.some((value) => ADMIN_ROLES.includes(value))

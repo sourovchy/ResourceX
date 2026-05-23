@@ -1,6 +1,7 @@
 package com.resourcex.resourcex.dto.request;
 
 import jakarta.validation.constraints.DecimalMin;
+import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 import lombok.*;
@@ -14,14 +15,14 @@ import java.math.BigDecimal;
 @Builder
 public class PaymentRequest {
 
-    @NotNull
+    @NotNull(message = "Booking ID is required")
     private Long bookingId;
 
-    @NotNull
-    @DecimalMin(value = "0.0", inclusive = false)
+    @NotNull(message = "Payment amount is required")
+    @DecimalMin(value = "0.01", inclusive = true, message = "Payment amount must be greater than 0")
     private BigDecimal amount;
 
-    @NotNull
-    @Size(max = 50)
+    @NotBlank(message = "Payment method is required")
+    @Size(max = 50, message = "Payment method must not exceed 50 characters")
     private String paymentMethod;
 }

@@ -16,6 +16,8 @@ import com.resourcex.resourcex.repository.UserRoleRepository;
 import com.resourcex.resourcex.service.SuperAdminService;
 import com.resourcex.resourcex.util.constants.RoleConstants;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -28,104 +30,159 @@ import java.util.Optional;
 @Transactional
 public class SuperAdminServiceImpl implements SuperAdminService {
 
-    private final UserRepository userRepository;
-    private final RoleRepository roleRepository;
-    private final UserRoleRepository userRoleRepository;
-    private final StudentProfileRepository studentProfileRepository;
-    private final PasswordEncoder passwordEncoder;
+        private final UserRepository userRepository;
+        private final RoleRepository roleRepository;
+        private final UserRoleRepository userRoleRepository;
+        private final StudentProfileRepository studentProfileRepository;
+        private final PasswordEncoder passwordEncoder;
 
-    @Override
-    public UserResponse promoteToAdmin(Long userId) {
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+        @Override
+        public UserResponse promoteToAdmin(Long userId) {
+                User user = userRepository.findById(userId)
+                                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
 
-        Role adminRole = roleRepository.findByNameIgnoreCase(RoleConstants.ROLE_ADMIN)
-                .orElseThrow(() -> new ResourceNotFoundException("Role not found"));
+                Role adminRole = roleRepository.findByNameIgnoreCase(RoleConstants.ROLE_ADMIN)
+                                .orElseThrow(() -> new ResourceNotFoundException("Role not found"));
 
-        Optional<UserRole> existingRole = userRoleRepository.findByUserAndRole(user, adminRole);
-        if (existingRole.isEmpty()) {
-            UserRole userRole = UserRole.builder()
-                    .user(user)
-                    .role(adminRole)
-                    .build();
-            userRoleRepository.save(userRole);
+                Optional<UserRole> existingRole = userRoleRepository.findByUserAndRole(user, adminRole);
+                if (existingRole.isEmpty()) {
+                        UserRole userRole = UserRole.builder()
+                                        .user(user)
+                                        .role(adminRole)
+                                        .build();
+                        userRoleRepository.save(userRole);
+                }
+
+                return UserMapper.toResponse(
+                                user,
+                                userRoleRepository.findAllByUser(user),
+                                studentProfileRepository.findByUser(user).orElse(null));
         }
 
-        return UserMapper.toResponse(
-                user,
-                userRoleRepository.findAllByUser(user),
-                studentProfileRepository.findByUser(user).orElse(null));
-    }
+        @Override
+        public UserResponse demoteFromAdmin(Long userId) {
+                User user = userRepository.findById(userId)
+                                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
 
-    @Override
-    public UserResponse demoteFromAdmin(Long userId) {
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+                if (isSuperAdmin(user)) {
+                        throw new ConflictException("Cannot demote a super admin account");
+                }
 
-        Role adminRole = roleRepository.findByNameIgnoreCase(RoleConstants.ROLE_ADMIN)
-                .orElseThrow(() -> new ResourceNotFoundException("Role not found"));
+                Role adminRole = roleRepository.findByNameIgnoreCase(RoleConstants.ROLE_ADMIN)
+                                .orElseThrow(() -> new ResourceNotFoundException("Role not found"));
 
-        userRoleRepository.findByUserAndRole(user, adminRole)
-                .ifPresent(userRoleRepository::delete);
+                Role moderatorRole = roleRepository.findByNameIgnoreCase(RoleConstants.ROLE_MODERATOR)
+                                .orElseGet(() -> roleRepository
+                                                .save(Role.builder().name(RoleConstants.ROLE_MODERATOR).build()));
 
-        return UserMapper.toResponse(
-                user,
-                userRoleRepository.findAllByUser(user),
-                studentProfileRepository.findByUser(user).orElse(null));
-    }
+                userRoleRepository.findByUserAndRole(user, adminRole)
+                                .ifPresent(userRoleRepository::delete);
 
-    @Override
-    public UserResponse createAdmin(CreatePrivilegedUserRequest request) {
-        return createPrivilegedUser(request, RoleConstants.ROLE_ADMIN);
-    }
+                if (userRoleRepository.findByUserAndRole(user, moderatorRole).isEmpty()) {
+                        userRoleRepository.save(UserRole.builder()
+                                        .user(user)
+                                        .role(moderatorRole)
+                                        .build());
+                }
 
-    @Override
-    public UserResponse createModerator(CreatePrivilegedUserRequest request) {
-        return createPrivilegedUser(request, RoleConstants.ROLE_MODERATOR);
-    }
-
-    @Override
-    public List<UserResponse> getAllPrivilegedUsers() {
-        return userRepository.findAll().stream()
-                .filter(u -> {
-                    List<String> roleNames = userRoleRepository.findAllByUser(u).stream()
-                            .map(ur -> ur.getRole().getName())
-                            .toList();
-                    return roleNames.contains(RoleConstants.ROLE_ADMIN)
-                            || roleNames.contains(RoleConstants.ROLE_MODERATOR)
-                            || roleNames.contains(RoleConstants.ROLE_SUPER_ADMIN);
-                })
-                .map(user -> UserMapper.toResponse(
-                        user,
-                        userRoleRepository.findAllByUser(user),
-                        studentProfileRepository.findByUser(user).orElse(null)))
-                .toList();
-    }
-
-    private UserResponse createPrivilegedUser(CreatePrivilegedUserRequest request, String roleName) {
-        if (userRepository.existsByEmailIgnoreCase(request.getEmail())) {
-            throw new ConflictException("Email already exists");
+                return UserMapper.toResponse(
+                                user,
+                                userRoleRepository.findAllByUser(user),
+                                studentProfileRepository.findByUser(user).orElse(null));
         }
 
-        Role role = roleRepository.findByNameIgnoreCase(roleName)
-                .orElseGet(() -> roleRepository.save(Role.builder().name(roleName).build()));
+        @Override
+        public UserResponse createAdmin(CreatePrivilegedUserRequest request) {
+                return createPrivilegedUser(request, RoleConstants.ROLE_ADMIN);
+        }
 
-        User user = User.builder()
-                .name(request.getName())
-                .email(request.getEmail())
-                .password(passwordEncoder.encode(request.getPassword()))
-                .status(UserStatus.ACTIVE)
-                .build();
+        @Override
+        public UserResponse createModerator(CreatePrivilegedUserRequest request) {
+                return createPrivilegedUser(request, RoleConstants.ROLE_MODERATOR);
+        }
 
-        User savedUser = userRepository.save(user);
-        userRoleRepository.save(UserRole.builder()
-                .user(savedUser)
-                .role(role)
-                .build());
+        @Override
+        public void deletePrivilegedUser(Long userId) {
+                User user = userRepository.findById(userId)
+                                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
 
-        return UserMapper.toResponse(
-                savedUser,
-                userRoleRepository.findAllByUser(savedUser),
-                null);
-    }
+                if (user.getUserId().equals(getCurrentUserId())) {
+                        throw new ConflictException("You cannot delete your own super admin account");
+                }
+
+                if (isSuperAdmin(user)) {
+                        throw new ConflictException("Super admin accounts cannot be deleted");
+                }
+
+                List<UserRole> userRoles = userRoleRepository.findAllByUser(user);
+                if (!userRoles.isEmpty()) {
+                        userRoleRepository.deleteAll(userRoles);
+                }
+
+                studentProfileRepository.findByUser(user)
+                                .ifPresent(studentProfileRepository::delete);
+
+                userRepository.delete(user);
+        }
+
+        @Override
+        public List<UserResponse> getAllPrivilegedUsers() {
+                return userRepository.findAll().stream()
+                                .filter(u -> {
+                                        List<String> roleNames = userRoleRepository.findAllByUser(u).stream()
+                                                        .map(ur -> ur.getRole().getName())
+                                                        .toList();
+                                        return roleNames.contains(RoleConstants.ROLE_ADMIN)
+                                                        || roleNames.contains(RoleConstants.ROLE_MODERATOR)
+                                                        || roleNames.contains(RoleConstants.ROLE_SUPER_ADMIN);
+                                })
+                                .map(user -> UserMapper.toResponse(
+                                                user,
+                                                userRoleRepository.findAllByUser(user),
+                                                studentProfileRepository.findByUser(user).orElse(null)))
+                                .toList();
+        }
+
+        private boolean isSuperAdmin(User user) {
+                return userRoleRepository.findAllByUser(user).stream()
+                                .map(ur -> ur.getRole().getName())
+                                .anyMatch(RoleConstants.ROLE_SUPER_ADMIN::equalsIgnoreCase);
+        }
+
+        private Long getCurrentUserId() {
+                Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+                if (authentication == null || authentication.getName() == null) {
+                        throw new ConflictException("Unable to determine authenticated user");
+                }
+                return userRepository.findByEmailIgnoreCase(authentication.getName())
+                                .orElseThrow(() -> new ConflictException("Authenticated user not found"))
+                                .getUserId();
+        }
+
+        private UserResponse createPrivilegedUser(CreatePrivilegedUserRequest request, String roleName) {
+                if (userRepository.existsByEmailIgnoreCase(request.getEmail())) {
+                        throw new ConflictException("Email already exists");
+                }
+
+                Role role = roleRepository.findByNameIgnoreCase(roleName)
+                                .orElseGet(() -> roleRepository.save(Role.builder().name(roleName).build()));
+
+                User user = User.builder()
+                                .name(request.getName())
+                                .email(request.getEmail())
+                                .password(passwordEncoder.encode(request.getPassword()))
+                                .status(UserStatus.ACTIVE)
+                                .build();
+
+                User savedUser = userRepository.save(user);
+                userRoleRepository.save(UserRole.builder()
+                                .user(savedUser)
+                                .role(role)
+                                .build());
+
+                return UserMapper.toResponse(
+                                savedUser,
+                                userRoleRepository.findAllByUser(savedUser),
+                                null);
+        }
 }

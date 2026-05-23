@@ -27,10 +27,6 @@ public class BookingResponse {
 
     private BigDecimal totalPrice;
 
-    /*
-     Recommended additions
-     for analytics/history/UI.
-    */
     private LocalDateTime createdAt;
 
     private LocalDateTime updatedAt;

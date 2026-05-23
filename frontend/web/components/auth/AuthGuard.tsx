@@ -10,7 +10,7 @@ export default function AuthGuard({
 	role,
 }: {
 	children: React.ReactNode;
-	role: "admin" | "student";
+	role: "admin" | "student" | "moderator" | "super_admin";
 }) {
 	const router = useRouter();
 	const { user, loading, canAccess } = useAuth();
@@ -24,11 +24,11 @@ export default function AuthGuard({
 		}
 
 		if (!canAccess(role)) {
-			router.replace(role === "admin" ? "/dashboard" : "/home");
+			router.replace(role === "student" ? "/home" : "/dashboard");
 		}
 	}, [canAccess, loading, role, router, user]);
 
-	if (loading || !user || !canAccess(role)) {
+	if (loading || !user) {
 		return (
 			<div className="min-h-screen bg-background flex items-center justify-center text-textSecondary">
 				<Loader2 className="w-5 h-5 animate-spin mr-2" />

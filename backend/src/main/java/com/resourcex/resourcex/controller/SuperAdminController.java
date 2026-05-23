@@ -13,41 +13,42 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/api/superadmin")
+@PreAuthorize("hasRole('SUPER_ADMIN')")
 @RequiredArgsConstructor
 public class SuperAdminController {
 
     private final SuperAdminService superAdminService;
 
     @PostMapping("/admins")
-    @PreAuthorize("hasRole('SUPER_ADMIN')")
     public ResponseEntity<UserResponse> createAdmin(@Valid @RequestBody CreatePrivilegedUserRequest request) {
-        return ResponseEntity.ok(superAdminService.createAdmin(request));
+        return ResponseEntity.status(org.springframework.http.HttpStatus.CREATED)
+                .body(superAdminService.createAdmin(request));
     }
 
     @PostMapping("/moderators")
-    @PreAuthorize("hasRole('SUPER_ADMIN')")
     public ResponseEntity<UserResponse> createModerator(@Valid @RequestBody CreatePrivilegedUserRequest request) {
-        return ResponseEntity.ok(superAdminService.createModerator(request));
+        return ResponseEntity.status(org.springframework.http.HttpStatus.CREATED)
+                .body(superAdminService.createModerator(request));
     }
 
     @PostMapping("/promote-to-admin/{userId}")
-    @PreAuthorize("hasRole('SUPER_ADMIN')")
     public ResponseEntity<UserResponse> promoteToAdmin(@PathVariable Long userId) {
-        UserResponse response = superAdminService.promoteToAdmin(userId);
-        return ResponseEntity.ok(response);
+        return ResponseEntity.ok(superAdminService.promoteToAdmin(userId));
     }
 
     @PostMapping("/demote-from-admin/{userId}")
-    @PreAuthorize("hasRole('SUPER_ADMIN')")
     public ResponseEntity<UserResponse> demoteFromAdmin(@PathVariable Long userId) {
-        UserResponse response = superAdminService.demoteFromAdmin(userId);
-        return ResponseEntity.ok(response);
+        return ResponseEntity.ok(superAdminService.demoteFromAdmin(userId));
     }
 
     @GetMapping("/privileged-users")
-    @PreAuthorize("hasRole('SUPER_ADMIN')")
     public ResponseEntity<List<UserResponse>> getAllPrivilegedUsers() {
-        List<UserResponse> response = superAdminService.getAllPrivilegedUsers();
-        return ResponseEntity.ok(response);
+        return ResponseEntity.ok(superAdminService.getAllPrivilegedUsers());
+    }
+
+    @DeleteMapping("/privileged-users/{userId}")
+    public ResponseEntity<Void> deletePrivilegedUser(@PathVariable Long userId) {
+        superAdminService.deletePrivilegedUser(userId);
+        return ResponseEntity.noContent().build();
     }
 }

@@ -17,7 +17,7 @@ public class UpdateItemRequest {
     @Size(max = 255, message = "Title cannot exceed 255 characters")
     private String title;
 
-    @Size(max = 2000, message = "Description cannot exceed 2000 characters")
+    @Size(max = 1000, message = "Description cannot exceed 2000 characters")
     private String description;
 
     @Size(max = 100, message = "Category cannot exceed 100 characters")

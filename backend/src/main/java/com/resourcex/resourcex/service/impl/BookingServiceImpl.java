@@ -104,7 +104,7 @@ public class BookingServiceImpl implements BookingService {
     @Override
     @Transactional(readOnly = true)
     public List<BookingResponse> getAllBookings() {
-        if (isAdmin()) {
+        if (isStaff()) {
             return bookingRepository.findAll().stream()
                     .map(BookingMapper::toResponse)
                     .toList();
@@ -194,6 +194,29 @@ public class BookingServiceImpl implements BookingService {
 
     @Override
     @Transactional
+    public BookingResponse moderateCancelBooking(Long bookingId) {
+        Booking booking = bookingRepository.findById(bookingId)
+                .orElseThrow(() -> new ResourceNotFoundException("Booking not found"));
+
+        if (!isStaff()) {
+            throw new ForbiddenException("Only staff members can moderate bookings");
+        }
+
+        if (booking.getStatus() == Booking.BookingStatus.COMPLETED
+                || booking.getStatus() == Booking.BookingStatus.CANCELLED
+                || booking.getStatus() == Booking.BookingStatus.REJECTED) {
+            throw new ConflictException("This booking can no longer be moderated");
+        }
+
+        booking.setStatus(Booking.BookingStatus.CANCELLED);
+
+        Booking saved = bookingRepository.save(booking);
+        syncItemAvailability(saved.getItem());
+        return BookingMapper.toResponse(saved);
+    }
+
+    @Override
+    @Transactional
     public BookingResponse completeBooking(Long bookingId) {
         Booking booking = bookingRepository.findById(bookingId)
                 .orElseThrow(() -> new ResourceNotFoundException("Booking not found"));
@@ -270,21 +293,21 @@ public class BookingServiceImpl implements BookingService {
     }
 
     private void assertCanViewBooking(Booking booking) {
-        if (isAdmin() || isRenter(booking) || isOwner(booking)) {
+        if (isStaff() || isRenter(booking) || isOwner(booking)) {
             return;
         }
         throw new ForbiddenException("You cannot access this booking");
     }
 
     private void assertCanManageOwnerSide(Booking booking) {
-        if (isAdmin() || isOwner(booking)) {
+        if (isStaff() || isOwner(booking)) {
             return;
         }
         throw new ForbiddenException("Only the listing owner can manage this booking");
     }
 
     private void assertCanCancelBooking(Booking booking) {
-        if (isAdmin() || isRenter(booking) || isOwner(booking)) {
+        if (isStaff() || isRenter(booking) || isOwner(booking)) {
             return;
         }
         throw new ForbiddenException("You cannot cancel this booking");
@@ -303,11 +326,18 @@ public class BookingServiceImpl implements BookingService {
                 && booking.getItem().getOwner().getUserId().equals(currentUser.getUserId());
     }
 
-    private boolean isAdmin() {
+    private boolean isStaff() {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        return authentication != null
-                && authentication.getAuthorities().stream()
-                .anyMatch(authority -> "ROLE_ADMIN".equals(authority.getAuthority()));
+
+        if (authentication == null) {
+            return false;
+        }
+
+        return authentication.getAuthorities().stream()
+                .map(authority -> authority.getAuthority())
+                .anyMatch(role -> role.equals("ROLE_ADMIN")
+                        || role.equals("ROLE_MODERATOR")
+                        || role.equals("ROLE_SUPER_ADMIN"));
     }
 
     private void syncAllItemAvailability() {

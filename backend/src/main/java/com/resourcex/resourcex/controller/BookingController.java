@@ -54,7 +54,7 @@ public class BookingController {
     }
 
     @PatchMapping("/{bookingId}/approve")
-    @PreAuthorize("isAuthenticated()")
+    @PreAuthorize("hasAnyRole('ADMIN','MODERATOR','SUPER_ADMIN') or isAuthenticated()")
     public BookingResponse approveBooking(
             @PathVariable Long bookingId
     ) {
@@ -62,7 +62,7 @@ public class BookingController {
     }
 
     @PatchMapping("/{bookingId}/reject")
-    @PreAuthorize("isAuthenticated()")
+    @PreAuthorize("hasAnyRole('ADMIN','MODERATOR','SUPER_ADMIN') or isAuthenticated()")
     public BookingResponse rejectBooking(
             @PathVariable Long bookingId
     ) {
@@ -78,10 +78,18 @@ public class BookingController {
     }
 
     @PatchMapping("/{bookingId}/complete")
-    @PreAuthorize("isAuthenticated()")
+    @PreAuthorize("hasAnyRole('ADMIN','MODERATOR','SUPER_ADMIN') or isAuthenticated()")
     public BookingResponse completeBooking(
             @PathVariable Long bookingId
     ) {
         return bookingService.completeBooking(bookingId);
+    }
+
+    @PatchMapping("/{bookingId}/moderate-cancel")
+    @PreAuthorize("hasAnyRole('ADMIN','MODERATOR','SUPER_ADMIN')")
+    public BookingResponse moderateCancelBooking(
+            @PathVariable Long bookingId
+    ) {
+        return bookingService.moderateCancelBooking(bookingId);
     }
 }

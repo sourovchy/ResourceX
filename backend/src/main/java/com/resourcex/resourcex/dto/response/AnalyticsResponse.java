@@ -2,6 +2,8 @@ package com.resourcex.resourcex.dto.response;
 
 import lombok.*;
 
+import java.util.Map;
+
 @Getter
 @Setter
 @NoArgsConstructor
@@ -9,9 +11,9 @@ import lombok.*;
 @Builder
 public class AnalyticsResponse {
 
-    private Object metrics;
+    private Map<String, Object> metrics;
 
-    private Object charts;
+    private Map<String, Object> charts;
 
-    private Object trends;
+    private Map<String, Object> trends;
 }
