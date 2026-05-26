@@ -6,57 +6,54 @@ import { Clock, CheckCircle2, ArrowRight } from "lucide-react";
 
 export default function PendingApprovalPage() {
 	return (
-		<div className="min-h-screen bg-background flex items-center justify-center p-4">
-			<div className="absolute inset-0 overflow-hidden pointer-events-none">
-				<div className="absolute top-[-10%] right-[-10%] w-[32rem] h-[32rem] bg-accent opacity-20 rounded-full blur-3xl"></div>
-				<div className="absolute bottom-[-10%] left-[-10%] w-[30rem] h-[30rem] bg-primary opacity-20 rounded-full blur-3xl"></div>
+		<div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-background px-4 py-8 sm:px-6 lg:px-8">
+			<div className="pointer-events-none absolute inset-0 overflow-hidden">
+				<div className="absolute bottom-[-10%] left-[-10%] h-72 w-72 rounded-full bg-primary opacity-20 blur-3xl sm:h-[30rem] sm:w-[30rem]" />
+				<div className="absolute right-[-10%] top-[-10%] h-72 w-72 rounded-full bg-accent opacity-20 blur-3xl sm:h-[32rem] sm:w-[32rem]" />
 			</div>
 
-			<div className="relative z-10 w-full max-w-md">
-				<div className="bg-surface border border-borderLight p-8 rounded-2xl shadow-xl text-center">
-					<div className="flex items-center justify-center w-20 h-20 mx-auto mb-6 rounded-full bg-warningLight border border-warning/20">
-						<Clock className="w-10 h-10 text-warning" />
+			<div className="relative z-10 w-full max-w-md px-1 sm:px-0">
+				<div className="rounded-2xl border border-borderLight bg-surface p-5 text-center shadow-xl sm:p-6 md:p-8">
+					<div className="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-full border border-warning/20 bg-warningLight sm:mb-6 sm:h-20 sm:w-20">
+						<Clock className="h-8 w-8 text-warning sm:h-10 sm:w-10" />
 					</div>
 
-					<h1 className="text-3xl font-bold text-textPrimary">
+					<h1 className="text-xl font-bold leading-tight text-textPrimary sm:text-3xl">
 						Account Pending
 					</h1>
 
-					<div className="mt-4 space-y-4">
-						<div className="flex items-start gap-3 text-left bg-successLight/30 p-4 rounded-xl border border-success/10">
-							<CheckCircle2 className="w-5 h-5 text-success shrink-0 mt-0.5" />
-							<div>
-								<p className="font-bold text-success text-sm">Email Verified</p>
-								<p className="text-xs text-textSecondary mt-0.5">
+					<div className="mt-4 space-y-3 sm:space-y-4 text-left">
+						<div className="flex items-start gap-3 rounded-xl border border-success/10 bg-successLight/30 p-3 sm:p-4">
+							<CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-success" />
+							<div className="min-w-0">
+								<p className="text-sm font-bold text-success">Email Verified</p>
+								<p className="mt-0.5 text-xs text-textSecondary">
 									Your email has been successfully verified.
 								</p>
 							</div>
 						</div>
 
-						<div className="flex items-start gap-3 text-left bg-surfaceVariant/50 p-4 rounded-xl border border-outlineVariant/30">
-							<Clock className="w-5 h-5 text-warning shrink-0 mt-0.5" />
-							<div>
-								<p className="font-bold text-textPrimary text-sm">
-									Admin Approval
-								</p>
-								<p className="text-xs text-textSecondary mt-0.5">
-									An administrator is reviewing your registration details and ID
-									card. This usually takes 24-48 hours.
+						<div className="flex items-start gap-3 rounded-xl border border-outlineVariant/30 bg-surfaceVariant/50 p-3 sm:p-4">
+							<Clock className="mt-0.5 h-5 w-5 shrink-0 text-warning" />
+							<div className="min-w-0">
+								<p className="text-sm font-bold text-textPrimary">Admin Approval</p>
+								<p className="mt-0.5 text-xs text-textSecondary">
+									An administrator is reviewing your registration details and ID card. This usually takes 24-48 hours.
 								</p>
 							</div>
 						</div>
 					</div>
 
-					<p className="text-textSecondary mt-8 text-sm">
+					<p className="mt-6 text-sm leading-relaxed text-textSecondary sm:mt-8">
 						Once approved, you will be able to log in to your account.
 					</p>
 
-					<div className="mt-8 space-y-3">
+					<div className="mt-6 sm:mt-8">
 						<Link
 							href="/auth/login"
-							className="w-full flex items-center justify-center gap-2 bg-primary hover:bg-primaryDark text-onPrimary py-3 rounded-lg font-medium transition shadow-md hover:shadow-lg focus:ring-4 focus:ring-primaryLight">
+							className="inline-flex w-full items-center justify-center gap-2 rounded-lg bg-primary px-5 py-3 text-sm font-medium text-onPrimary shadow-md transition hover:bg-primaryDark hover:shadow-lg focus:ring-4 focus:ring-primaryLight sm:w-auto sm:px-6">
 							Return to Login
-							<ArrowRight className="w-4 h-4" />
+							<ArrowRight className="h-4 w-4" />
 						</Link>
 					</div>
 				</div>

@@ -9,6 +9,10 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.web.PageableDefault;
 
 import java.util.List;
 
@@ -29,11 +33,12 @@ public class ItemController {
     }
 
     @GetMapping
-    public List<ItemResponse> getAllItems(
+    public Page<ItemResponse> getAllItems(
             @RequestParam(required = false) String category,
-            @RequestParam(required = false) String searchQuery
+            @RequestParam(required = false) String searchQuery,
+            @PageableDefault(size = 10, sort = "itemId", direction = Sort.Direction.DESC) Pageable pageable
     ) {
-        return itemService.getAllItems(category, searchQuery);
+        return itemService.getAllItems(category, searchQuery, pageable);
     }
 
     @GetMapping("/me")

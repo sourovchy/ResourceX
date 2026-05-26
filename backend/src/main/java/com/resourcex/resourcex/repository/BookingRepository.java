@@ -39,4 +39,8 @@ public interface BookingRepository extends JpaRepository<Booking, Long> {
     );
 
     boolean existsByItemAndStatusIn(Item item, List<Booking.BookingStatus> statuses);
+
+    List<Booking> findByStatusAndCreatedAtBefore(Booking.BookingStatus status, java.time.LocalDateTime dateTime);
+
+    List<Booking> findByStatusAndEndDateBeforeAndReturnedDateIsNull(Booking.BookingStatus status, LocalDate date);
 }

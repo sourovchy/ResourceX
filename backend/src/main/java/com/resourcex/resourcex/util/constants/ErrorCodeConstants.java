@@ -1,6 +1,6 @@
 package com.resourcex.resourcex.util.constants;
 
-public class ErrorCodeConstants {
+public final class ErrorCodeConstants {
 
         private ErrorCodeConstants() {
         }
@@ -21,5 +21,15 @@ public class ErrorCodeConstants {
 
         public static final String ACCESS_DENIED = "ACCESS_DENIED";
 
+        public static final String UNAUTHORIZED = "UNAUTHORIZED";
+
+        public static final String INVALID_TOKEN = "INVALID_TOKEN";
+
+        public static final String TOKEN_EXPIRED = "TOKEN_EXPIRED";
+
         public static final String VALIDATION_FAILED = "VALIDATION_FAILED";
+
+        public static final String INTERNAL_SERVER_ERROR = "INTERNAL_SERVER_ERROR";
+
+        public static final String DUPLICATE_RESOURCE = "DUPLICATE_RESOURCE";
 }

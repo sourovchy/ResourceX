@@ -1,6 +1,6 @@
 package com.resourcex.resourcex.util.constants;
 
-public class AppConstants {
+public final class AppConstants {
 
     private AppConstants() {
     }
@@ -9,9 +9,13 @@ public class AppConstants {
 
     public static final String API_BASE_PATH = "/api";
 
-    public static final Integer DEFAULT_PAGE_SIZE = 10;
+    public static final String AUTH_HEADER = "Authorization";
 
-    public static final Integer MAX_PAGE_SIZE = 100;
+    public static final String BEARER_PREFIX = "Bearer ";
 
-    public static final Long JWT_EXPIRATION = 86400000L;
+    public static final int DEFAULT_PAGE_SIZE = 10;
+
+    public static final int MAX_PAGE_SIZE = 100;
+
+    public static final long JWT_EXPIRATION = 86400000L;
 }

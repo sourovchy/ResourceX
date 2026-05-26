@@ -1,8 +1,17 @@
 package com.resourcex.resourcex.util;
 
+import java.util.Locale;
+import java.util.Set;
 import java.util.UUID;
 
-public class FileUtil {
+public final class FileUtil {
+
+    private static final Set<String> ALLOWED_IMAGE_EXTENSIONS = Set.of(
+            ".jpg",
+            ".jpeg",
+            ".png",
+            ".webp"
+    );
 
     private FileUtil() {
     }
@@ -13,20 +22,23 @@ public class FileUtil {
             return UUID.randomUUID().toString();
         }
 
-        return UUID.randomUUID() + "_" + originalFileName;
+        String sanitizedFileName = originalFileName
+                .trim()
+                .replace(" ", "_")
+                .replaceAll("[^a-zA-Z0-9._-]", "");
+
+        return UUID.randomUUID() + "_" + sanitizedFileName;
     }
 
     public static boolean isImageFile(String fileName) {
 
-        if (fileName == null) {
+        if (fileName == null || fileName.isBlank()) {
             return false;
         }
 
-        String lowerCase = fileName.toLowerCase();
+        String lowerCase = fileName.trim().toLowerCase(Locale.ROOT);
 
-        return lowerCase.endsWith(".jpg")
-                || lowerCase.endsWith(".jpeg")
-                || lowerCase.endsWith(".png")
-                || lowerCase.endsWith(".webp");
+        return ALLOWED_IMAGE_EXTENSIONS.stream()
+                .anyMatch(lowerCase::endsWith);
     }
 }

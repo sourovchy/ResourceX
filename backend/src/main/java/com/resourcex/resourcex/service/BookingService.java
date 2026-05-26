@@ -2,6 +2,8 @@ package com.resourcex.resourcex.service;
 
 import com.resourcex.resourcex.dto.request.CreateBookingRequest;
 import com.resourcex.resourcex.dto.response.BookingResponse;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 
 import java.util.List;
 
@@ -11,7 +13,7 @@ public interface BookingService {
 
     BookingResponse getBookingById(Long bookingId);
 
-    List<BookingResponse> getAllBookings();
+    Page<BookingResponse> getAllBookings(Pageable pageable);
 
     List<BookingResponse> getMyBookings();
 
@@ -26,4 +28,8 @@ public interface BookingService {
     BookingResponse moderateCancelBooking(Long bookingId);
 
     BookingResponse completeBooking(Long bookingId);
+
+    void cancelExpiredPendingBookings(java.time.LocalDateTime threshold);
+
+    void processOverdueBookings(java.time.LocalDate currentDate);
 }

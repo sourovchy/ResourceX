@@ -6,6 +6,7 @@ import com.resourcex.resourcex.entity.*;
 import com.resourcex.resourcex.exception.ResourceNotFoundException;
 import com.resourcex.resourcex.mapper.PenaltyMapper;
 import com.resourcex.resourcex.repository.*;
+import com.resourcex.resourcex.service.AuditLogService;
 import com.resourcex.resourcex.service.PenaltyService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -24,6 +25,7 @@ public class PenaltyServiceImpl implements PenaltyService {
     private final BookingRepository bookingRepository;
     private final DisputeRepository disputeRepository;
     private final PenaltyMapper penaltyMapper;
+    private final AuditLogService auditLogService;
 
     @Override
     public PenaltyResponse createPenalty(PenaltyRequest request) {
@@ -56,9 +58,19 @@ public class PenaltyServiceImpl implements PenaltyService {
                 .status(Penalty.PenaltyStatus.PENDING)
                 .build();
 
-        return penaltyMapper.toResponse(
-                penaltyRepository.save(penalty)
+        Penalty saved = penaltyRepository.save(penalty);
+
+        auditLogService.logAction(
+                AuditLog.ActorType.USER,
+                issuedBy.getUserId(),
+                "PENALTY_CREATED",
+                "PENALTY",
+                saved.getPenaltyId(),
+                AuditLog.AuditOutcome.SUCCESS,
+                "Penalty created for user " + user.getUserId()
         );
+
+        return penaltyMapper.toResponse(saved);
     }
 
     @Override
@@ -94,9 +106,19 @@ public class PenaltyServiceImpl implements PenaltyService {
             penalty.setDispute(null);
         }
 
-        return penaltyMapper.toResponse(
-                penaltyRepository.save(penalty)
+        Penalty saved = penaltyRepository.save(penalty);
+
+        auditLogService.logAction(
+                AuditLog.ActorType.SYSTEM,
+                null,
+                "PENALTY_UPDATED",
+                "PENALTY",
+                saved.getPenaltyId(),
+                AuditLog.AuditOutcome.SUCCESS,
+                "Penalty updated"
         );
+
+        return penaltyMapper.toResponse(saved);
     }
 
     @Override
@@ -168,9 +190,19 @@ public class PenaltyServiceImpl implements PenaltyService {
         penalty.setStatus(Penalty.PenaltyStatus.APPLIED);
         penalty.setAppliedAt(LocalDateTime.now());
 
-        return penaltyMapper.toResponse(
-                penaltyRepository.save(penalty)
+        Penalty saved = penaltyRepository.save(penalty);
+
+        auditLogService.logAction(
+                AuditLog.ActorType.SYSTEM,
+                null,
+                "PENALTY_APPLIED",
+                "PENALTY",
+                saved.getPenaltyId(),
+                AuditLog.AuditOutcome.SUCCESS,
+                "Penalty applied"
         );
+
+        return penaltyMapper.toResponse(saved);
     }
 
     @Override
@@ -181,9 +213,19 @@ public class PenaltyServiceImpl implements PenaltyService {
 
         penalty.setStatus(Penalty.PenaltyStatus.WAIVED);
 
-        return penaltyMapper.toResponse(
-                penaltyRepository.save(penalty)
+        Penalty saved = penaltyRepository.save(penalty);
+
+        auditLogService.logAction(
+                AuditLog.ActorType.SYSTEM,
+                null,
+                "PENALTY_WAIVED",
+                "PENALTY",
+                saved.getPenaltyId(),
+                AuditLog.AuditOutcome.SUCCESS,
+                "Penalty waived"
         );
+
+        return penaltyMapper.toResponse(saved);
     }
 
     @Override
@@ -193,5 +235,15 @@ public class PenaltyServiceImpl implements PenaltyService {
                 .orElseThrow(() -> new ResourceNotFoundException("Penalty not found"));
 
         penaltyRepository.delete(penalty);
+
+        auditLogService.logAction(
+                AuditLog.ActorType.SYSTEM,
+                null,
+                "PENALTY_DELETED",
+                "PENALTY",
+                penaltyId,
+                AuditLog.AuditOutcome.SUCCESS,
+                "Penalty deleted"
+        );
     }
 }

@@ -1,6 +1,7 @@
 package com.resourcex.resourcex.security;
 
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
@@ -8,6 +9,7 @@ import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
+import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -18,6 +20,7 @@ import org.springframework.web.cors.CorsConfigurationSource;
 @Configuration
 @EnableMethodSecurity
 @RequiredArgsConstructor
+@Slf4j
 public class SecurityConfig {
 
         private final JwtAuthenticationFilter jwtAuthenticationFilter;
@@ -32,6 +35,9 @@ public class SecurityConfig {
 
                                 .csrf(csrf -> csrf.disable())
 
+                                .formLogin(AbstractHttpConfigurer::disable)
+                                .httpBasic(AbstractHttpConfigurer::disable)
+
                                 .sessionManagement(session -> session
                                                 .sessionCreationPolicy(SessionCreationPolicy.STATELESS))
 
@@ -44,11 +50,17 @@ public class SecurityConfig {
                                                 // Public auth endpoints
                                                 .requestMatchers(
                                                                 "/api/auth/login",
-                                                                "/api/auth/register")
+                                                                "/api/auth/register",
+                                                                "/api/auth/forgot-password",
+                                                                "/api/auth/reset-password")
                                                 .permitAll()
 
                                                 // OTP endpoints
                                                 .requestMatchers("/api/otp/**")
+                                                .permitAll()
+
+                                                // Public File endpoints
+                                                .requestMatchers(HttpMethod.GET, "/api/files/**")
                                                 .permitAll()
 
                                                 // Swagger

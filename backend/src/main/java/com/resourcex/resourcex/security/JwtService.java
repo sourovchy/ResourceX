@@ -64,6 +64,10 @@ public class JwtService {
     }
 
     public String generateToken(Map<String, Object> extraClaims, String email) {
+        if (email == null || email.isBlank()) {
+            throw new IllegalArgumentException("Email must not be blank");
+        }
+
         String normalizedEmail = normalize(email);
 
         return Jwts.builder()

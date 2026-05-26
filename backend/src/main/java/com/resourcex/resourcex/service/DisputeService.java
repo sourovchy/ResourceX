@@ -24,4 +24,6 @@ public interface DisputeService {
     DisputeResponse closeDispute(Long disputeId);
 
     void deleteDispute(Long disputeId);
+
+    void followUpStaleDisputes(java.time.LocalDateTime threshold);
 }

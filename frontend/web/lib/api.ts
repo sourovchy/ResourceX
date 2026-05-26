@@ -1,5 +1,6 @@
 import axios from "axios";
 import { clearSession, getStoredToken } from "@/lib/auth";
+import { logger } from "@/lib/logger";
 
 const api = axios.create({
 	baseURL:
@@ -17,7 +18,13 @@ api.interceptors.request.use((config) => {
 		return config;
 	}
 
-	const publicPaths = ["/auth/login", "/auth/register", "/otp/request", "/otp/resend", "/otp/verify"];
+	const publicPaths = [
+		"/auth/login",
+		"/auth/register",
+		"/otp/request",
+		"/otp/resend",
+		"/otp/verify",
+	];
 	const requestUrl = config.url ?? "";
 
 	if (publicPaths.some((path) => requestUrl.startsWith(path))) {
@@ -28,15 +35,39 @@ api.interceptors.request.use((config) => {
 
 	if (token && config.headers) {
 		config.headers.Authorization = `Bearer ${token}`;
+		logger.debug(
+			`[API Request] ${config.method?.toUpperCase()} ${requestUrl} - Token attached`,
+		);
+	} else if (!publicPaths.some((path) => requestUrl.startsWith(path))) {
+		logger.warn(
+			`[API Warning] No token found for protected endpoint: ${config.method?.toUpperCase()} ${requestUrl}`,
+		);
 	}
 
 	return config;
 });
 
 api.interceptors.response.use(
-	(response) => response,
+	(response) => {
+		logger.debug(`[API Response] ${response.status} ${response.config.url}`);
+		return response;
+	},
 	(error) => {
-		if (typeof window !== "undefined" && [401, 403].includes(error.response?.status)) {
+		const status = error.response?.status;
+		const url = error.config?.url;
+		const data = error.response?.data;
+
+		logger.error(`[API Error] ${status} ${url}`, {
+			status,
+			url,
+			statusText: error.response?.statusText,
+			data,
+		});
+
+		if (typeof window !== "undefined" && [401, 403].includes(status)) {
+			logger.warn(
+				`[Auth Error] ${status} - Clearing session and redirecting to login`,
+			);
 			clearSession();
 			window.location.href = "/auth/login";
 		}

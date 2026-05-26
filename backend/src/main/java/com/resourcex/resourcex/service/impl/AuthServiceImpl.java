@@ -20,6 +20,9 @@ import com.resourcex.resourcex.repository.UserRoleRepository;
 import com.resourcex.resourcex.repository.UserRepository;
 import com.resourcex.resourcex.security.JwtService;
 import com.resourcex.resourcex.service.AuthService;
+import com.resourcex.resourcex.service.EmailService;
+import com.resourcex.resourcex.service.AuditLogService;
+import com.resourcex.resourcex.entity.AuditLog;
 import com.resourcex.resourcex.util.constants.RoleConstants;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.Authentication;
@@ -41,6 +44,9 @@ public class AuthServiceImpl implements AuthService {
     private final UserRoleRepository userRoleRepository;
     private final PasswordEncoder passwordEncoder;
     private final JwtService jwtService;
+    private final EmailService emailService;
+    private final com.resourcex.resourcex.service.OtpService otpService;
+    private final AuditLogService auditLogService;
 
     @Override
     @Transactional
@@ -77,6 +83,16 @@ public class AuthServiceImpl implements AuthService {
 
         pendingUserRepository.save(pendingUser);
 
+        auditLogService.logAction(
+                AuditLog.ActorType.SYSTEM,
+                null,
+                "USER_REGISTER_PENDING",
+                "PENDING_USER",
+                pendingUser.getPendingUserId(),
+                AuditLog.AuditOutcome.SUCCESS,
+                "User registration request created for " + request.getEmail()
+        );
+
         return AuthResponse.builder()
                 .message("Registration successful. Your request is pending review.")
                 .token(null)
@@ -109,6 +125,16 @@ public class AuthServiceImpl implements AuthService {
         String token = jwtService.generateToken(user.getUserId(), user.getEmail(), roles);
         StudentProfile profile = studentProfileRepository.findByUser(user).orElse(null);
 
+        auditLogService.logAction(
+                AuditLog.ActorType.USER,
+                user.getUserId(),
+                "USER_LOGIN",
+                "USER",
+                user.getUserId(),
+                AuditLog.AuditOutcome.SUCCESS,
+                "User logged in successfully"
+        );
+
         return AuthResponse.builder()
                 .message("Login successful")
                 .token(token)
@@ -132,6 +158,38 @@ public class AuthServiceImpl implements AuthService {
                         profile))
                 .roles(resolveRoles(user))
                 .build();
+    }
+
+    @Override
+    @Transactional
+    public void forgotPassword(com.resourcex.resourcex.dto.request.ForgotPasswordRequest request) {
+        com.resourcex.resourcex.dto.request.OtpRequest otpRequest = new com.resourcex.resourcex.dto.request.OtpRequest(request.getEmail());
+        otpService.sendOtp(otpRequest, com.resourcex.resourcex.entity.TokenPurpose.PASSWORD_RESET);
+    }
+
+    @Override
+    @Transactional
+    public void resetPassword(com.resourcex.resourcex.dto.request.ResetPasswordRequest request) {
+        com.resourcex.resourcex.dto.request.OtpVerifyRequest otpVerifyRequest = new com.resourcex.resourcex.dto.request.OtpVerifyRequest(request.getEmail(), request.getOtp());
+        
+        // This validates the OTP and marks it as USED
+        otpService.verifyOtp(otpVerifyRequest, com.resourcex.resourcex.entity.TokenPurpose.PASSWORD_RESET);
+        
+        User user = userRepository.findByEmailIgnoreCase(request.getEmail())
+                .orElseThrow(() -> new com.resourcex.resourcex.exception.ResourceNotFoundException("User not found"));
+
+        user.setPassword(passwordEncoder.encode(request.getNewPassword()));
+        userRepository.save(user);
+
+        auditLogService.logAction(
+                AuditLog.ActorType.USER,
+                user.getUserId(),
+                "USER_PASSWORD_RESET",
+                "USER",
+                user.getUserId(),
+                AuditLog.AuditOutcome.SUCCESS,
+                "User password reset successfully via OTP"
+        );
     }
 
     private University resolveUniversity(String universityName) {
@@ -165,3 +223,4 @@ public class AuthServiceImpl implements AuthService {
         return roles.isEmpty() ? List.of(RoleConstants.ROLE_USER) : roles;
     }
 }
+

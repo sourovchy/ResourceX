@@ -19,7 +19,7 @@ const TrustBadge = ({ score = 95, showIcon = true, compact = false }: TrustBadge
 	if (compact) {
 		// Minimal badge display (for lists)
 		return (
-			<span className={`text-sm font-extrabold px-2.5 py-1 rounded-full ${getColor()}`}>
+			<span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-extrabold leading-none sm:px-2.5 sm:py-1 sm:text-sm ${getColor()}`}>
 				{score}
 			</span>
 		);
@@ -27,9 +27,9 @@ const TrustBadge = ({ score = 95, showIcon = true, compact = false }: TrustBadge
 
 	// Full badge display (with icon)
 	return (
-		<div className="inline-flex items-center gap-1.5 bg-indigo-50 border border-indigo-100 text-indigo-700 px-2.5 py-1 rounded-full text-xs font-semibold shadow-sm">
-			{showIcon && <ShieldCheck className="w-3.5 h-3.5" />}
-			<span>Trust Score: {score}</span>
+		<div className="inline-flex max-w-full items-center gap-1.5 rounded-full border border-indigo-100 bg-indigo-50 px-2 py-1 text-[11px] font-semibold text-indigo-700 shadow-sm sm:gap-2 sm:px-2.5 sm:text-xs md:text-sm">
+			{showIcon && <ShieldCheck className="h-3.5 w-3.5 shrink-0 sm:h-4 sm:w-4" />}
+			<span className="truncate">Trust Score: {score}</span>
 		</div>
 	);
 };

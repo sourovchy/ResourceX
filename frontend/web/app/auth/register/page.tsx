@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
@@ -48,15 +48,18 @@ export default function RegisterPage() {
 	const [idCardFileName, setIdCardFileName] = useState("");
 	const [idCardDataUrl, setIdCardDataUrl] = useState("");
 
-	const passwordChecks = [
-		{ label: "At least 8 characters", valid: form.password.length >= 8 },
-		{
-			label: "Uppercase and lowercase letters",
-			valid: /[A-Z]/.test(form.password) && /[a-z]/.test(form.password),
-		},
-		{ label: "At least one number", valid: /\d/.test(form.password) },
-		{ label: "At least one symbol", valid: /[^A-Za-z0-9]/.test(form.password) },
-	];
+	const passwordChecks = useMemo(
+		() => [
+			{ label: "At least 8 characters", valid: form.password.length >= 8 },
+			{
+				label: "Uppercase and lowercase letters",
+				valid: /[A-Z]/.test(form.password) && /[a-z]/.test(form.password),
+			},
+			{ label: "At least one number", valid: /\d/.test(form.password) },
+			{ label: "At least one symbol", valid: /[^A-Za-z0-9]/.test(form.password) },
+		],
+		[form.password],
+	);
 
 	const passwordIsStrong = passwordChecks.every((check) => check.valid);
 
@@ -76,7 +79,6 @@ export default function RegisterPage() {
 
 	const handleIdCardChange = (e: React.ChangeEvent<HTMLInputElement>) => {
 		const file = e.target.files?.[0];
-
 		if (!file) return;
 
 		if (!file.type.startsWith("image/")) {
@@ -136,58 +138,47 @@ export default function RegisterPage() {
 			console.error("Registration error:", err?.response?.data ?? err);
 
 			const responseData = err?.response?.data;
-			const rawMessage: string =
-				responseData?.message || responseData?.error || err?.message || "";
+			const rawMessage: string = responseData?.message || responseData?.error || err?.message || "";
 
+			const lower = rawMessage.toLowerCase();
 			const friendlyMessage =
-				rawMessage.toLowerCase().includes("duplicate") &&
-				rawMessage.toLowerCase().includes("phone")
+				lower.includes("duplicate") && lower.includes("phone")
 					? "Phone number already exists"
-					: rawMessage.toLowerCase().includes("duplicate") &&
-						  rawMessage.toLowerCase().includes("email")
+					: lower.includes("duplicate") && lower.includes("email")
 						? "Email already registered"
-						: rawMessage.toLowerCase().includes("duplicate") &&
-							  rawMessage.toLowerCase().includes("studentid")
+						: lower.includes("duplicate") && lower.includes("studentid")
 							? "Student ID already registered"
 							: rawMessage;
 
-			setError(
-				friendlyMessage || "Could not create your account. Please try again.",
-			);
+			setError(friendlyMessage || "Could not create your account. Please try again.");
 		} finally {
 			setLoading(false);
 		}
 	};
 
 	const inputBase =
-		"w-full rounded-xl border border-slate-300/70 bg-white/90 px-4 py-3 text-textPrimary outline-none transition placeholder:text-slate-400 focus:border-primary focus:ring-4 focus:ring-primary/15 dark:border-white/10 dark:bg-white/5 dark:text-white dark:placeholder:text-slate-400";
+		"w-full rounded-xl border border-outlineVariant bg-surface px-4 py-3 text-textPrimary outline-none transition placeholder:text-textTertiary focus:border-primary focus:ring-2 focus:ring-primary";
+
 	return (
-		<div className="min-h-screen bg-background flex items-center justify-center p-4 relative overflow-hidden">
-			{/* Minimal Background */}
-			<div className="absolute inset-0 pointer-events-none overflow-hidden">
-				{/* Soft top glow */}
-				<div className="absolute top-[-10%] right-[-10%] w-[28rem] h-[28rem] bg-primary opacity-10 rounded-full blur-3xl"></div>
-
-				{/* Soft bottom glow */}
-				<div className="absolute bottom-[-10%] left-[-10%] w-[26rem] h-[26rem] bg-accent opacity-10 rounded-full blur-3xl"></div>
-
-				{/* Subtle grid */}
+		<div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-background px-4 py-8 sm:px-6 lg:px-8">
+			<div className="pointer-events-none absolute inset-0 overflow-hidden">
+				<div className="absolute left-[-10%] top-[-10%] h-[28rem] w-[28rem] rounded-full bg-primary opacity-10 blur-3xl" />
+				<div className="absolute bottom-[-10%] left-[-10%] h-[26rem] w-[26rem] rounded-full bg-accent opacity-10 blur-3xl" />
 				<div
 					className="absolute inset-0 opacity-[0.03]"
 					style={{
 						backgroundImage: `
-                        linear-gradient(to right, currentColor 1px, transparent 1px),
-                        linear-gradient(to bottom, currentColor 1px, transparent 1px)
-                    `,
+							linear-gradient(to right, currentColor 1px, transparent 1px),
+							linear-gradient(to bottom, currentColor 1px, transparent 1px)
+						`,
 						backgroundSize: "40px 40px",
 					}}
 				/>
 			</div>
 
-			<div className="relative z-10 w-full max-w-6xl">
+			<div className="relative z-10 w-full max-w-6xl px-1 sm:px-0">
 				<div className="grid overflow-hidden rounded-3xl border border-borderLight bg-surface/90 shadow-2xl backdrop-blur-xl lg:grid-cols-[0.75fr_1.25fr]">
-					{/* LEFT SIDE */}
-					<div className="hidden lg:flex flex-col justify-between border-r border-borderLight bg-surfaceVariant/30 p-10">
+					<div className="hidden flex-col justify-between border-r border-borderLight bg-surfaceVariant/30 p-10 lg:flex">
 						<div>
 							<div className="inline-flex rounded-full border border-outlineVariant px-4 py-1 text-sm font-medium text-primary">
 								ResourceX
@@ -198,60 +189,40 @@ export default function RegisterPage() {
 							</h1>
 
 							<p className="mt-5 max-w-md text-lg leading-8 text-textSecondary">
-								Rent, share and exchange resources securely within your
-								university community.
+								Rent, share and exchange resources securely within your university community.
 							</p>
 						</div>
 
 						<div className="space-y-4">
 							<div className="rounded-2xl border border-borderLight bg-surface p-5">
-								<p className="text-sm text-textSecondary">
-									Verified students only
-								</p>
-
-								<h3 className="mt-1 text-lg font-semibold text-textPrimary">
-									Safe university-based access
-								</h3>
+								<p className="text-sm text-textSecondary">Verified students only</p>
+								<h3 className="mt-1 text-lg font-semibold text-textPrimary">Safe university-based access</h3>
 							</div>
 
 							<div className="rounded-2xl border border-borderLight bg-surface p-5">
 								<p className="text-sm text-textSecondary">Quick onboarding</p>
-
-								<h3 className="mt-1 text-lg font-semibold text-textPrimary">
-									Create account in minutes
-								</h3>
+								<h3 className="mt-1 text-lg font-semibold text-textPrimary">Create account in minutes</h3>
 							</div>
 						</div>
 					</div>
 
-					{/* RIGHT SIDE */}
-					<div className="bg-surface p-6 sm:p-8 lg:p-10">
-						<div className="mx-auto w-full max-w-xl">
-							{/* Header */}
-							<div className="mb-8">
-								<h2 className="text-3xl font-bold text-textPrimary">
-									Create Account
-								</h2>
-
-								<p className="mt-2 text-textSecondary">
-									Register with your university details.
-								</p>
+					<div className="bg-surface p-5 sm:p-6 md:p-8 lg:p-10">
+						<div className="mx-auto w-full max-w-xl px-1 sm:px-0">
+							<div className="mb-6 sm:mb-8">
+								<h2 className="text-2xl font-bold leading-tight text-textPrimary sm:text-3xl">Create Account</h2>
+								<p className="mt-2 text-sm text-textSecondary sm:text-base">Register with your university details.</p>
 							</div>
 
-							{/* Keep your existing form here */}
-							<form className="space-y-5" onSubmit={handleSubmit}>
+							<form className="space-y-4 sm:space-y-5" onSubmit={handleSubmit}>
 								{error && (
-									<div className="rounded-xl border border-red-500/20 bg-red-50 px-4 py-3 text-sm text-red-700 dark:border-red-500/20 dark:bg-red-500/10 dark:text-red-200">
+									<div className="rounded-xl border border-error/30 bg-errorLight px-4 py-3 text-sm leading-relaxed font-medium text-error">
 										{error}
 									</div>
 								)}
 
-								<div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-									{/* Full Name */}
+								<div className="grid grid-cols-1 gap-4 sm:gap-5 sm:grid-cols-2">
 									<div className="space-y-1.5">
-										<label className="text-sm font-medium text-textPrimary dark:text-white">
-											Full Name
-										</label>
+										<label className="block text-sm font-medium text-textPrimary">Full Name</label>
 										<div className="relative">
 											<User className="absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-textTertiary" />
 											<input
@@ -270,21 +241,15 @@ export default function RegisterPage() {
 										</div>
 									</div>
 
-									{/* Student ID */}
 									<div className="space-y-1.5">
-										<label className="text-sm font-medium text-textPrimary dark:text-white">
-											Student ID
-										</label>
+										<label className="block text-sm font-medium text-textPrimary">Student ID</label>
 										<input
 											type="text"
 											value={form.studentId}
 											onChange={(e) =>
 												setForm({
 													...form,
-													studentId: e.target.value.replace(
-														/[^a-zA-Z0-9]/g,
-														"",
-													),
+													studentId: e.target.value.replace(/[^a-zA-Z0-9]/g, ""),
 												})
 											}
 											className={inputBase}
@@ -294,14 +259,11 @@ export default function RegisterPage() {
 									</div>
 								</div>
 
-								<div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-									{/* Mobile Number */}
+								<div className="grid grid-cols-1 gap-4 sm:gap-5 sm:grid-cols-2">
 									<div className="space-y-1.5">
-										<label className="text-sm font-medium text-textPrimary dark:text-white">
-											Mobile Number
-										</label>
-										<div className="flex overflow-hidden rounded-xl border border-slate-300/70 bg-white/90 transition focus-within:border-primary focus-within:ring-4 focus-within:ring-primary/15 dark:border-white/10 dark:bg-white/5">
-											<div className="flex items-center border-r border-slate-300/70 bg-slate-100 px-4 font-semibold text-textPrimary dark:border-white/10 dark:bg-white/10 dark:text-white">
+										<label className="block text-sm font-medium text-textPrimary">Mobile Number</label>
+										<div className="flex overflow-hidden rounded-xl border border-outlineVariant bg-surface transition focus-within:border-primary focus-within:ring-2 focus-within:ring-primary">
+											<div className="flex items-center border-r border-outlineVariant bg-surfaceVariant px-4 font-semibold text-textPrimary">
 												+880
 											</div>
 											<input
@@ -311,12 +273,10 @@ export default function RegisterPage() {
 												onChange={(e) =>
 													setForm({
 														...form,
-														phone: e.target.value
-															.replace(/\D/g, "")
-															.slice(0, 10),
+														phone: e.target.value.replace(/\D/g, "").slice(0, 10),
 													})
 												}
-												className="w-full bg-transparent px-4 py-3 text-textPrimary outline-none dark:text-white"
+												className="w-full bg-transparent px-4 py-3 text-textPrimary outline-none"
 												placeholder="1XXXXXXXXX"
 												maxLength={10}
 												required
@@ -324,11 +284,8 @@ export default function RegisterPage() {
 										</div>
 									</div>
 
-									{/* University */}
 									<div className="space-y-1.5">
-										<label className="text-sm font-medium text-textPrimary dark:text-white">
-											University
-										</label>
+										<label className="block text-sm font-medium text-textPrimary">University</label>
 										<input
 											type="text"
 											list="university-list"
@@ -353,12 +310,9 @@ export default function RegisterPage() {
 									</div>
 								</div>
 
-								<div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-									{/* Department */}
+								<div className="grid grid-cols-1 gap-4 sm:gap-5 sm:grid-cols-2">
 									<div className="space-y-1.5">
-										<label className="text-sm font-medium text-textPrimary dark:text-white">
-											Department
-										</label>
+										<label className="block text-sm font-medium text-textPrimary">Department</label>
 										<input
 											type="text"
 											list="department-list"
@@ -366,10 +320,7 @@ export default function RegisterPage() {
 											onChange={(e) =>
 												setForm({
 													...form,
-													department: e.target.value.replace(
-														/[^a-zA-Z\s]/g,
-														"",
-													),
+													department: e.target.value.replace(/[^a-zA-Z\s]/g, ""),
 												})
 											}
 											className={inputBase}
@@ -385,11 +336,8 @@ export default function RegisterPage() {
 										</datalist>
 									</div>
 
-									{/* Email */}
 									<div className="space-y-1.5">
-										<label className="text-sm font-medium text-textPrimary dark:text-white">
-											Email
-										</label>
+										<label className="block text-sm font-medium text-textPrimary">Email</label>
 										<div className="relative">
 											<Mail className="absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-textTertiary" />
 											<input
@@ -409,11 +357,8 @@ export default function RegisterPage() {
 									</div>
 								</div>
 
-								{/* Password */}
 								<div className="space-y-1.5">
-									<label className="text-sm font-medium text-textPrimary dark:text-white">
-										Password
-									</label>
+									<label className="block text-sm font-medium text-textPrimary">Password</label>
 
 									<div className="relative">
 										<Lock className="absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-textTertiary" />
@@ -436,16 +381,13 @@ export default function RegisterPage() {
 										<button
 											type="button"
 											onClick={() => setShowPassword(!showPassword)}
-											className="absolute right-3 top-1/2 -translate-y-1/2 text-textTertiary transition hover:text-textPrimary dark:hover:text-white">
-											{showPassword ? (
-												<EyeOff className="h-5 w-5" />
-											) : (
-												<Eye className="h-5 w-5" />
-											)}
+											className="absolute right-3 top-1/2 -translate-y-1/2 text-textTertiary transition hover:text-textPrimary"
+											aria-label={showPassword ? "Hide password" : "Show password"}>
+											{showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
 										</button>
 									</div>
 
-									<div className="grid grid-cols-1 gap-1.5 pt-1 sm:grid-cols-2">
+									<div className="grid grid-cols-1 gap-1.5 pt-1 sm:grid-cols-2 sm:gap-2">
 										{passwordChecks.map((check) => (
 											<div
 												key={check.label}
@@ -458,28 +400,19 @@ export default function RegisterPage() {
 									</div>
 								</div>
 
-								{/* Student ID Card */}
 								<div className="space-y-1.5">
-									<label className="text-sm font-medium text-textPrimary dark:text-white">
-										Student ID Card
-									</label>
+									<label className="block text-sm font-medium text-textPrimary">Student ID Card</label>
 
-									<label className="flex cursor-pointer items-center gap-3 rounded-xl border border-dashed border-slate-300/80 bg-white/90 px-4 py-4 text-sm text-textSecondary transition hover:border-primary hover:bg-primary/5 dark:border-white/10 dark:bg-white/5 dark:text-slate-300 dark:hover:bg-white/10">
-										<div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
-											{idCardDataUrl ? (
-												<FileCheck2 className="h-5 w-5" />
-											) : (
-												<Upload className="h-5 w-5" />
-											)}
+									<label className="flex cursor-pointer items-start gap-3 rounded-xl border border-dashed border-outlineVariant bg-surface px-4 py-4 text-sm text-textSecondary transition hover:border-primary hover:bg-primaryLight sm:items-center">
+										<div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary sm:h-11 sm:w-11">
+											{idCardDataUrl ? <FileCheck2 className="h-4 w-4 sm:h-5 sm:w-5" /> : <Upload className="h-4 w-4 sm:h-5 sm:w-5" />}
 										</div>
 
 										<div className="min-w-0 flex-1">
-											<div className="truncate font-semibold text-textPrimary dark:text-white">
+											<div className="truncate font-semibold text-textPrimary">
 												{idCardFileName || "Upload ID card image"}
 											</div>
-											<div className="text-xs text-textTertiary dark:text-slate-400">
-												JPG or PNG, up to 2 MB
-											</div>
+											<div className="text-xs text-textTertiary">JPG or PNG, up to 2 MB</div>
 										</div>
 
 										<input
@@ -495,12 +428,28 @@ export default function RegisterPage() {
 										<img
 											src={idCardDataUrl}
 											alt="Student ID card preview"
-											className="h-40 w-full rounded-2xl border border-slate-200 object-cover shadow-sm dark:border-white/10"
+											className="h-32 w-full rounded-2xl border border-borderLight bg-surface object-cover shadow-sm sm:h-40"
 										/>
 									)}
 								</div>
 
-								{/* Submit */}
+								<div className="space-y-1.5 pb-1 pt-1 sm:pt-2">
+									<label className="flex cursor-pointer items-start gap-3">
+										<input
+											type="checkbox"
+											className="mt-1 h-4 w-4 rounded border-outlineVariant bg-surface text-primary focus:ring-primary"
+											required
+										/>
+										<span className="text-sm leading-relaxed text-textSecondary">
+											I agree to the{" "}
+											<Link href="/terms" className="font-semibold text-primary hover:underline" target="_blank" rel="noreferrer">
+												Terms &amp; Conditions
+											</Link>{" "}
+											and Privacy Policy. I confirm that all provided information is accurate.
+										</span>
+									</label>
+								</div>
+
 								<button
 									type="submit"
 									disabled={loading}
@@ -510,11 +459,9 @@ export default function RegisterPage() {
 								</button>
 							</form>
 
-							<p className="mt-8 text-center text-sm text-textSecondary">
+							<p className="mt-6 text-center text-sm text-textSecondary sm:mt-8">
 								Already have an account?{" "}
-								<Link
-									href="/auth/login"
-									className="font-semibold text-primary hover:text-primaryDark">
+								<Link href="/auth/login" className="font-semibold text-primary hover:text-primaryDark">
 									Sign in
 								</Link>
 							</p>

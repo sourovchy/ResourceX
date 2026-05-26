@@ -16,4 +16,10 @@ public interface TrustService {
     long getTrustScore(Long userId);
 
     void applyPenaltyImpact(Long userId, Long penaltyId, Integer deductionPoints, String reason);
+
+    List<com.resourcex.resourcex.dto.response.AdminTrustUserResponse> getAllUsersForTrustAdmin();
+
+    List<com.resourcex.resourcex.dto.response.TrustAuditResponse> getTrustAuditLog();
+
+    void adjustTrust(Long userId, Integer change, String reason);
 }

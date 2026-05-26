@@ -21,8 +21,12 @@ public interface ConversationRepository extends JpaRepository<Conversation, Long
     @Query("""
             select c
             from Conversation c
-            where c.participantOneUser.userId = :participantOneUserId
-              and c.participantTwoUser.userId = :participantTwoUserId
+            where (
+                    (c.participantOneUser.userId = :participantOneUserId
+                     and c.participantTwoUser.userId = :participantTwoUserId)
+                 or (c.participantOneUser.userId = :participantTwoUserId
+                     and c.participantTwoUser.userId = :participantOneUserId)
+            )
               and ((:bookingId is null and c.booking is null) or c.booking.bookingId = :bookingId)
               and ((:disputeId is null and c.dispute is null) or c.dispute.disputeId = :disputeId)
             """)

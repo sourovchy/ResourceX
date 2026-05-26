@@ -5,6 +5,7 @@ import com.resourcex.resourcex.dto.request.OtpVerifyRequest;
 import com.resourcex.resourcex.dto.response.OtpResponse;
 import com.resourcex.resourcex.entity.OtpStatus;
 import com.resourcex.resourcex.entity.OtpToken;
+import com.resourcex.resourcex.entity.TokenPurpose;
 import com.resourcex.resourcex.entity.PendingUser;
 import com.resourcex.resourcex.entity.PendingUserStatus;
 import com.resourcex.resourcex.exception.ConflictException;
@@ -54,25 +55,25 @@ public class OtpServiceImpl implements OtpService {
     private final Clock clock = Clock.systemUTC();
 
     @Override
-    public OtpResponse sendOtp(OtpRequest request) {
-        return issueOtp(request.email(), "OTP sent successfully");
+    public OtpResponse sendOtp(OtpRequest request, TokenPurpose purpose) {
+        return issueOtp(request.email(), purpose, "OTP sent successfully");
     }
 
     @Override
-    public OtpResponse resendOtp(OtpRequest request) {
-        return issueOtp(request.email(), "OTP resent successfully");
+    public OtpResponse resendOtp(OtpRequest request, TokenPurpose purpose) {
+        return issueOtp(request.email(), purpose, "OTP resent successfully");
     }
 
     @Override
     @Transactional
-    public OtpResponse verifyOtp(OtpVerifyRequest request) {
+    public OtpResponse verifyOtp(OtpVerifyRequest request, TokenPurpose purpose) {
         String email = normalizeEmail(request.email());
         String inputOtp = normalizeOtp(request.otp());
         Instant now = now();
 
-        expireExpiredPendingTokens(email, now);
+        expireExpiredPendingTokens(email, purpose, now);
 
-        OtpToken token = findLatestPendingTokenForUpdate(email)
+        OtpToken token = findLatestPendingTokenForUpdate(email, purpose)
                 .orElseThrow(() -> new UnauthorizedException("OTP expired or not found"));
 
         if (isExpired(token, now)) {
@@ -103,8 +104,13 @@ public class OtpServiceImpl implements OtpService {
         token.setUsedAt(now);
         otpRepository.save(token);
 
-        pendingUserRepository.findByEmailIgnoreCase(email)
-                .orElseThrow(() -> new ResourceNotFoundException("Pending user not found"));
+        if (purpose == TokenPurpose.EMAIL_VERIFICATION) {
+            pendingUserRepository.findByEmailIgnoreCase(email)
+                    .orElseThrow(() -> new ResourceNotFoundException("Pending user not found"));
+        } else if (purpose == TokenPurpose.PASSWORD_RESET) {
+            userRepository.findByEmailIgnoreCase(email)
+                    .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+        }
 
         log.info("OTP verified successfully for email: {}, resend attempts used: {}/{}",
                 email, token.getResendCount(), MAX_OTP_REQUESTS_PER_DAY);
@@ -118,17 +124,21 @@ public class OtpServiceImpl implements OtpService {
                 .build();
     }
 
-    private OtpResponse issueOtp(String rawEmail, String successMessage) {
+    private OtpResponse issueOtp(String rawEmail, TokenPurpose purpose, String successMessage) {
         String email = normalizeEmail(rawEmail);
 
         // Validate user can request OTP
-        validateOtpRequest(email);
+        validateOtpRequest(email, purpose);
 
-        IssuedOtp issuedOtp = transactionTemplate.execute(status -> createOrUpdateOtp(email));
+        IssuedOtp issuedOtp = transactionTemplate.execute(status -> createOrUpdateOtp(email, purpose));
 
         try {
-            log.info("Sending OTP to email: {}", email);
-            emailService.sendOtpEmail(issuedOtp.email(), issuedOtp.rawOtp());
+            log.info("Sending OTP to email: {} for purpose: {}", email, purpose);
+            if (purpose == TokenPurpose.PASSWORD_RESET) {
+                emailService.sendPasswordResetEmail(issuedOtp.email(), issuedOtp.rawOtp());
+            } else {
+                emailService.sendOtpEmail(issuedOtp.email(), issuedOtp.rawOtp());
+            }
             log.info("OTP successfully sent to: {}", email);
         } catch (RuntimeException ex) {
             log.error("OTP email send failed for: {}, rolling back token creation", email, ex);
@@ -145,12 +155,13 @@ public class OtpServiceImpl implements OtpService {
                 .build();
     }
 
-    private void validateOtpRequest(String email) {
+    private void validateOtpRequest(String email, TokenPurpose purpose) {
         Instant now = now();
 
         // Check 24-hour daily limit
-        long dailyRequestCount = otpRepository.countByEmailAndCreatedAtAfter(
+        long dailyRequestCount = otpRepository.countByEmailAndTokenPurposeAndCreatedAtAfter(
                 email,
+                purpose,
                 now.minus(24, ChronoUnit.HOURS));
 
         if (dailyRequestCount >= MAX_OTP_REQUESTS_PER_DAY) {
@@ -160,23 +171,29 @@ public class OtpServiceImpl implements OtpService {
         }
     }
 
-    private IssuedOtp createOrUpdateOtp(String email) {
+    private IssuedOtp createOrUpdateOtp(String email, TokenPurpose purpose) {
         Instant now = now();
 
-        if (userRepository.existsByEmailIgnoreCase(email)) {
-            throw new ConflictException("Email is already registered");
+        if (purpose == TokenPurpose.EMAIL_VERIFICATION) {
+            if (userRepository.existsByEmailIgnoreCase(email)) {
+                throw new ConflictException("Email is already registered");
+            }
+
+            PendingUser pendingUser = pendingUserRepository.findByEmailIgnoreCase(email)
+                    .orElseThrow(() -> new ResourceNotFoundException("Please register first"));
+
+            if (pendingUser.getStatus() == PendingUserStatus.REJECTED) {
+                throw new UnauthorizedException("Registration was rejected");
+            }
+        } else if (purpose == TokenPurpose.PASSWORD_RESET) {
+            if (!userRepository.existsByEmailIgnoreCase(email)) {
+                throw new ResourceNotFoundException("User not found");
+            }
         }
 
-        PendingUser pendingUser = pendingUserRepository.findByEmailIgnoreCase(email)
-                .orElseThrow(() -> new ResourceNotFoundException("Please register first"));
+        expireExpiredPendingTokens(email, purpose, now);
 
-        if (pendingUser.getStatus() == PendingUserStatus.REJECTED) {
-            throw new UnauthorizedException("Registration was rejected");
-        }
-
-        expireExpiredPendingTokens(email, now);
-
-        Optional<OtpToken> existingPendingOtp = findLatestPendingTokenForUpdate(email);
+        Optional<OtpToken> existingPendingOtp = findLatestPendingTokenForUpdate(email, purpose);
 
         if (existingPendingOtp.isPresent()) {
             OtpToken existing = existingPendingOtp.get();
@@ -225,6 +242,7 @@ public class OtpServiceImpl implements OtpService {
 
         OtpToken token = OtpToken.builder()
                 .email(email)
+                .tokenPurpose(purpose)
                 .otpHash(hashedOtp)
                 .status(OtpStatus.PENDING)
                 .attemptCount(0)
@@ -262,16 +280,18 @@ public class OtpServiceImpl implements OtpService {
                 now.minus(RETAIN_FINISHED_TOKENS_HOURS, ChronoUnit.HOURS));
     }
 
-    private Optional<OtpToken> findLatestPendingTokenForUpdate(String email) {
-        return otpRepository.findByEmailAndStatusForUpdate(
+    private Optional<OtpToken> findLatestPendingTokenForUpdate(String email, TokenPurpose purpose) {
+        return otpRepository.findByEmailAndTokenPurposeAndStatusForUpdate(
                 email,
+                purpose,
                 OtpStatus.PENDING).stream()
                 .findFirst();
     }
 
-    private void expireExpiredPendingTokens(String email, Instant now) {
-        otpRepository.expireExpiredOtpForEmail(
+    private void expireExpiredPendingTokens(String email, TokenPurpose purpose, Instant now) {
+        otpRepository.expireExpiredOtpForEmailAndTokenPurpose(
                 email,
+                purpose,
                 OtpStatus.EXPIRED,
                 OtpStatus.PENDING,
                 now);

@@ -5,13 +5,38 @@ import { spacing } from "./theme/spacing";
 import { radius } from "./theme/radius";
 import { shadows } from "./theme/shadows";
 
-const convertToString = (obj: any) =>
-	Object.fromEntries(
-		Object.entries(obj).map(([k, v]) => [
-			k,
-			typeof v === "number" ? `${v}px` : String(v),
-		]),
-	);
+const convertSpacing = (obj: any): any => {
+	const result: any = {};
+	for (const [k, v] of Object.entries(obj)) {
+		if (typeof v === "number") {
+			result[k] = `${v}px`;
+		} else if (typeof v === "object" && v !== null) {
+			result[k] = convertSpacing(v);
+		} else {
+			result[k] = String(v);
+		}
+	}
+	return result;
+};
+
+const flattenShadows = (obj: any, prefix = ""): Record<string, string> => {
+	const result: Record<string, string> = {};
+	for (const [k, v] of Object.entries(obj)) {
+		const key = prefix ? `${prefix}-${k}` : k;
+		if (typeof v === "object" && v !== null) {
+			if ("shadowOffset" in v) {
+				const width = (v as any).shadowOffset?.width || 0;
+				const height = (v as any).shadowOffset?.height || 0;
+				const radius = (v as any).shadowRadius || 0;
+				const opacity = (v as any).shadowOpacity || 0.1;
+				result[key] = `${width}px ${height}px ${radius}px rgba(0,0,0,${opacity})`;
+			} else {
+				Object.assign(result, flattenShadows(v, key));
+			}
+		}
+	}
+	return result;
+};
 
 const config: Config = {
 	darkMode: "class",
@@ -23,7 +48,7 @@ const config: Config = {
 	theme: {
 		extend: {
 			colors: {
-				...(convertToString(lightThemeColors) as any),
+				...lightThemeColors,
 				// CSS-variable driven tokens so dark-mode overrides work via globals.css
 				background: "var(--color-background)",
 				surface: "var(--color-surface)",
@@ -56,9 +81,9 @@ const config: Config = {
 				warningDark: "var(--color-warningDark)",
 				onSurface: "var(--color-onSurface)",
 			},
-			borderRadius: convertToString(radius) as any,
-			boxShadow: convertToString(shadows) as any,
-			spacing: convertToString(spacing) as any,
+			borderRadius: convertSpacing(radius),
+			boxShadow: flattenShadows(shadows),
+			spacing: convertSpacing(spacing),
 		},
 	},
 	plugins: [],

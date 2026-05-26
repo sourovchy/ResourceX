@@ -1,27 +1,16 @@
 import React from "react";
 import Link from "next/link";
 
-/**
- * Enhanced StatCard Component
- * Supports multiple display modes: simple stats, icon-based stats, and clickable cards
- */
 interface StatCardProps {
-	// Core properties
 	title: string;
 	value: string;
-
-	// Optional icon styling
 	icon?: React.ReactNode;
-	tint?: string; // bg color classes for icon
-	iconColor?: string; // text color for subtitle/icon
-
-	// Optional display variants
+	tint?: string;
+	iconColor?: string;
 	subtitle?: string;
-	sub?: string; // Alias for subtitle
-	trend?: string; // For simple stat display
-
-	// Optional interactivity
-	href?: string; // Makes card clickable/linkable
+	sub?: string;
+	trend?: string;
+	href?: string;
 	className?: string;
 }
 
@@ -37,32 +26,35 @@ const StatCard = ({
 	trend,
 	className = "",
 }: StatCardProps) => {
-	// Support both 'sub' and 'subtitle' aliases
 	const displaySubtitle = sub || subtitle;
 
 	const inner = (
 		<div
 			className={`
-				bg-surface border border-borderLight p-5 rounded-2xl shadow-sm 
-				hover:shadow-md transition-all
-				${icon ? "flex items-start gap-4" : "flex flex-col gap-2"}
-				cursor-default group
-				${href ? "cursor-pointer" : ""}
+				group rounded-2xl border border-borderLight bg-surface p-4 shadow-sm transition-all hover:shadow-md
+				${icon ? "flex items-start gap-3 sm:gap-4" : "flex flex-col gap-2"}
+				${href ? "cursor-pointer" : "cursor-default"}
+				sm:p-5
 				${className}
 			`.trim()}>
-			{icon && <div className={`p-3 rounded-xl ${tint} shrink-0`}>{icon}</div>}
-			<div className="min-w-0 flex-1">
-				<div className="text-sm font-medium text-textSecondary">{title}</div>
-				<div className="text-3xl font-extrabold text-textPrimary mt-0.5">
+			{icon && (
+				<div
+					className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${tint} sm:h-12 sm:w-12`}>
+					<div className="scale-90 sm:scale-100">{icon}</div>
+				</div>
+			)}
+			<div className="min-w-0 flex-1 overflow-hidden">
+				<div className="break-words text-xs font-medium text-textSecondary sm:text-sm">{title}</div>
+				<div className="mt-1 break-words text-2xl font-extrabold leading-tight text-textPrimary sm:text-3xl">
 					{value}
 				</div>
 				{displaySubtitle && (
-					<div className={`text-xs font-semibold mt-1 ${iconColor}`}>
+					<div className={`mt-1 break-words text-[11px] font-semibold sm:text-xs ${iconColor}`}>
 						{displaySubtitle}
 					</div>
 				)}
 				{trend && !displaySubtitle && (
-					<div className="text-xs font-semibold mt-1 text-green-600">
+					<div className="mt-1 break-words text-[11px] font-semibold text-green-600 sm:text-xs">
 						{trend}
 					</div>
 				)}

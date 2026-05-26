@@ -8,6 +8,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
+import java.time.LocalDateTime;
 
 @Repository
 public interface DisputeRepository extends JpaRepository<Dispute, Long> {
@@ -21,4 +22,17 @@ public interface DisputeRepository extends JpaRepository<Dispute, Long> {
     boolean existsByBookingAndRaisedBy(Booking booking, User user);
 
     long countByStatus(DisputeStatus status);
+
+    List<Dispute> findAllByOrderByCreatedAtDesc();
+
+    List<Dispute> findByRaisedByOrderByCreatedAtDesc(User user);
+
+    List<Dispute> findByStatusOrderByCreatedAtDesc(DisputeStatus status);
+
+    List<Dispute> findByCreatedAtBetweenOrderByCreatedAtDesc(
+            LocalDateTime startDate,
+            LocalDateTime endDate
+    );
+
+    List<Dispute> findByStatusInAndUpdatedAtBefore(List<DisputeStatus> statuses, LocalDateTime dateTime);
 }

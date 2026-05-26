@@ -7,7 +7,7 @@ import java.time.Instant;
 
 @Entity
 @Table(name = "otp_tokens", indexes = {
-        @Index(name = "idx_otp_email_status", columnList = "email,status"),
+        @Index(name = "idx_otp_email_purpose_status", columnList = "email,tokenPurpose,status"),
         @Index(name = "idx_otp_expires_at", columnList = "expiresAt")
 })
 @Getter
@@ -26,6 +26,11 @@ public class OtpToken {
 
     @Column(nullable = false, length = 255)
     private String otpHash;
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 50, columnDefinition = "VARCHAR(50)")
+    @Builder.Default
+    private TokenPurpose tokenPurpose = TokenPurpose.EMAIL_VERIFICATION;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 50, columnDefinition = "VARCHAR(50)")

@@ -5,6 +5,8 @@ import com.resourcex.resourcex.dto.request.UpdateItemRequest;
 import com.resourcex.resourcex.dto.response.ItemResponse;
 
 import java.util.List;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 
 public interface ItemService {
 
@@ -14,7 +16,7 @@ public interface ItemService {
 
     ItemResponse getItemById(Long itemId);
 
-    List<ItemResponse> getAllItems(String category, String searchQuery);
+    Page<ItemResponse> getAllItems(String category, String searchQuery, Pageable pageable);
 
     List<ItemResponse> getMyItems();
 

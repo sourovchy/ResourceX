@@ -207,22 +207,22 @@ export default function EmailVerificationPage() {
 	};
 
 	return (
-		<div className="min-h-screen bg-background flex items-center justify-center p-4">
-			<div className="absolute inset-0 overflow-hidden pointer-events-none">
-				<div className="absolute top-[-10%] left-[-10%] w-96 h-96 bg-primary opacity-20 rounded-full blur-3xl" />
-				<div className="absolute bottom-[-10%] right-[-10%] w-[30rem] h-[30rem] bg-accent opacity-20 rounded-full blur-3xl" />
+		<div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-background px-4 py-8 sm:px-6 lg:px-8">
+			<div className="pointer-events-none absolute inset-0 overflow-hidden">
+				<div className="absolute left-[-10%] top-[-10%] h-72 w-72 rounded-full bg-primary opacity-20 blur-3xl sm:h-96 sm:w-96" />
+				<div className="absolute bottom-[-10%] right-[-10%] h-72 w-72 rounded-full bg-accent opacity-20 blur-3xl sm:h-[30rem] sm:w-[30rem]" />
 			</div>
 
-			<div className="relative z-10 w-full max-w-md">
-				<div className="bg-surface border border-borderLight p-8 rounded-2xl shadow-xl">
-					<div className="text-center mb-8">
-						<div className="flex items-center justify-center w-16 h-16 mx-auto mb-4 rounded-full bg-primaryLight border border-primary/20">
-							<MailCheck className="w-7 h-7 text-primary" />
+			<div className="relative z-10 w-full max-w-md px-1 sm:px-0">
+				<div className="rounded-2xl border border-borderLight bg-surface p-5 shadow-xl sm:p-6 md:p-8">
+					<div className="mb-6 text-center sm:mb-8">
+						<div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full border border-primary/20 bg-primaryLight sm:h-16 sm:w-16">
+							<MailCheck className="h-6 w-6 text-primary sm:h-7 sm:w-7" />
 						</div>
-						<h1 className="text-3xl font-bold text-textPrimary">
+						<h1 className="text-2xl font-bold leading-tight text-textPrimary sm:text-3xl">
 							Verify Email
 						</h1>
-						<p className="text-textSecondary mt-2">
+						<p className="mt-2 text-sm text-textSecondary sm:text-base">
 							Enter the 6-digit code sent to{" "}
 							<span className="font-semibold text-textPrimary">
 								{displayedEmail}
@@ -240,21 +240,21 @@ export default function EmailVerificationPage() {
 						)}
 					</div>
 
-					<form className="space-y-5" onSubmit={handleSubmit}>
+					<form className="space-y-4 sm:space-y-5" onSubmit={handleSubmit}>
 						{error && (
-							<div className="text-sm text-error bg-errorLight border border-error px-3 py-2 rounded-lg">
+							<div className="rounded-lg border border-error bg-errorLight px-3 py-2 text-sm leading-relaxed text-error">
 								{error}
 							</div>
 						)}
 
 						{message && (
-							<div className="text-sm text-success bg-successLight border border-success px-3 py-2 rounded-lg">
+							<div className="rounded-lg border border-success bg-successLight px-3 py-2 text-sm leading-relaxed text-success">
 								{message}
 							</div>
 						)}
 
 						<div className="space-y-1.5">
-							<label className="text-sm font-medium text-textPrimary">
+							<label className="block text-sm font-medium text-textPrimary">
 								Email Code
 							</label>
 							<input
@@ -263,7 +263,7 @@ export default function EmailVerificationPage() {
 								maxLength={6}
 								value={otp}
 								onChange={(e) => setOtp(e.target.value.replace(/\D/g, ""))}
-								className="w-full px-4 py-3 bg-surface border border-outlineVariant rounded-lg focus:ring-2 focus:ring-primary focus:border-primary outline-none transition text-textPrimary text-center text-xl tracking-[0.35em]"
+								className="w-full rounded-lg border border-outlineVariant bg-surface px-4 py-3 text-center text-xl tracking-[0.35em] text-textPrimary outline-none transition focus:border-primary focus:ring-2 focus:ring-primary"
 								placeholder="000000"
 								autoComplete="one-time-code"
 								required
@@ -273,27 +273,23 @@ export default function EmailVerificationPage() {
 						<button
 							type="submit"
 							disabled={loading || !email}
-							className="w-full flex items-center justify-center gap-2 bg-primary hover:bg-primaryDark disabled:opacity-70 disabled:cursor-not-allowed text-onPrimary py-3 rounded-lg font-medium transition shadow-md hover:shadow-lg focus:ring-4 focus:ring-primaryLight">
+							className="mt-2 flex w-full items-center justify-center gap-2 rounded-lg bg-primary px-4 py-3 font-medium text-onPrimary shadow-md transition shadow-md hover:bg-primaryDark hover:shadow-lg focus:ring-4 focus:ring-primaryLight disabled:cursor-not-allowed disabled:opacity-70">
 							{loading ? "Verifying..." : "Verify Email"}
-							{!loading && <ArrowRight className="w-4 h-4" />}
+							{!loading && <ArrowRight className="h-4 w-4" />}
 						</button>
 					</form>
 
-					<div className="mt-6 flex items-center justify-between text-sm gap-4">
+					<div className="mt-6 flex flex-col gap-4 text-sm sm:flex-row sm:items-center sm:justify-between sm:gap-4">
 						<button
 							type="button"
 							onClick={handleResend}
 							disabled={isResendDisabled}
-							className="inline-flex items-center gap-2 font-semibold text-primary hover:text-primaryDark disabled:opacity-70 disabled:cursor-not-allowed">
-							<RefreshCw
-								className={`w-4 h-4 ${resending ? "animate-spin" : ""}`}
-							/>
+							className="inline-flex items-center gap-2 font-semibold text-primary transition-colors hover:text-primaryDark disabled:cursor-not-allowed disabled:opacity-70">
+							<RefreshCw className={`h-4 w-4 ${resending ? "animate-spin" : ""}`} />
 							{getResendButtonText()}
 						</button>
 
-						<Link
-							href="/auth/login"
-							className="font-semibold text-textSecondary hover:text-primary">
+						<Link href="/auth/login" className="font-semibold text-textSecondary transition-colors hover:text-primary">
 							Back to login
 						</Link>
 					</div>

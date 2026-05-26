@@ -7,6 +7,10 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.web.PageableDefault;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -22,15 +26,15 @@ public class BookingController {
     @ResponseStatus(HttpStatus.CREATED)
     @PreAuthorize("isAuthenticated()")
     public BookingResponse createBooking(
-            @Valid @RequestBody CreateBookingRequest request
-    ) {
+            @Valid @RequestBody CreateBookingRequest request) {
         return bookingService.createBooking(request);
     }
 
     @GetMapping
-    @PreAuthorize("hasRole('ADMIN')")
-    public List<BookingResponse> getAllBookings() {
-        return bookingService.getAllBookings();
+    @PreAuthorize("hasAnyRole('ADMIN','SUPER_ADMIN','MODERATOR')")
+    public Page<BookingResponse> getAllBookings(
+            @PageableDefault(size = 10, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable) {
+        return bookingService.getAllBookings(pageable);
     }
 
     @GetMapping("/me")
@@ -48,48 +52,42 @@ public class BookingController {
     @GetMapping("/{bookingId}")
     @PreAuthorize("isAuthenticated()")
     public BookingResponse getBookingById(
-            @PathVariable Long bookingId
-    ) {
+            @PathVariable Long bookingId) {
         return bookingService.getBookingById(bookingId);
     }
 
     @PatchMapping("/{bookingId}/approve")
     @PreAuthorize("hasAnyRole('ADMIN','MODERATOR','SUPER_ADMIN') or isAuthenticated()")
     public BookingResponse approveBooking(
-            @PathVariable Long bookingId
-    ) {
+            @PathVariable Long bookingId) {
         return bookingService.approveBooking(bookingId);
     }
 
     @PatchMapping("/{bookingId}/reject")
     @PreAuthorize("hasAnyRole('ADMIN','MODERATOR','SUPER_ADMIN') or isAuthenticated()")
     public BookingResponse rejectBooking(
-            @PathVariable Long bookingId
-    ) {
+            @PathVariable Long bookingId) {
         return bookingService.rejectBooking(bookingId);
     }
 
     @PatchMapping("/{bookingId}/cancel")
     @PreAuthorize("isAuthenticated()")
     public BookingResponse cancelBooking(
-            @PathVariable Long bookingId
-    ) {
+            @PathVariable Long bookingId) {
         return bookingService.cancelBooking(bookingId);
     }
 
     @PatchMapping("/{bookingId}/complete")
     @PreAuthorize("hasAnyRole('ADMIN','MODERATOR','SUPER_ADMIN') or isAuthenticated()")
     public BookingResponse completeBooking(
-            @PathVariable Long bookingId
-    ) {
+            @PathVariable Long bookingId) {
         return bookingService.completeBooking(bookingId);
     }
 
     @PatchMapping("/{bookingId}/moderate-cancel")
     @PreAuthorize("hasAnyRole('ADMIN','MODERATOR','SUPER_ADMIN')")
     public BookingResponse moderateCancelBooking(
-            @PathVariable Long bookingId
-    ) {
+            @PathVariable Long bookingId) {
         return bookingService.moderateCancelBooking(bookingId);
     }
 }

@@ -4,6 +4,8 @@ import com.resourcex.resourcex.dto.response.UserResponse;
 import com.resourcex.resourcex.dto.request.CreatePrivilegedUserRequest;
 
 import java.util.List;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 
 public interface SuperAdminService {
 
@@ -35,5 +37,5 @@ public interface SuperAdminService {
     /**
      * Get all users with ADMIN or MODERATOR role
      */
-    List<UserResponse> getAllPrivilegedUsers();
+    Page<UserResponse> getAllPrivilegedUsers(Pageable pageable);
 }

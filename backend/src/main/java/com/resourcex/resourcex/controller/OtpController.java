@@ -3,10 +3,10 @@ package com.resourcex.resourcex.controller;
 import com.resourcex.resourcex.dto.request.OtpRequest;
 import com.resourcex.resourcex.dto.request.OtpVerifyRequest;
 import com.resourcex.resourcex.dto.response.OtpResponse;
+import com.resourcex.resourcex.entity.TokenPurpose;
 import com.resourcex.resourcex.service.OtpService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -21,7 +21,7 @@ public class OtpController {
     public ResponseEntity<OtpResponse> requestOtp(
             @Valid @RequestBody OtpRequest request
     ) {
-        OtpResponse response = otpService.sendOtp(request);
+        OtpResponse response = otpService.sendOtp(request, TokenPurpose.EMAIL_VERIFICATION);
         return ResponseEntity.ok(response);
     }
 
@@ -29,7 +29,7 @@ public class OtpController {
     public ResponseEntity<OtpResponse> resendOtp(
             @Valid @RequestBody OtpRequest request
     ) {
-        OtpResponse response = otpService.resendOtp(request);
+        OtpResponse response = otpService.resendOtp(request, TokenPurpose.EMAIL_VERIFICATION);
         return ResponseEntity.ok(response);
     }
 
@@ -37,7 +37,7 @@ public class OtpController {
     public ResponseEntity<OtpResponse> verifyOtp(
             @Valid @RequestBody OtpVerifyRequest request
     ) {
-        OtpResponse response = otpService.verifyOtp(request);
+        OtpResponse response = otpService.verifyOtp(request, TokenPurpose.EMAIL_VERIFICATION);
         return ResponseEntity.ok(response);
     }
 }

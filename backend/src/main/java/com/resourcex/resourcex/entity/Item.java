@@ -14,7 +14,8 @@ import java.util.List;
         indexes = {
                 @Index(name = "idx_items_owner", columnList = "owner_id"),
                 @Index(name = "idx_items_status", columnList = "status"),
-                @Index(name = "idx_items_category", columnList = "category")
+                @Index(name = "idx_items_category", columnList = "category_id"),
+                @Index(name = "idx_items_created_at", columnList = "created_at")
         }
 )
 @Getter
@@ -38,8 +39,9 @@ public class Item {
     @Column(columnDefinition = "TEXT")
     private String description;
 
-    @Column(length = 80)
-    private String category;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "category_id")
+    private Category category;
 
     @Column(length = 80)
     private String itemCondition;
@@ -58,7 +60,7 @@ public class Item {
             orphanRemoval = true
     )
     @Builder.Default
-    private List<ItemImage> images = new ArrayList<>();
+    private List<FileMetadata> images = new ArrayList<>();
 
     @Column(nullable = false, updatable = false)
     private LocalDateTime createdAt;
@@ -103,9 +105,7 @@ public class Item {
             this.description = this.description.trim();
         }
 
-        if (this.category != null) {
-            this.category = this.category.trim();
-        }
+        // Category is now an entity, normalization happens via category service/repository
 
         if (this.itemCondition != null) {
             this.itemCondition = this.itemCondition.trim();

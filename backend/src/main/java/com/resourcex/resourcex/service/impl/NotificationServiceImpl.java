@@ -11,6 +11,7 @@ import com.resourcex.resourcex.repository.NotificationRepository;
 import com.resourcex.resourcex.repository.UserRepository;
 import com.resourcex.resourcex.service.NotificationService;
 import com.resourcex.resourcex.validator.NotificationValidator;
+import org.springframework.messaging.simp.SimpMessagingTemplate;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -30,6 +31,7 @@ public class NotificationServiceImpl implements NotificationService {
     private final UserRepository userRepository;
     private final NotificationMapper notificationMapper;
     private final NotificationValidator notificationValidator;
+    private final SimpMessagingTemplate messagingTemplate;
 
     @Override
     public NotificationResponse createNotification(NotificationRequest request) {
@@ -69,8 +71,11 @@ public class NotificationServiceImpl implements NotificationService {
 
         Notification saved = notificationRepository.save(notification);
         log.info("Notification created with ID: {}", saved.getNotificationId());
+        
+        NotificationResponse response = notificationMapper.toResponse(saved);
+        messagingTemplate.convertAndSend("/topic/notifications/" + request.getUserId(), response);
 
-        return notificationMapper.toResponse(saved);
+        return response;
     }
 
     @Override
@@ -452,5 +457,12 @@ public class NotificationServiceImpl implements NotificationService {
 
         notificationRepository.saveAll(notifications);
         log.info("Broadcast notification sent to {} valid users", notifications.size());
+    }
+
+    @Override
+    @Transactional
+    public void cleanupStaleNotifications(LocalDateTime threshold) {
+        notificationRepository.deleteByCreatedAtBefore(threshold);
+        log.info("Cleaned up stale notifications older than {}", threshold);
     }
 }

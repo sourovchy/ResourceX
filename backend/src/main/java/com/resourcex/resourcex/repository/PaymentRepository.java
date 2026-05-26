@@ -8,6 +8,8 @@ import org.springframework.stereotype.Repository;
 
 import java.math.BigDecimal;
 import java.util.Optional;
+import java.time.LocalDateTime;
+import java.util.List;
 
 @Repository
 public interface PaymentRepository extends JpaRepository<Payment, Long> {
@@ -20,10 +22,20 @@ public interface PaymentRepository extends JpaRepository<Payment, Long> {
 
     @Query("select coalesce(sum(p.amount), 0) from Payment p where p.status = :status")
     BigDecimal sumAmountByStatus(PaymentStatus status);
+
     @Query("""
        SELECT COALESCE(SUM(p.amount), 0)
        FROM Payment p
        WHERE p.status = com.resourcex.resourcex.entity.Payment.PaymentStatus.SUCCESS
        """)
     BigDecimal sumSuccessfulRevenue();
+
+    List<Payment> findAllByOrderByCreatedAtDesc();
+
+    List<Payment> findByStatusOrderByCreatedAtDesc(PaymentStatus status);
+
+    List<Payment> findByCreatedAtBetweenOrderByCreatedAtDesc(
+            LocalDateTime startDate,
+            LocalDateTime endDate
+    );
 }

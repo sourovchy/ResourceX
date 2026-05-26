@@ -57,4 +57,33 @@ public class TrustController {
         trustService.applyPenaltyImpact(userId, penaltyId, deductionPoints, reason);
         return ResponseEntity.ok().build();
     }
+
+    // --- Merged from AdminTrustController ---
+
+    @GetMapping("/admin/users")
+    @PreAuthorize("hasAnyRole('ADMIN','MODERATOR','SUPER_ADMIN')")
+    public ResponseEntity<List<com.resourcex.resourcex.dto.response.AdminTrustUserResponse>> getAllUsers() {
+        return ResponseEntity.ok(trustService.getAllUsersForTrustAdmin());
+    }
+
+    @GetMapping("/admin/audit-log")
+    @PreAuthorize("hasAnyRole('ADMIN','MODERATOR','SUPER_ADMIN')")
+    public ResponseEntity<List<com.resourcex.resourcex.dto.response.TrustAuditResponse>> getAuditLog() {
+        return ResponseEntity.ok(trustService.getTrustAuditLog());
+    }
+
+    public static class AdjustTrustRequest {
+        public Integer change;
+        public String reason;
+    }
+
+    @PatchMapping("/admin/{userId}/adjust")
+    @PreAuthorize("hasAnyRole('ADMIN','MODERATOR','SUPER_ADMIN')")
+    public ResponseEntity<Void> adjustTrust(@PathVariable Long userId, @RequestBody AdjustTrustRequest req) {
+        if (req == null || req.change == null || req.change == 0) {
+            throw new com.resourcex.resourcex.exception.ResourceNotFoundException("Invalid change value");
+        }
+        trustService.adjustTrust(userId, req.change, req.reason);
+        return ResponseEntity.ok().build();
+    }
 }

@@ -5,6 +5,8 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
+import org.springframework.data.jpa.repository.Modifying;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.Optional;
@@ -41,7 +43,7 @@ public interface NotificationRepository extends JpaRepository<Notification, Long
      * Get notifications by type for a user
      */
     List<Notification> findByUserUserIdAndNotificationTypeOrderByCreatedAtDesc(
-            Long userId, 
+            Long userId,
             Notification.NotificationType notificationType
     );
 
@@ -73,9 +75,16 @@ public interface NotificationRepository extends JpaRepository<Notification, Long
     Optional<Notification> findByNotificationIdAndUserUserId(Long notificationId, Long userId);
 
     /**
-     * Delete all read notifications for a user older than a certain point
+     * Delete all read notifications for a user
      * (useful for cleanup)
      */
+    @Modifying
+    @Transactional
     @Query("DELETE FROM Notification n WHERE n.user.userId = :userId AND n.isRead = true")
     void deleteReadNotificationsByUserId(@Param("userId") Long userId);
+
+    @Modifying
+    @Transactional
+    @Query("DELETE FROM Notification n WHERE n.createdAt < :dateTime")
+    void deleteByCreatedAtBefore(@Param("dateTime") java.time.LocalDateTime dateTime);
 }

@@ -1,4 +1,7 @@
 import { AuthUser, UserRole } from "@/types/auth";
+import { logger } from "@/lib/logger";
+
+export type AccessibleRole = "admin" | "student" | "moderator" | "super_admin";
 
 export const AUTH_TOKEN_KEY = "resourcex_token";
 export const AUTH_USER_KEY = "resourcex_user";
@@ -40,7 +43,7 @@ export function storeSession(
 	localStorage.setItem(AUTH_USER_KEY, JSON.stringify(userWithRoles));
 	localStorage.setItem(AUTH_ROLES_KEY, JSON.stringify(roles));
 
-	document.cookie = `${AUTH_TOKEN_KEY}=${token}; path=/; max-age=86400; SameSite=Lax`;
+	logger.debug("[Auth] Session stored with roles:", roles);
 }
 
 export function clearSession() {
@@ -49,14 +52,34 @@ export function clearSession() {
 	localStorage.removeItem(AUTH_TOKEN_KEY);
 	localStorage.removeItem(AUTH_USER_KEY);
 	localStorage.removeItem(AUTH_ROLES_KEY);
-	for (const key of [AUTH_TOKEN_KEY, AUTH_ROLES_KEY]) {
-		document.cookie = `${key}=; path=/; max-age=0; SameSite=Lax`;
-	}
+	logger.debug("[Auth] Session cleared");
 }
 
 export function hasRole(roles: UserRole[] | undefined, role: AccessibleRole) {
-	if (!roles) return false;
-	return role === "admin"
-		? roles.some((value) => ADMIN_ROLES.includes(value))
-		: roles.some((value) => AUTHENTICATED_ROLES.includes(value));
+	if (!roles || roles.length === 0) {
+		logger.debug("[Auth] No roles available for hasRole check");
+		return false;
+	}
+
+	logger.debug(`[Auth] Checking role "${role}" against user roles:`, roles);
+
+	// Map AccessibleRole to check patterns
+	if (role === "admin") {
+		// "admin" should allow anyone with admin-level access
+		return roles.some((value) => ADMIN_ROLES.includes(value));
+	} else if (role === "super_admin") {
+		// "super_admin" should allow ONLY super admin
+		return roles.includes("ROLE_SUPER_ADMIN");
+	} else if (role === "moderator") {
+		// "moderator" should allow moderator or higher
+		return roles.some((value) =>
+			["ROLE_MODERATOR", "ROLE_SUPER_ADMIN", "ROLE_ADMIN"].includes(value),
+		);
+	} else if (role === "student") {
+		// "student" allows any authenticated user
+		return roles.some((value) => AUTHENTICATED_ROLES.includes(value));
+	}
+
+	// Fallback: check if any authenticated role matches
+	return roles.some((value) => AUTHENTICATED_ROLES.includes(value));
 }

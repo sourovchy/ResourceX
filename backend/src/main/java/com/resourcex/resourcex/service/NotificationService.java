@@ -140,4 +140,9 @@ public interface NotificationService {
             Notification.RelatedEntityType entityType,
             Long entityId,
             Long createdByUserId);
+
+    /**
+     * Cleanup stale notifications
+     */
+    void cleanupStaleNotifications(java.time.LocalDateTime threshold);
 }

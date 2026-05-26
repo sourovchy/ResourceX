@@ -11,15 +11,22 @@ import com.resourcex.resourcex.exception.ForbiddenException;
 import com.resourcex.resourcex.exception.ResourceNotFoundException;
 import com.resourcex.resourcex.mapper.ItemMapper;
 import com.resourcex.resourcex.repository.BookingRepository;
+import com.resourcex.resourcex.repository.CategoryRepository;
+import com.resourcex.resourcex.repository.FileMetadataRepository;
 import com.resourcex.resourcex.repository.ItemRepository;
 import com.resourcex.resourcex.repository.UserRepository;
 import com.resourcex.resourcex.service.ItemService;
+import com.resourcex.resourcex.service.AuditLogService;
+import com.resourcex.resourcex.entity.AuditLog;
 import com.resourcex.resourcex.validator.ItemValidator;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.PageImpl;
 
 import java.util.List;
 
@@ -30,7 +37,10 @@ public class ItemServiceImpl implements ItemService {
     private final ItemRepository itemRepository;
     private final UserRepository userRepository;
     private final BookingRepository bookingRepository;
+    private final FileMetadataRepository fileMetadataRepository;
+    private final CategoryRepository categoryRepository;
     private final ItemValidator itemValidator;
+    private final AuditLogService auditLogService;
 
     @Override
     @Transactional
@@ -39,10 +49,16 @@ public class ItemServiceImpl implements ItemService {
 
         User owner = resolveCurrentUser();
 
+        com.resourcex.resourcex.entity.Category categoryObj = null;
+        if (request.getCategory() != null && !request.getCategory().isBlank()) {
+            categoryObj = categoryRepository.findByNameIgnoreCase(request.getCategory().trim())
+                    .orElseGet(() -> categoryRepository.save(com.resourcex.resourcex.entity.Category.builder().name(request.getCategory().trim()).build()));
+        }
+
         Item item = Item.builder()
                 .title(request.getTitle())
                 .description(request.getDescription())
-                .category(request.getCategory())
+                .category(categoryObj)
                 .itemCondition(request.getItemCondition())
                 .dailyRate(request.getDailyRate())
                 .status(Item.ItemStatus.AVAILABLE)
@@ -52,9 +68,19 @@ public class ItemServiceImpl implements ItemService {
         Item saved = itemRepository.save(item);
 
         if (request.getImageUrls() != null && !request.getImageUrls().isEmpty()) {
-            ItemMapper.mapImages(saved, request.getImageUrls());
+            processImageUrls(saved, request.getImageUrls());
             saved = itemRepository.save(saved);
         }
+
+        auditLogService.logAction(
+                AuditLog.ActorType.USER,
+                owner.getUserId(),
+                "ITEM_CREATED",
+                "ITEM",
+                saved.getItemId(),
+                AuditLog.AuditOutcome.SUCCESS,
+                "Item created: " + saved.getTitle()
+        );
 
         return ItemMapper.toResponse(saved);
     }
@@ -75,7 +101,28 @@ public class ItemServiceImpl implements ItemService {
 
         ItemMapper.updateEntity(item, request);
 
+        if (request.getCategory() != null && !request.getCategory().isBlank()) {
+            com.resourcex.resourcex.entity.Category categoryObj = categoryRepository.findByNameIgnoreCase(request.getCategory().trim())
+                    .orElseGet(() -> categoryRepository.save(com.resourcex.resourcex.entity.Category.builder().name(request.getCategory().trim()).build()));
+            item.setCategory(categoryObj);
+        }
+
+        if (request.getImageUrls() != null) {
+            processImageUrls(item, request.getImageUrls());
+        }
+
         Item saved = itemRepository.save(item);
+
+        auditLogService.logAction(
+                AuditLog.ActorType.USER,
+                resolveCurrentUser().getUserId(),
+                "ITEM_UPDATED",
+                "ITEM",
+                saved.getItemId(),
+                AuditLog.AuditOutcome.SUCCESS,
+                "Item updated: " + saved.getTitle()
+        );
+
         return ItemMapper.toResponse(saved);
     }
 
@@ -94,15 +141,18 @@ public class ItemServiceImpl implements ItemService {
 
     @Override
     @Transactional(readOnly = true)
-    public List<ItemResponse> getAllItems(String category, String searchQuery) {
+    public Page<ItemResponse> getAllItems(String category, String searchQuery, Pageable pageable) {
         String normalizedCategory = normalizeFilterValue(category);
         String normalizedSearchQuery = normalizeFilterValue(searchQuery);
 
-        return itemRepository.findItemsWithFilters(normalizedCategory, normalizedSearchQuery)
-                .stream()
+        Page<Item> itemPage = itemRepository.findItemsWithFilters(normalizedCategory, normalizedSearchQuery, pageable);
+        
+        List<ItemResponse> responses = itemPage.stream()
                 .filter(item -> item.getStatus() != Item.ItemStatus.DELETED || isCurrentUserAdmin())
                 .map(ItemMapper::toResponse)
                 .toList();
+                
+        return new PageImpl<>(responses, pageable, itemPage.getTotalElements());
     }
 
     @Override
@@ -142,6 +192,16 @@ public class ItemServiceImpl implements ItemService {
 
         item.setStatus(Item.ItemStatus.DELETED);
         itemRepository.save(item);
+
+        auditLogService.logAction(
+                AuditLog.ActorType.USER,
+                resolveCurrentUser().getUserId(),
+                "ITEM_DELETED",
+                "ITEM",
+                itemId,
+                AuditLog.AuditOutcome.SUCCESS,
+                "Item marked as deleted"
+        );
     }
 
     private User resolveCurrentUser() {
@@ -185,5 +245,39 @@ public class ItemServiceImpl implements ItemService {
             return null;
         }
         return value.trim();
+    }
+
+    private void processImageUrls(Item item, List<String> imageUrls) {
+        if (item.getImages() == null) {
+            item.setImages(new java.util.ArrayList<>());
+        }
+        
+        List<com.resourcex.resourcex.entity.FileMetadata> newImages = new java.util.ArrayList<>();
+        for (String url : imageUrls) {
+            if (url != null && !url.isBlank()) {
+                String storedName = extractStoredName(url);
+                fileMetadataRepository.findByStoredName(storedName).ifPresent(file -> {
+                    file.setItem(item);
+                    newImages.add(file);
+                });
+            }
+        }
+        
+        // Remove old images not in the new list by setting item to null (if not using orphanRemoval)
+        for (com.resourcex.resourcex.entity.FileMetadata oldFile : item.getImages()) {
+            if (!newImages.contains(oldFile)) {
+                oldFile.setItem(null);
+            }
+        }
+        
+        item.getImages().clear();
+        item.getImages().addAll(newImages);
+    }
+
+    private String extractStoredName(String url) {
+        if (url.contains("/api/files/")) {
+            return url.substring(url.lastIndexOf('/') + 1);
+        }
+        return url;
     }
 }

@@ -17,6 +17,7 @@ import {
 	getStoredToken,
 	hasRole,
 	storeSession,
+	type AccessibleRole,
 } from "@/lib/auth";
 import {
 	AuthResponse,
@@ -24,8 +25,6 @@ import {
 	CurrentUserResponse,
 	UserRole,
 } from "@/types/auth";
-
-type AccessibleRole = "admin" | "student" | "moderator" | "super_admin";
 
 type AuthContextValue = {
 	user: AuthUser | null;
@@ -41,30 +40,17 @@ type AuthContextValue = {
 	canAccess: (role: AccessibleRole) => boolean;
 };
 
-const AuthContext =
-	createContext<AuthContextValue | undefined>(undefined);
+const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 
-function normalizeRoles(
-	roles: UserRole[] = [],
-): UserRole[] {
-	return roles.map((role) =>
-		String(role).toUpperCase() as UserRole,
-	);
+function normalizeRoles(roles: UserRole[] = []): UserRole[] {
+	return roles.map((role) => String(role).toUpperCase() as UserRole);
 }
 
-function getHomeRoute(roles: UserRole[]) {
-	return roles.some((role) =>
-		["ROLE_ADMIN", "ROLE_SUPER_ADMIN", "ROLE_MODERATOR"].includes(role),
-	)
-		? "/home"
-		: "/dashboard";
+function getHomeRoute(_roles: UserRole[]) {
+	return "/dashboard";
 }
 
-export function AuthProvider({
-								 children,
-							 }: {
-	children: React.ReactNode;
-}) {
+export function AuthProvider({ children }: { children: React.ReactNode }) {
 	const router = useRouter();
 	const pathname = usePathname();
 
@@ -73,6 +59,7 @@ export function AuthProvider({
 	const [loading, setLoading] = useState(true);
 
 	const suppressLoginRedirectRef = useRef(false);
+	const isMountedRef = useRef(true);
 
 	const applySession = useCallback(
 		(token: string, nextUser: AuthUser, nextRoles: UserRole[]) => {
@@ -90,31 +77,50 @@ export function AuthProvider({
 		setUser(null);
 		setRoles([]);
 		suppressLoginRedirectRef.current = false;
-		router.replace("/auth/login");
-	}, [router]);
+
+		if (pathname !== "/auth/login") {
+			router.replace("/auth/login");
+		}
+	}, [pathname, router]);
 
 	const refresh = useCallback(async () => {
 		const token = getStoredToken();
 
 		if (!token) {
-			setLoading(false);
+			clearSession();
+			if (isMountedRef.current) {
+				setUser(null);
+				setRoles([]);
+				setLoading(false);
+			}
 			return;
 		}
 
 		try {
 			const { data } = await api.get<CurrentUserResponse>("/auth/me");
-			applySession(token, data.user, data.roles ?? []);
+			if (isMountedRef.current) {
+				applySession(token, data.user, data.roles ?? []);
+			}
 		} catch {
 			clearSession();
-			setUser(null);
-			setRoles([]);
+			if (isMountedRef.current) {
+				setUser(null);
+				setRoles([]);
+			}
 		} finally {
-			setLoading(false);
+			if (isMountedRef.current) {
+				setLoading(false);
+			}
 		}
 	}, [applySession]);
 
 	useEffect(() => {
+		isMountedRef.current = true;
 		refresh();
+
+		return () => {
+			isMountedRef.current = false;
+		};
 	}, [refresh]);
 
 	useEffect(() => {
@@ -124,11 +130,7 @@ export function AuthProvider({
 	}, [pathname]);
 
 	const login = useCallback(
-		async (
-			email: string,
-			password: string,
-			redirect = true,
-		) => {
+		async (email: string, password: string, redirect = true) => {
 			const { data } = await api.post<AuthResponse>("/auth/login", {
 				email,
 				password,

@@ -13,6 +13,8 @@ import com.resourcex.resourcex.repository.RoleRepository;
 import com.resourcex.resourcex.repository.StudentProfileRepository;
 import com.resourcex.resourcex.repository.UserRepository;
 import com.resourcex.resourcex.repository.UserRoleRepository;
+import com.resourcex.resourcex.service.AuditLogService;
+import com.resourcex.resourcex.entity.AuditLog;
 import com.resourcex.resourcex.service.SuperAdminService;
 import com.resourcex.resourcex.util.constants.RoleConstants;
 import lombok.RequiredArgsConstructor;
@@ -21,6 +23,8 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 
 import java.util.List;
 import java.util.Optional;
@@ -35,6 +39,7 @@ public class SuperAdminServiceImpl implements SuperAdminService {
         private final UserRoleRepository userRoleRepository;
         private final StudentProfileRepository studentProfileRepository;
         private final PasswordEncoder passwordEncoder;
+        private final AuditLogService auditLogService;
 
         @Override
         public UserResponse promoteToAdmin(Long userId) {
@@ -52,6 +57,16 @@ public class SuperAdminServiceImpl implements SuperAdminService {
                                         .build();
                         userRoleRepository.save(userRole);
                 }
+
+                auditLogService.logAction(
+                                AuditLog.ActorType.USER,
+                                getCurrentUserId(),
+                                "USER_PROMOTED",
+                                "USER",
+                                userId,
+                                AuditLog.AuditOutcome.SUCCESS,
+                                "User promoted to ADMIN"
+                );
 
                 return UserMapper.toResponse(
                                 user,
@@ -84,6 +99,16 @@ public class SuperAdminServiceImpl implements SuperAdminService {
                                         .role(moderatorRole)
                                         .build());
                 }
+
+                auditLogService.logAction(
+                                AuditLog.ActorType.USER,
+                                getCurrentUserId(),
+                                "USER_DEMOTED",
+                                "USER",
+                                userId,
+                                AuditLog.AuditOutcome.SUCCESS,
+                                "User demoted from ADMIN to MODERATOR"
+                );
 
                 return UserMapper.toResponse(
                                 user,
@@ -123,24 +148,30 @@ public class SuperAdminServiceImpl implements SuperAdminService {
                                 .ifPresent(studentProfileRepository::delete);
 
                 userRepository.delete(user);
+
+                auditLogService.logAction(
+                                AuditLog.ActorType.USER,
+                                getCurrentUserId(),
+                                "PRIVILEGED_USER_DELETED",
+                                "USER",
+                                userId,
+                                AuditLog.AuditOutcome.SUCCESS,
+                                "Privileged user deleted"
+                );
         }
 
         @Override
-        public List<UserResponse> getAllPrivilegedUsers() {
-                return userRepository.findAll().stream()
-                                .filter(u -> {
-                                        List<String> roleNames = userRoleRepository.findAllByUser(u).stream()
-                                                        .map(ur -> ur.getRole().getName())
-                                                        .toList();
-                                        return roleNames.contains(RoleConstants.ROLE_ADMIN)
-                                                        || roleNames.contains(RoleConstants.ROLE_MODERATOR)
-                                                        || roleNames.contains(RoleConstants.ROLE_SUPER_ADMIN);
-                                })
+        public Page<UserResponse> getAllPrivilegedUsers(Pageable pageable) {
+                List<String> privilegedRoles = List.of(
+                                RoleConstants.ROLE_ADMIN,
+                                RoleConstants.ROLE_MODERATOR,
+                                RoleConstants.ROLE_SUPER_ADMIN
+                );
+                return userRepository.findAllByRoleNames(privilegedRoles, pageable)
                                 .map(user -> UserMapper.toResponse(
                                                 user,
                                                 userRoleRepository.findAllByUser(user),
-                                                studentProfileRepository.findByUser(user).orElse(null)))
-                                .toList();
+                                                studentProfileRepository.findByUser(user).orElse(null)));
         }
 
         private boolean isSuperAdmin(User user) {
@@ -179,6 +210,16 @@ public class SuperAdminServiceImpl implements SuperAdminService {
                                 .user(savedUser)
                                 .role(role)
                                 .build());
+
+                auditLogService.logAction(
+                                AuditLog.ActorType.USER,
+                                getCurrentUserId(),
+                                "PRIVILEGED_USER_CREATED",
+                                "USER",
+                                savedUser.getUserId(),
+                                AuditLog.AuditOutcome.SUCCESS,
+                                "Created privileged user with role " + roleName
+                );
 
                 return UserMapper.toResponse(
                                 savedUser,

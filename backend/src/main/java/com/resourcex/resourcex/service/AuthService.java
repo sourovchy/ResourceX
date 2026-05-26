@@ -12,4 +12,8 @@ public interface AuthService {
     AuthResponse login(LoginRequest request);
 
     CurrentUserResponse getCurrentUser();
+
+    void forgotPassword(com.resourcex.resourcex.dto.request.ForgotPasswordRequest request);
+
+    void resetPassword(com.resourcex.resourcex.dto.request.ResetPasswordRequest request);
 }

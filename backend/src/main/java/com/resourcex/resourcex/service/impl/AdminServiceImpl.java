@@ -8,6 +8,7 @@ import com.resourcex.resourcex.exception.ConflictException;
 import com.resourcex.resourcex.exception.ResourceNotFoundException;
 import com.resourcex.resourcex.repository.*;
 import com.resourcex.resourcex.service.AdminService;
+import com.resourcex.resourcex.service.AuditLogService;
 import com.resourcex.resourcex.util.constants.RoleConstants;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -16,6 +17,8 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.stream.Collectors;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 
 @Service
 @RequiredArgsConstructor
@@ -24,12 +27,12 @@ public class AdminServiceImpl implements AdminService {
         private final PendingUserRepository pendingUserRepository;
         private final UserRepository userRepository;
         private final StudentProfileRepository studentProfileRepository;
-        private final AuditLogRepository auditLogRepository;
         private final ItemRepository itemRepository;
         private final BookingRepository bookingRepository;
         private final PaymentRepository paymentRepository;
         private final RoleRepository roleRepository;
         private final UserRoleRepository userRoleRepository;
+        private final AuditLogService auditLogService;
 
         @Override
         //To get dashboard stat
@@ -45,10 +48,12 @@ public class AdminServiceImpl implements AdminService {
         }
 
         @Override
-        public List<PendingUserResponse> getPendingUsers() {
-                return pendingUserRepository.findByStatus(PendingUserStatus.PENDING).stream()
-                                .map(this::mapToResponse)
-                                .collect(Collectors.toList());
+        @Transactional(readOnly = true)
+        public Page<PendingUserResponse> getPendingUsers(Pageable pageable) {
+
+                return pendingUserRepository
+                        .findByStatus(PendingUserStatus.PENDING, pageable)
+                        .map(this::mapToResponse);
         }
 
         @Override
@@ -102,15 +107,15 @@ public class AdminServiceImpl implements AdminService {
                 pending.setReviewedAt(LocalDateTime.now());
                 pendingUserRepository.save(pending);
 
-                AuditLog log = AuditLog.builder()
-                                .actorType(AuditLog.ActorType.SYSTEM)
-                                .actionType("USER_APPROVAL")
-                                .entityType("PENDING_USER")
-                                .entityId(pending.getPendingUserId())
-                                .outcome(AuditLog.AuditOutcome.APPROVED)
-                                .details("Approved pending user " + pending.getEmail() + " and created user account")
-                                .build();
-                auditLogRepository.save(log);
+                auditLogService.logAction(
+                                AuditLog.ActorType.SYSTEM,
+                                null,
+                                "USER_APPROVAL",
+                                "PENDING_USER",
+                                pending.getPendingUserId(),
+                                AuditLog.AuditOutcome.APPROVED,
+                                "Approved pending user " + pending.getEmail() + " and created user account"
+                );
         }
 
         @Override
@@ -133,15 +138,15 @@ public class AdminServiceImpl implements AdminService {
                 pending.setReviewedAt(LocalDateTime.now());
                 pendingUserRepository.save(pending);
 
-                AuditLog log = AuditLog.builder()
-                                .actorType(AuditLog.ActorType.SYSTEM)
-                                .actionType("USER_REJECTION")
-                                .entityType("PENDING_USER")
-                                .entityId(pending.getPendingUserId())
-                                .outcome(AuditLog.AuditOutcome.REJECTED)
-                                .details("Rejected pending user " + pending.getEmail() + ". Reason: " + rejectionReason)
-                                .build();
-                auditLogRepository.save(log);
+                auditLogService.logAction(
+                                AuditLog.ActorType.SYSTEM,
+                                null,
+                                "USER_REJECTION",
+                                "PENDING_USER",
+                                pending.getPendingUserId(),
+                                AuditLog.AuditOutcome.REJECTED,
+                                "Rejected pending user " + pending.getEmail() + ". Reason: " + rejectionReason
+                );
         }
 
         @Override
@@ -154,15 +159,15 @@ public class AdminServiceImpl implements AdminService {
                 item.setStatus(Item.ItemStatus.BLOCKED);
                 itemRepository.save(item);
 
-                AuditLog log = AuditLog.builder()
-                                .actorType(AuditLog.ActorType.SYSTEM)
-                                .actionType("ITEM_TAKEDOWN")
-                                .entityType("ITEM")
-                                .entityId(itemId)
-                                .outcome(AuditLog.AuditOutcome.SUCCESS)
-                                .details("Item " + item.getTitle() + " taken down. Reason: " + reason)
-                                .build();
-                auditLogRepository.save(log);
+                auditLogService.logAction(
+                                AuditLog.ActorType.SYSTEM,
+                                null,
+                                "ITEM_TAKEDOWN",
+                                "ITEM",
+                                itemId,
+                                AuditLog.AuditOutcome.SUCCESS,
+                                "Item " + item.getTitle() + " taken down. Reason: " + reason
+                );
         }
 
         private PendingUserResponse mapToResponse(PendingUser pending) {

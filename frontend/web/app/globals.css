@@ -5,85 +5,86 @@
 /* Light Theme (Clean, Crisp, Professional) */
 :root {
     --color-primary: #4f46e5;         /* Modern Indigo */
-    --color-primaryLight: #e0e7ff;    
-    --color-primaryDark: #4338ca;     
-    --color-onPrimary: #ffffff;       
-    
-    --color-accent: #0f172a;          /* Slate Accent for premium contrast */
-    --color-accentLight: #f1f5f9;     
-    --color-accentDark: #020617;      
-    
-    --color-success: #10b981;         /* Emerald Green */
-    --color-secondary: #6366f1;       
-    --color-successLight: #ecfdf5;    
-    --color-successDark: #047857;     
+    --color-primaryLight: #e0e7ff;
+    --color-primaryDark: #4338ca;
+    --color-onPrimary: #ffffff;
 
-    --color-error: #ef4444;           /* Rose/Red */
-    --color-errorLight: #fef2f2;      
-    --color-errorDark: #b91c1c;       
-    
+    --color-accent: #0f172a;          /* Slate Accent for premium contrast */
+    --color-accentLight: #f1f5f9;
+    --color-accentDark: #020617;
+
+    --color-success: #10b981; /* Emerald Green */
+    --color-secondary: #6366f1;
+    --color-successLight: #ecfdf5;
+    --color-successDark: #047857;
+
+    --color-error: #ef4444;
+    /* Rose/Red */
+    --color-errorLight: #fef2f2;
+    --color-errorDark: #b91c1c;
+
     --color-warning: #f59e0b;         /* Amber */
-    --color-warningLight: #fffbeb;    
-    --color-warningDark: #b45309;     
+    --color-warningLight: #fffbeb;
+    --color-warningDark: #b45309;
 
     --color-background: #fafafa;      /* Soft Off-White (Less straining than pure white) */
-    --color-surface: #ffffff;         
-    --color-surfaceVariant: #f4f4f5;  
-    --color-card: #ffffff;            
+    --color-surface: #ffffff;
+    --color-surfaceVariant: #f4f4f5;
+    --color-card: #ffffff;
 
     --color-textPrimary: #09090b;     /* Deep Zinc (More organic than pure #000) */
-    --color-textSecondary: #52525b;   
-    --color-textTertiary: #a1a1aa;    
-    --color-onSurface: #09090b;       
+    --color-textSecondary: #52525b;
+    --color-textTertiary: #a1a1aa;
+    --color-onSurface: #09090b;
 
     /* Borders and Dividers */
     --color-border: #d9d9df;          /* Subtly crisp lines */
-    --color-borderLight: #dedee8;     
-    --color-outline: #71717a;         
-    --color-outlineVariant: #d4d4d8;  
-    --color-divider: #e4e4e7;         
+    --color-borderLight: #dedee8;
+    --color-outline: #71717a;
+    --color-outlineVariant: #d4d4d8;
+    --color-divider: #e4e4e7;
 }
 
 /* Dark Theme (Sleek, Premium, High-End Developer Aesthetic) */
 .dark {
     --color-primary: #6366f1;         /* Indigo Glow */
-    --color-primaryLight: #1e1b4b;    
-    --color-primaryDark: #818cf8;     
-    --color-onPrimary: #ffffff;       
+    --color-primaryLight: #1e1b4b;
+    --color-primaryDark: #818cf8;
+    --color-onPrimary: #ffffff;
 
-    --color-accent: #f8fafc;          
-    --color-accentLight: #0f172a;     
-    --color-accentDark: #cbd5e1;      
+    --color-accent: #f8fafc;
+    --color-accentLight: #0f172a;
+    --color-accentDark: #cbd5e1;
 
-    --color-success: #34d399;         
-    --color-secondary: #38bdf8;       
-    --color-successLight: #064e3b;    
-    --color-successDark: #a7f3d0;     
+    --color-success: #34d399;
+    --color-secondary: #38bdf8;
+    --color-successLight: #064e3b;
+    --color-successDark: #a7f3d0;
 
-    --color-error: #f87171;           
-    --color-errorLight: #451a1a;      
-    --color-errorDark: #fca5a5;       
+    --color-error: #f87171;
+    --color-errorLight: #451a1a;
+    --color-errorDark: #fca5a5;
 
-    --color-warning: #fbbf24;         
-    --color-warningLight: #451a03;    
-    --color-warningDark: #fcd34d;     
+    --color-warning: #fbbf24;
+    --color-warningLight: #451a03;
+    --color-warningDark: #fcd34d;
 
     --color-background: #09090b;      /* Sleek Obsidian/Zinc Black */
     --color-surface: #121214;         /* Rich Elevated Dark Surface */
-    --color-surfaceVariant: #18181b;  
-    --color-card: #141417;            
+    --color-surfaceVariant: #18181b;
+    --color-card: #141417;
 
-    --color-textPrimary: #f4f4f5;     
-    --color-textSecondary: #a1a1aa;   
-    --color-textTertiary: #71717a;    
-    --color-onSurface: #f4f4f5;       
+    --color-textPrimary: #f4f4f5;
+    --color-textSecondary: #a1a1aa;
+    --color-textTertiary: #71717a;
+    --color-onSurface: #f4f4f5;
 
     /* Borders and Dividers */
     --color-border: #27272a;          /* Muted dark borders */
-    --color-borderLight: #1f1f23;     
-    --color-outline: #52525b;         
-    --color-outlineVariant: #3f3f46;  
-    --color-divider: #27272a;         
+    --color-borderLight: #1f1f23;
+    --color-outline: #52525b;
+    --color-outlineVariant: #3f3f46;
+    --color-divider: #27272a;
 }
 
 /* Smooth theme transitions */

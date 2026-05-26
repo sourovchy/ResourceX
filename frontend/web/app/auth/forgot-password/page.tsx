@@ -1,60 +1,113 @@
 "use client";
 
-import React from "react";
+import React, { useState } from "react";
 import Link from "next/link";
-import { Mail, ArrowRight, ArrowLeft } from "lucide-react";
+import { Mail, ArrowLeft, Loader2 } from "lucide-react";
+import api from "@/lib/api";
 
 export default function ForgotPasswordPage() {
+	const [email, setEmail] = useState("");
+	const [loading, setLoading] = useState(false);
+	const [message, setMessage] = useState("");
+	const [error, setError] = useState("");
+
+	const handleSubmit = async (e: React.FormEvent) => {
+		e.preventDefault();
+		setError("");
+		setMessage("");
+
+		if (!email.trim() || !email.includes("@")) {
+			setError("Please enter a valid email address.");
+			return;
+		}
+
+		setLoading(true);
+		try {
+			const res = await api.post("/auth/forgot-password", {
+				email: email.trim(),
+			});
+			setMessage(
+				res.data?.message || "Password reset email sent. Please check your inbox.",
+			);
+		} catch (err: any) {
+			setError(
+				err.response?.data?.message || "Failed to send reset link. Please try again.",
+			);
+		} finally {
+			setLoading(false);
+		}
+	};
+
 	return (
-		<div className="min-h-screen bg-background flex items-center justify-center p-4">
-			{/* Background decoration */}
-			<div className="absolute inset-0 overflow-hidden pointer-events-none">
-				<div className="absolute top-[-10%] left-[-10%] w-96 h-96 bg-primary opacity-20 rounded-full blur-3xl"></div>
-				<div className="absolute bottom-[-10%] right-[-10%] w-[30rem] h-[30rem] bg-accent opacity-20 rounded-full blur-3xl"></div>
+		<div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-background px-4 py-8 sm:px-6 lg:px-8">
+			<div className="pointer-events-none absolute inset-0 overflow-hidden">
+				<div className="absolute left-[-10%] top-[-10%] h-72 w-72 rounded-full bg-primary opacity-20 blur-3xl sm:h-96 sm:w-96" />
+				<div className="absolute bottom-[-10%] right-[-10%] h-72 w-72 rounded-full bg-accent opacity-20 blur-3xl sm:h-[30rem] sm:w-[30rem]" />
 			</div>
 
-			<div className="relative z-10 w-full max-w-md">
-				<div className="bg-surface border border-borderLight p-8 rounded-2xl shadow-xl">
-					<div className="text-center mb-8">
-						<h1 className="text-3xl font-bold text-textPrimary tracking-tight">
+			<div className="relative z-10 w-full max-w-md px-1 sm:px-0">
+				<div className="rounded-2xl border border-borderLight bg-surface p-5 shadow-xl sm:p-6 md:p-8">
+					<div className="mb-6 text-center sm:mb-8">
+						<div className="mb-3 flex justify-center">
+							<Mail className="h-10 w-10 text-primary" />
+						</div>
+
+						<h1 className="text-2xl font-bold tracking-tight text-textPrimary sm:text-3xl">
 							Forgot Password
 						</h1>
-						<p className="text-textSecondary mt-2">
-							Enter your email address and we'll send you a link to reset your
-							password.
+
+						<p className="mt-2 text-sm text-textSecondary sm:text-base">
+							Enter your email address and we&apos;ll send you a link to reset your password.
 						</p>
 					</div>
 
-					<form className="space-y-5" onSubmit={(e) => e.preventDefault()}>
+					<form className="space-y-4 sm:space-y-5" onSubmit={handleSubmit}>
+						{error && (
+							<div className="rounded-lg border border-error bg-errorLight px-3 py-2 text-sm text-error">
+								{error}
+							</div>
+						)}
+
+						{message && (
+							<div className="rounded-lg border border-success bg-successLight px-3 py-2 text-sm text-successDark">
+								{message}
+							</div>
+						)}
+
 						<div className="space-y-1.5">
-							<label className="text-sm font-medium text-textPrimary">
+							<label className="block text-sm font-medium text-textPrimary">
 								Email
 							</label>
 							<div className="relative">
-								<div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-textTertiary">
-									<Mail className="w-5 h-5" />
-								</div>
+								<Mail className="absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-textTertiary" />
 								<input
 									type="email"
-									className="w-full pl-10 pr-4 py-2.5 bg-surface border border-outlineVariant rounded-lg focus:ring-2 focus:ring-primary focus:border-primary outline-none transition-all text-textPrimary"
+									value={email}
+									onChange={(e) => setEmail(e.target.value)}
+									className="w-full rounded-lg border border-outlineVariant bg-surface py-3 pl-10 pr-4 text-textPrimary outline-none transition-all focus:border-primary focus:ring-2 focus:ring-primary"
 									placeholder="Enter your email"
+									required
 								/>
 							</div>
 						</div>
 
 						<button
 							type="submit"
-							className="w-full mt-2 flex items-center justify-center gap-2 bg-primary hover:bg-primaryDark text-onPrimary py-3 rounded-lg font-medium transition-colors shadow-md hover:shadow-lg focus:ring-4 focus:ring-primaryLight outline-none">
-							Send Reset Link
-							{/* <ArrowRight className="w-4 h-4" /> */}
+							disabled={loading}
+							className="mt-2 flex w-full items-center justify-center gap-2 rounded-lg bg-primary px-4 py-3 font-medium text-onPrimary shadow-md transition-colors hover:bg-primaryDark hover:shadow-lg focus:ring-4 focus:ring-primaryLight outline-none disabled:cursor-not-allowed disabled:opacity-70">
+							{loading ? (
+								<Loader2 className="h-5 w-5 animate-spin" />
+							) : (
+								"Send Reset Link"
+							)}
 						</button>
 					</form>
 
-					<div className="mt-8 text-center">
+					<div className="mt-6 text-center sm:mt-8">
 						<Link
 							href="/auth/login"
-							className="inline-flex items-center gap-2 text-sm font-semibold text-primary hover:text-primaryDark transition-colors">
-							<ArrowLeft className="w-4 h-4" />
+							className="inline-flex items-center gap-2 text-sm font-semibold text-primary transition-colors hover:text-primaryDark">
+							<ArrowLeft className="h-4 w-4" />
 							Back to Sign In
 						</Link>
 					</div>

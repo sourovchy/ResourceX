@@ -14,7 +14,9 @@ import com.resourcex.resourcex.mapper.DisputeMapper;
 import com.resourcex.resourcex.repository.BookingRepository;
 import com.resourcex.resourcex.repository.DisputeRepository;
 import com.resourcex.resourcex.repository.UserRepository;
+import com.resourcex.resourcex.service.AuditLogService;
 import com.resourcex.resourcex.service.DisputeService;
+import com.resourcex.resourcex.entity.AuditLog;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -32,6 +34,7 @@ public class DisputeServiceImpl implements DisputeService {
     private final DisputeRepository disputeRepository;
     private final BookingRepository bookingRepository;
     private final UserRepository userRepository;
+    private final AuditLogService auditLogService;
 
     @Override
     public DisputeResponse createDispute(CreateDisputeRequest request) {
@@ -54,8 +57,20 @@ public class DisputeServiceImpl implements DisputeService {
                 .reason(request.getReason())
                 .build();
 
+        Dispute saved = disputeRepository.save(dispute);
+
+        auditLogService.logAction(
+                AuditLog.ActorType.USER,
+                user.getUserId(),
+                "DISPUTE_CREATED",
+                "DISPUTE",
+                saved.getDisputeId(),
+                AuditLog.AuditOutcome.SUCCESS,
+                "Dispute created for booking " + booking.getBookingId()
+        );
+
         // If you add description to the entity, map it here too.
-        return DisputeMapper.toResponse(disputeRepository.save(dispute));
+        return DisputeMapper.toResponse(saved);
     }
 
     @Override
@@ -141,7 +156,19 @@ public class DisputeServiceImpl implements DisputeService {
             dispute.setResolvedAt(LocalDateTime.now());
         }
 
-        return DisputeMapper.toResponse(disputeRepository.save(dispute));
+        Dispute saved = disputeRepository.save(dispute);
+
+        auditLogService.logAction(
+                AuditLog.ActorType.USER,
+                resolveCurrentUser().getUserId(),
+                "DISPUTE_RESOLVED",
+                "DISPUTE",
+                saved.getDisputeId(),
+                AuditLog.AuditOutcome.SUCCESS,
+                "Dispute resolved with status " + status.name()
+        );
+
+        return DisputeMapper.toResponse(saved);
     }
 
     @Override
@@ -156,7 +183,19 @@ public class DisputeServiceImpl implements DisputeService {
         dispute.setStatus(DisputeStatus.CLOSED);
         dispute.setResolvedAt(LocalDateTime.now());
 
-        return DisputeMapper.toResponse(disputeRepository.save(dispute));
+        Dispute saved = disputeRepository.save(dispute);
+
+        auditLogService.logAction(
+                AuditLog.ActorType.USER,
+                resolveCurrentUser().getUserId(),
+                "DISPUTE_CLOSED",
+                "DISPUTE",
+                saved.getDisputeId(),
+                AuditLog.AuditOutcome.SUCCESS,
+                "Dispute closed"
+        );
+
+        return DisputeMapper.toResponse(saved);
     }
 
     @Override
@@ -172,6 +211,16 @@ public class DisputeServiceImpl implements DisputeService {
         }
 
         disputeRepository.delete(dispute);
+
+        auditLogService.logAction(
+                AuditLog.ActorType.USER,
+                currentUser.getUserId(),
+                "DISPUTE_DELETED",
+                "DISPUTE",
+                disputeId,
+                AuditLog.AuditOutcome.SUCCESS,
+                "Dispute deleted"
+        );
     }
 
     private User resolveCurrentUser() {
@@ -205,6 +254,17 @@ public class DisputeServiceImpl implements DisputeService {
             return DisputeStatus.valueOf(status.trim().toUpperCase());
         } catch (IllegalArgumentException ex) {
             throw new IllegalArgumentException("Invalid dispute status: " + status);
+        }
+    }
+
+    @Override
+    @Transactional
+    public void followUpStaleDisputes(java.time.LocalDateTime threshold) {
+        List<DisputeStatus> statuses = List.of(DisputeStatus.OPEN, DisputeStatus.UNDER_REVIEW);
+        List<Dispute> staleDisputes = disputeRepository.findByStatusInAndUpdatedAtBefore(statuses, threshold);
+        for (Dispute dispute : staleDisputes) {
+            // Business logic for stale disputes (e.g. notify admins)
+            // Just logging for now
         }
     }
 }

@@ -13,6 +13,7 @@ import com.resourcex.resourcex.repository.MessageRepository;
 import com.resourcex.resourcex.repository.UserRepository;
 import com.resourcex.resourcex.service.MessageService;
 import com.resourcex.resourcex.validator.MessageValidator;
+import org.springframework.messaging.simp.SimpMessagingTemplate;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -29,6 +30,7 @@ public class MessageServiceImpl implements MessageService {
     private final UserRepository userRepository;
     private final MessageMapper messageMapper;
     private final MessageValidator messageValidator;
+    private final SimpMessagingTemplate messagingTemplate;
 
     @Override
     @Transactional
@@ -52,7 +54,10 @@ public class MessageServiceImpl implements MessageService {
         conversation.setLastMessageAt(savedMessage.getCreatedAt() != null ? savedMessage.getCreatedAt() : LocalDateTime.now());
         conversationRepository.save(conversation);
 
-        return messageMapper.toResponse(savedMessage);
+        MessageResponse response = messageMapper.toResponse(savedMessage);
+        messagingTemplate.convertAndSend("/queue/messages/" + receiver.getUserId(), response);
+
+        return response;
     }
 
     @Override

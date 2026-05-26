@@ -8,9 +8,12 @@ import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 
 import java.util.List;
 import java.util.Optional;
+import java.time.LocalDateTime;
 
 @Repository
 public interface PendingUserRepository extends JpaRepository<PendingUser, Long> {
@@ -31,7 +34,19 @@ public interface PendingUserRepository extends JpaRepository<PendingUser, Long> 
 
     boolean existsByPhone(String phone);
 
-    List<PendingUser> findByStatus(PendingUserStatus status);
+    Page<PendingUser> findByStatus(PendingUserStatus status, Pageable pageable);
 
     long countByStatus(PendingUserStatus status);
+
+    List<PendingUser> findAllByOrderByPendingUserIdDesc();
+
+    List<PendingUser> findByCreatedAtBetweenOrderByPendingUserIdDesc(
+            LocalDateTime startDate,
+            LocalDateTime endDate
+    );
+
+    long countByCreatedAtBetween(
+            LocalDateTime startDate,
+            LocalDateTime endDate
+    );
 }

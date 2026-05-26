@@ -1,845 +1,569 @@
-# Project Architecture Audit
+# ResourceX — Project Architecture Audit
+
+> **Audit Date:** 2026-05-25  
+> **Auditor:** Senior Engineering Review  
+> **Version:** 2.0 (Full Rewrite — supersedes v1.0)
+
+---
+
+## 1. Executive Summary
+
+ResourceX has completed its first major consolidation refactor: four separate role-specific frontends have been merged into a single unified dashboard. The backend has a well-structured service/controller/repository layering with proper DTO patterns and centralized exception handling. The design system is clean and dark-mode-ready.
+
+However, the project has **critical routing bugs that silently break admin login**, **dead code that should have been removed**, **security vulnerabilities from credential exposure**, and **a missing REST controller** that leaves an entire feature non-functional.
+
+This audit covers:
+- **8 Critical Issues** (break functionality or pose security risk)
+- **12 High-Priority Issues** (production blockers)
+- **9 Medium-Priority Issues** (quality concerns)
+- **Reusability analysis** across frontend components
+- **Scalability concerns** for production workloads
+- **Phased refactor recommendations** ordered by risk and dependency
+
+---
+
+## 2. Architecture Overview
+
+### 2.1 Current Architecture
+
+```
+┌─────────────────────────────────────────────┐
+│                  FRONTEND                    │
+│  Next.js 14 App Router (TypeScript + Tailwind)│
+│                                             │
+│  app/page.tsx (Landing)                     │
+│  app/auth/* (Login, Register, OTP, Reset)   │
+│  app/(dashboard)/* (Shared for all roles)   │
+│  app/terms/* (Terms & Conditions)           │
+│                                             │
+│  Shared: AuthContext, ThemeContext          │
+│  API Layer: Single Axios client (api.ts)    │
+│  Auth Layer: auth.ts utility + AuthGuard    │
+│  AppShell: Collapsible sidebar + header     │
+└─────────────────────────────────────────────┘
+                     │ HTTP/HTTPS
+                     │ Bearer JWT
+                     ▼
+┌─────────────────────────────────────────────┐
+│                  BACKEND                     │
+│  Spring Boot 3 (Java 21)                    │
+│                                             │
+│  Auth: JWT (roles + userId embedded)        │
+│  Security: Spring Security + @PreAuthorize  │
+│  Controllers: 11 REST controllers           │
+│  Services: 13 service interfaces + impls    │
+│  Repositories: 17 JPA repositories         │
+│  DTOs: Typed request/response models       │
+│  Exception: GlobalExceptionHandler          │
+└─────────────────────────────────────────────┘
+                     │ JPA/JDBC
+                     ▼
+┌─────────────────────────────────────────────┐
+│                  DATABASE                    │
+│  MySQL (InnoDB)                             │
+│  16 tables, proper FK constraints           │
+│  Indexes on lookup columns                  │
+│  Schema: universities, users, roles,        │
+│  student_profiles, pending_users, items,    │
+│  bookings, payments, reviews, reports,      │
+│  disputes, penalties, trust_events,         │
+│  audit_logs, notifications,                 │
+│  conversations, messages                    │
+└─────────────────────────────────────────────┘
+```
+
+### 2.2 Role Architecture (Current State)
 
-## 1. Executive summary
+| Backend Role | Frontend Alias | Access Level |
+|-------------|---------------|-------------|
+| `ROLE_USER` | `"student"` | Own data only |
+| `ROLE_MODERATOR` | `"moderator"` | Moderation tools |
+| `ROLE_ADMIN` | `"admin"` | Platform management |
+| `ROLE_SUPER_ADMIN` | `"super_admin"` | Full unrestricted access |
+
+**Assessment:** The role hierarchy is correctly implemented in the backend with `@PreAuthorize`. The frontend role aliasing (`student` → `ROLE_USER`) is semantically inconsistent but functionally correct.
 
-ResourceX currently has a working skeleton, but the architecture is inconsistent and insecure across authentication, authorization, database design, frontend routing, and API contracts.
+---
 
-Critical findings:
+## 3. Critical Issues
 
-- duplicate admin auth flow and frontend-only admin gating
-- backend role handling split between `users`, `staff`, and `roles`
-- backend/frontend contract mismatches for auth endpoints and token fields
-- redundant and conflicting onboarding schema (`users`, `pending_users`, `student_verifications`)
-- major security issues from `fakeAdminAccess`, local storage JWT persistence, and weak middleware guards
+### 3.1 Admin/Moderator Redirected to Non-Existent Route
 
-This audit documents exact issues found in the current branch, explains the risks, and defines a refactor strategy that makes auth and RBAC consistent, removes dead schema, and aligns frontend and backend behavior.
+**Severity:** 🔴 CRITICAL  
+**Impact:** Any user with `ROLE_ADMIN`, `ROLE_MODERATOR`, or `ROLE_SUPER_ADMIN` is redirected to `/home` after login — a route that does not exist in the current `(dashboard)` group.
 
-## 2. Overall architecture evaluation
+**Root Cause:**
+```typescript
+// frontend/web/context/AuthContext.tsx
+function getHomeRoute(roles: UserRole[]) {
+  return roles.some((role) =>
+    ["ROLE_ADMIN", "ROLE_SUPER_ADMIN", "ROLE_MODERATOR"].includes(role),
+  )
+    ? "/home"      // ← This route does not exist
+    : "/dashboard";
+}
+```
 
-The architecture is partially built but not coherent.
+**Also affected:** `AuthGuard.tsx:27` — `router.replace(role === "student" ? "/home" : "/dashboard")` redirects non-student access violations to `/home`.
 
-- Backend: Spring Boot with JWT-based security and method-level roles, but auth logic only supports `users` even though the schema has a separate `staff` table.
-- Frontend: Next.js app with two auth flows, one for student login and one for admin login, but the admin route is protected by a fake bypass and cookie-parsed roles.
-- Database: partially normalized, but contains duplicate lifecycle states and unused tables.
-- API: structural contract mismatches between backend routes and frontend calls.
+**Fix:** Change both references to `/dashboard`. The dashboard page already renders role-appropriate content via `AdminDashboard.tsx` vs `StudentDashboard.tsx`.
 
-Overall, ResourceX is currently more of a proof-of-concept than a production-ready full-stack architecture.
+---
 
-## 3. Critical issues
+### 3.2 Middleware Protects Stale Routes, Misses Current Ones
 
-### 3.1 Duplicate admin authentication flow
+**Severity:** 🔴 CRITICAL  
+**Files:** `frontend/web/middleware.ts`
 
-Evidence:
+The middleware matcher list was never updated after the consolidation refactor. It still references routes from the old admin/student split (`/disputesAdmin`, `/adminProfile`, `/home`, `/announcements`) while missing routes that now exist (`/staff-management`, `/categories`, `/trust-scores`).
 
-- `frontend/web/app/(admin)/AdminLogin/page.tsx`
-- `frontend/web/app/auth/login/page.tsx`
-- `frontend/web/app/(admin)/layout.tsx`
-- `frontend/web/middleware.ts`
-- `frontend/web/context/AuthContext.tsx`
-- `backend/src/main/java/com/resourcex/resourcex/controller/AuthController.java`
+**Security consequence:** Routes like `/staff-management` and `/trust-scores` are NOT matched by the middleware token check. A user without a token who knows the URL could potentially access these routes if the client-side `AuthGuard` fails to load (e.g., JavaScript error).
 
-Issue:
+**Fix:** Replace middleware path lists with the actual current route set from `(dashboard)/layout.tsx`.
 
-- the project exposes two login flows for the same backend endpoint.
-- admin login is implemented solely in the frontend by inspecting the auth response and storing role state locally.
-- there is no dedicated backend admin login flow.
+---
 
-Why it is wrong:
+### 3.3 Plaintext Credentials in Source Code
 
-- separation of frontend and backend auth logic creates a security gap.
-- it leads to duplicated route logic, duplicate session storage, and inconsistent routing.
+**Severity:** 🔴 CRITICAL  
+**File:** `backend/src/main/resources/application.properties`
 
-Risk:
+```properties
+spring.datasource.password=[REDACTED_DB_PASSWORD]
+spring.mail.password=[REDACTED_GMAIL_APP_PASSWORD]
+jwt.secret=QresourceXv7rV8vNQ6r6GJv2qYxkJm9p...
+```
 
-- unauthorized admin access
-- inconsistent experience when roles change
-- hidden bugs when the auth contract changes
+All three secrets are committed in plaintext. If this repository is ever shared or made public, these credentials are immediately compromised.
 
-Fix:
+**Fix:** Use environment variable substitution:
+```properties
+spring.datasource.password=${DB_PASSWORD}
+spring.mail.password=${MAIL_APP_PASSWORD}
+jwt.secret=${JWT_SECRET}
+```
 
-- remove separate admin login page and replace with one shared `/auth/login`
-- use backend to authenticate credentials and return role-aware JWT
-- redirect users after login based on role
-- centralize authorization in backend and use frontend only for navigation
+---
 
-### 3.2 `staff` table vs `users` auth mismatch
+### 3.4 SuperAdminController Does Not Exist
 
-Evidence:
+**Severity:** 🔴 CRITICAL (Feature completely non-functional)  
+**Files:** `SuperAdminService.java`, `SuperAdminServiceImpl.java` — complete, well-written service layer.  
+**Missing:** `SuperAdminController.java`
 
-- `database/schema.sql` contains `staff` table
-- `backend/src/main/java/com/resourcex/resourcex/security/CustomUserDetailsServiceImpl.java`
-- `backend/src/main/java/com/resourcex/resourcex/service/impl/SuperAdminServiceImpl.java`
+The entire staff management feature (create admin, create moderator, promote, demote, delete privileged users, list staff) has a fully implemented service layer but no REST endpoint to reach it. The `staff-management` frontend page cannot function.
 
-Issue:
+---
 
-- the database defines staff with `staff_id`, `email`, `role`, `password_hash`, but auth code never loads staff.
-- `CustomUserDetailsServiceImpl` only searches `UserRepository`.
-- `SuperAdminServiceImpl` promotes admin roles on `User`, not `Staff`.
+### 3.5 Base64 Images Stored in MySQL
 
-Why it is wrong:
+**Severity:** 🔴 CRITICAL (Data architecture problem)  
+**File:** `pending_users.id_card_data_url LONGTEXT`
 
-- the schema claims separate staff accounts, but the code ignores them.
-- this is a broken architectural contract between DB and backend.
+Student registration uploads an ID card image which is converted to a base64 data URL and stored in a `LONGTEXT` MySQL column. A 2MB image → ~2.7MB of base64 text in a single database row.
 
-Risk:
+**Consequences:**
+- Each `SELECT * FROM pending_users` transfers megabytes of image data
+- InnoDB row overflow if multiple images per row
+- Database backup size bloats dramatically
+- Cannot serve images via CDN
+- Cannot apply image optimization
 
-- dangerous assumptions by future developers
-- misleading audit logs and foreign key references
-- inability to correctly implement staff-level RBAC
+---
 
-Fix:
+### 3.6 Dual JWT Token Storage
 
-- decide between one of these two models:
-  - single account model: remove `staff`, keep `roles` + `user_roles` for admin/moderator/superadmin
-  - separate staff model: implement staff authentication and unify token handling across both account types
+**Severity:** 🔴 CRITICAL (Security)  
+**File:** `frontend/web/lib/auth.ts:storeSession()`
 
-### 3.3 Auth endpoint / permissions mismatch
+```typescript
+localStorage.setItem(AUTH_TOKEN_KEY, token);       // XSS accessible
+document.cookie = `${AUTH_TOKEN_KEY}=${token}; path=/; max-age=86400; SameSite=Lax`; // Also XSS accessible (not HttpOnly)
+```
 
-Evidence:
+The token is written to both `localStorage` AND a non-HttpOnly cookie. This does not improve security — it doubles the attack surface for XSS without providing the benefits of HttpOnly cookies.
 
-- `backend/src/main/java/com/resourcex/resourcex/security/SecurityConfig.java`
-- `frontend/web/context/AuthContext.tsx`
-- `backend/src/main/java/com/resourcex/resourcex/controller/AuthController.java`
+---
 
-Issue:
+### 3.7 N+1 Query in getAllPrivilegedUsers()
 
-- security config permits `/api/auth/current-user`
-- controller exposes `/api/auth/me`
-- frontend refresh uses `/auth/me`
+**Severity:** 🔴 CRITICAL (Performance)  
+**File:** `backend/.../service/impl/SuperAdminServiceImpl.java:130`
 
-Why it is wrong:
+```java
+return userRepository.findAll().stream()  // Query 1: all users
+  .filter(u -> {
+    List<String> roleNames = userRoleRepository.findAllByUser(u)  // Query N: per user
+      .stream().map(ur -> ur.getRole().getName()).toList();
+    return roleNames.contains(ROLE_ADMIN) || ...;
+  })
+```
 
-- authorization rules and public endpoint allowances do not match actual routes.
+With 1,000 users → 1,001 database queries. This will time out in production.
 
-Risk:
+---
 
-- refresh calls fail unexpectedly
-- broken auth persistence
-- inconsistent user experience
+### 3.8 OTP Endpoints Fully Public Without Rate Limiting
 
-Fix:
+**Severity:** 🔴 CRITICAL (Security)  
+**File:** `SecurityConfig.java:59`
 
-- align backend permit list with actual endpoints
-- choose a canonical auth endpoint path, preferably `/api/auth/me`
-- remove dead permission route definitions
+```java
+.requestMatchers("/api/otp/**").permitAll()
+```
 
-### 3.4 JWT missing embedded roles
+Any actor can send unlimited OTP requests for any email address, causing email spam and potentially triggering email service rate limits/bans.
 
-Evidence:
+---
 
-- `backend/src/main/java/com/resourcex/resourcex/security/JwtService.java`
-- `frontend/web/components/auth/AuthGuard.tsx`
-- `frontend/web/app/(admin)/AdminLogin/page.tsx`
+## 4. High-Priority Issues
 
-Issue:
+### 4.1 Dead Code — Frontend
 
-- `JwtService.generateToken` stores only email in the subject.
-- roles are not stored in JWT claims.
-- frontend uses localStorage roles to enforce routing.
+| File | Size | Issue |
+|------|------|-------|
+| `frontend/web/test.css` | 58KB | Orphan — not imported anywhere |
+| `frontend/Arif/index.html` | Unknown | Abandoned prototype |
+| `frontend/web/lib/mocks/dummyData.ts` | — | Mock data in production source |
+| `frontend/web/lib/approvalRequests.ts` | — | No known consumers |
+| `frontend/web/hooks/useChat.ts` | — | Duplicate of `inbox/hooks/useChat.ts` |
+| `frontend/web/lib/services/chatService.ts` | — | Duplicate of `inbox/services/chatService.ts` |
 
-Why it is wrong:
+### 4.2 Dead Code — Backend
 
-- the token lacks the metadata needed to validate roles independently.
-- frontend route guards are not backed by token semantics.
+| File | Issue |
+|------|-------|
+| `Staff.java` + `StaffRepository.java` | Entity for an unused table — nothing authenticates as staff |
+| `StudentVerification.java` + repository | Entity references a table that doesn't exist in `schema.sql` |
 
-Risk:
+### 4.3 Console Debug Logging in Production
 
-- stale or tampered role state can allow incorrect routing
-- backend may still be secure, but frontend unnecessarily depends on client state
+**Files:** `api.ts`, `auth.ts`  
+`console.debug()` calls expose internal auth state (token present/absent, roles, API calls) to the browser DevTools in production. Replace with environment-gated logger.
 
-Fix:
+### 4.4 Register Page Bypasses Design System
 
-- add roles claim to JWT at generation time
-- use JWT claims to build `UserDetails` and perform auth checks
-- use token-backed role info instead of separate local storage values
+**File:** `app/auth/register/page.tsx`  
+Uses raw Tailwind `dark:` variants (`dark:border-white/10`, `dark:bg-white/5`) instead of the CSS variable tokens used by the rest of the app. This breaks dark mode consistency.
 
-### 3.5 Fake admin access bypass
+### 4.5 `navItems: any[]` in AppShell
 
-Evidence:
+**File:** `components/layout/AppShell.tsx:23`  
+Loses type safety on the entire navigation system. Should use the `NavItem` type already defined in `(dashboard)/layout.tsx`.
 
-- `frontend/web/app/(admin)/layout.tsx`
-- `frontend/web/middleware.ts`
+### 4.6 Login Page Missing Terms Notice
 
-Issue:
+The register page correctly requires a Terms & Conditions checkbox. The login page has no mention of terms. At minimum, a link to `/terms` should be visible on the login page.
 
-- the admin layout has `fakeAdminAccess = true`.
-- this bypasses the `AuthGuard` entirely for admin routes.
+### 4.7 No Pagination on List Endpoints
 
-Why it is wrong:
+`getAllBookings()`, `getAllUsers()`, `getAllPrivilegedUsers()`, and others return unbounded `List<T>`. As data grows, these will exhaust memory and timeout.
 
-- it effectively disables frontend auth enforcement.
-- it indicates a development-only hack left in source.
+### 4.8 No Soft Delete Strategy
 
-Risk:
+Hard deletes are used throughout. Booking/item/user data deleted by a bug or accidental action cannot be recovered.
 
-- any frontend user can load the admin shell without authentication.
-- the admin experience is not representative of actual security.
+### 4.9 Categories Not in Database
 
-Fix:
+The frontend has `/categories` as a route with full management UI, but no `categories` table exists in `schema.sql`. The `items.category` field is a free-text `VARCHAR(50)`.
 
-- remove the fake bypass immediately
-- protect admin layout with `AuthGuard` or server-side session checks
-- ensure UI access matches backend RBAC
+### 4.10 History Route in Middleware But Not in Dashboard
 
-## 4. Medium-priority issues
+`/history` is listed in the middleware matcher but no `history` directory exists under `(dashboard)`.
 
-### 4.1 Redundant onboarding schema
+### 4.11 Analytics Chart Colors Not Design System Aware
 
-Evidence:
+`DonutChart` in analytics page hardcodes hex values (`"#3b82f6"`, `"#12a37a"`) that don't follow CSS variable tokens and won't change with dark mode.
 
-- `database/schema.sql`
-- `backend/src/main/java/com/resourcex/resourcex/service/impl/AuthServiceImpl.java`
-- `backend/src/main/java/com/resourcex/resourcex/service/impl/AdminServiceImpl.java`
+### 4.12 Repeated Role Switch Pattern (4+ Pages)
 
-Issue:
+Every unified page duplicates this pattern:
+```tsx
+const { roles, loading } = useAuth();
+const isPrivileged = hasRole(roles, "admin") || hasRole(roles, "moderator") || hasRole(roles, "super_admin");
+return isPrivileged ? <AdminVersion /> : <StudentVersion />;
+```
+Should be extracted to a `useRoleSwitch()` hook.
 
-- `users.status` contains `PENDING_VERIFICATION`, `PENDING_APPROVAL`, `REJECTED`, yet `pending_users` duplicates these states.
-- `student_verifications` stores a review record after approval, which partially duplicates `pending_users` and `users`.
+---
 
-Why it is wrong:
+## 5. Medium-Priority Issues
 
-- there are multiple overlapping representations of the same workflow.
-- audit and approval logic must traverse several tables.
+### 5.1 Missing Database Indexes
 
-Risk:
+```sql
+-- These compound/single indexes are missing:
+CREATE INDEX idx_items_category ON items(category);
+CREATE INDEX idx_items_created_at ON items(created_at);
+CREATE INDEX idx_bookings_status ON bookings(status);
+CREATE INDEX idx_bookings_start_date ON bookings(start_date);
+CREATE INDEX idx_disputes_status ON disputes(status);
+```
 
-- inconsistent user lifecycle states
-- complicated approval/rejection edge cases
+### 5.2 University Datalist Hardcoded
 
-Fix:
+**File:** `register/page.tsx`  
+University suggestions are hardcoded in the HTML `<datalist>`. Should be loaded from `/api/universities` to stay in sync with the `universities` table.
 
-- choose a single onboarding model:
-  - if `pending_users` remains, use it only for unapproved registrations and keep `users` for active accounts
-  - if not, collapse into `users` with status fields and store verification records separately
-- keep `student_verifications` as a review history, not a duplicate state store
+### 5.3 Phone Number Hardcoded to Bangladesh
 
-### 4.2 Unused `staff` table and role duplication
+**File:** `register/page.tsx`  
+The `+880` prefix is hardcoded in the UI and phone validation enforces Bangladeshi format. This should be configurable if the platform expands.
 
-Evidence:
+### 5.4 Missing `@ResponseStatus` on POST Endpoints
 
-- `database/schema.sql`
-- `backend/src/main/java/com/resourcex/resourcex/service/impl/SuperAdminServiceImpl.java`
+`createBooking`, `register`, and similar creation endpoints return `200 OK` where they should return `201 Created`.
 
-Issue:
+### 5.5 `JpaRepository.count()` in DashboardStats
 
-- the schema creates `staff` and `roles`, but `Staff` is not authenticated.
-- roles in `staff.role` and `user_roles.role_id` are conceptually duplicated.
+```java
+.totalUsers(userRepository.count())
+```
+This counts ALL users including banned/suspended. Should filter by `status = 'ACTIVE'`.
 
-Why it is wrong:
+### 5.6 `AuditLog.actorType` Always `SYSTEM`
 
-- it produces an inconsistent RBAC model.
+In `AdminServiceImpl`, all audit logs set `actorType = SYSTEM` even when a human admin performs the action. Should record the actual admin's userId.
 
-Risk:
+### 5.7 Missing Password Reset Token Table in Schema
 
-- confusing admin developer workflows
-- broken staff auditing and authorization assumptions
+`PasswordResetToken` entity exists in code and is used, but `password_reset_tokens` is not in `schema.sql`. The table is created by Hibernate `ddl-auto=update` but not documented.
 
-Fix:
+### 5.8 `application.properties` — `spring.jpa.show-sql=true`
 
-- align schema with auth by removing unused tables or wiring them correctly
+SQL logging is enabled in what appears to be a production config file. This should be disabled in production for performance.
 
-### 4.3 Naming and route inconsistency
+### 5.9 Email Sender Still Uses Personal-Style Address
 
-Evidence:
+`spring.mail.username=students.reform2.0@gmail.com` — using a Gmail account for transactional email is fragile (subject to Gmail sending limits, account suspension). Should use a transactional email service (SendGrid, Mailgun, SES).
 
-- `frontend/web/app/(admin)/AdminLogin/page.tsx`
-- `frontend/web/app/(admin)/layout.tsx`
-- `frontend/web/middleware.ts`
-- `frontend/web/app/auth/login/page.tsx`
-- `frontend/web/app/(admin)/adminProfile/page.tsx`
+---
 
-Issue:
+## 6. API Contract Analysis
 
-- mixed casing in routes: `/AdminLogin`, `/adminlogin`, `disputesAdmin`, `trust-scores`, `adminProfile`.
-- inconsistent route naming between student and admin sections.
+### 6.1 Auth Contract (Correct)
 
-Why it is wrong:
+| Endpoint | Method | Auth | Notes |
+|----------|--------|------|-------|
+| `/api/auth/login` | POST | Public | Returns `{token, user, roles, message}` |
+| `/api/auth/register` | POST | Public | Returns `{message, token: null}` |
+| `/api/auth/me` | GET | Bearer | Returns `{user, roles}` |
+| `/api/auth/forgot-password` | POST | Public | Sends reset email |
+| `/api/auth/reset-password` | POST | Public | Resets password with token |
 
-- inconsistent route patterns are harder to maintain and fragile in middleware matching.
+**Frontend alignment:** `AuthContext` calls `/auth/login` and `/auth/me` — these match the controller.  
+**Previously stale:** `/api/auth/current-user` referenced in old audit — this has been removed.
 
-Fix:
+### 6.2 Missing API Endpoints (Frontend Pages with No Backend)
 
-- adopt lowercase kebab-case for routes
-- rename pages to match route conventions
-- use route constants for middleware matching
+| Frontend Page | Expected Endpoint | Backend Status |
+|---------------|------------------|----------------|
+| `/staff-management` | `/api/superadmin/**` | ❌ Controller missing |
+| `/categories` | `/api/categories/**` | ❌ Not implemented |
+| `/trust-scores` | `/api/trust/**` | ⚠️ Service exists, check controller |
+| `/penalties` (admin) | `/api/penalties/**` (admin view) | ⚠️ Check |
 
-### 4.4 Duplicate client-side auth storage
+### 6.3 Inconsistent Response Wrapping
 
-Evidence:
+Some endpoints return bare objects (`BookingResponse`), others return `ResponseEntity<Void>`. The `AuthController` returns `Map.of("message", ...)` for password reset — inconsistent with `ApiResponse<T>` used in exception handler. Standardize all endpoints to wrap in `ApiResponse<T>`.
 
-- `frontend/web/lib/auth.ts`
-- `frontend/web/app/(admin)/AdminLogin/page.tsx`
-- `frontend/web/context/AuthContext.tsx`
+---
 
-Issue:
+## 7. Security Scoring
 
-- the admin login page duplicates session persistence logic.
-- token storage is repeated in localStorage and cookies.
+| Threat | Backend Protection | Frontend Protection | Overall |
+|--------|-------------------|--------------------|---------| 
+| Unauthorized access | ✅ JWT + @PreAuthorize | ⚠️ AuthGuard (stale middleware) | 7/10 |
+| RBAC enforcement | ✅ Method-level | ✅ Role-filtered nav | 8/10 |
+| Ownership enforcement | ✅ resolveCurrentUser() pattern | N/A | 8/10 |
+| XSS | ✅ React escapes JSX | ⚠️ Token in localStorage | 6/10 |
+| CSRF | ✅ Disabled (stateless JWT) | N/A | 9/10 |
+| SQL injection | ✅ JPA parameterized | N/A | 10/10 |
+| Brute force | ❌ No rate limiting | ❌ No captcha | 2/10 |
+| Credential exposure | ❌ Plaintext in config | ✅ Env var for API URL | 3/10 |
+| Sensitive data in DB | ❌ Base64 images | N/A | 2/10 |
+| **Overall** | | | **6.1/10** |
 
-Why it is wrong:
+---
 
-- duplicate code increases risk when session storage changes.
-- storing JWT in both localStorage and cookies increases attack surface.
+## 8. Frontend Component Reusability Analysis
 
-Fix:
+### 8.1 Patterns That Should Be Shared Components
 
-- centralize session persistence in one utility
-- avoid duplicate calls in pages
-- prefer secure cookie storage if the backend can support it
+| Pattern | Current | Should Be |
+|---------|---------|-----------|
+| Loading spinner | Inline in 10+ pages | `<PageLoader />` |
+| Error message | Inline inconsistent | `<PageError />` |
+| Empty state | Inline inconsistent | `<PageEmpty />` |
+| Status badge | Inline color logic | `<StatusBadge status={...} />` |
+| Role switch | Repeated in 4 pages | `useRoleSwitch()` hook |
+| Data table | Full reimplementation in 3 pages | `<DataTable columns={...} data={...} />` |
+| Confirm dialog | Inline in multiple admin actions | `<ConfirmModal />` |
 
-## 5. Low-priority cleanup issues
+### 8.2 Correctly Shared (Keep As Is)
 
-### 5.1 Mock or temporary admin logic left in production
+- `AuthContext` — single source of truth for auth state ✅
+- `api.ts` — single Axios client with interceptors ✅
+- `auth.ts` — single auth utility (token, session, role checks) ✅
+- `AppShell` — single layout component ✅
+- `AuthGuard` — single route guard component ✅
+- `ThemeContext` — single theme context ✅
+- `globals.css` — CSS variable design tokens ✅
 
-Evidence:
+### 8.3 Pattern: Unified Pages with Role Rendering
 
-- `frontend/web/app/(admin)/layout.tsx`
+The pattern of `page.tsx` + `AdminVersion.tsx` + `StudentVersion.tsx` is good. Keep this pattern. The only improvement is extracting the common boilerplate into `useRoleSwitch()`.
 
-Issue:
+---
 
-- a development bypass remains in source.
+## 9. Scalability Assessment
 
-Fix:
+### 9.1 Backend Scalability
 
-- remove fake auth flag
-- lock down admin UI until auth works
+| Concern | Current State | Risk at Scale |
+|---------|--------------|---------------|
+| Un-paginated lists | All list endpoints | 🔴 High — OOM at 10K+ records |
+| N+1 queries | `getAllPrivilegedUsers` | 🔴 High |
+| No caching | Every request hits DB | 🟡 Medium |
+| Image storage in DB | `LONGTEXT` base64 | 🔴 High — DB size explosion |
+| Email sending synchronous | Blocks request thread | 🟡 Medium |
+| No background jobs | Trust score recalc on-demand | 🟡 Medium |
 
-### 5.2 Unused auth response fields
+### 9.2 Frontend Scalability
 
-Evidence:
+| Concern | Current State | Risk at Scale |
+|---------|--------------|---------------|
+| No virtual scrolling | `users/page.tsx` loads all | 🟡 Medium |
+| No pagination UI | Admin tables load all items | 🔴 High |
+| Analytics: no date range | Fixed window | 🟡 Medium |
+| No memoization on heavy components | AdminDashboard re-renders | 🟢 Low |
 
-- `frontend/web/app/(admin)/AdminLogin/page.tsx`
-- `backend/src/main/java/com/resourcex/resourcex/dto/response/AuthResponse.java`
+---
 
-Issue:
+## 10. Maintainability Scoring
 
-- frontend expects `accessToken` / `refreshToken` and nested `user.role` fields.
-- backend returns `token`, `user`, and `roles` only.
+| Category | Score | Notes |
+|----------|-------|-------|
+| Code organization | 7/10 | Good layer separation; some dead code |
+| Naming consistency | 6/10 | `student` vs `user` alias; mixed casing historically |
+| TypeScript coverage | 7/10 | Some `any` types; types dir is good |
+| Error handling | 7/10 | Backend excellent; frontend inconsistent |
+| Documentation | 4/10 | Minimal inline docs; good project-level docs |
+| Test coverage | 1/10 | Only boilerplate test exists |
+| Dead code | 4/10 | Multiple dead files need cleanup |
+| Consistency | 6/10 | Design system good; some bypasses |
+| **Overall** | **5.3/10** | |
 
-Fix:
+---
 
-- standardize the response contract
-- remove stale frontend expectations
+## 11. Production Readiness Scoring
 
-### 5.3 Redundant route guards
+| Category | Score | Notes |
+|----------|-------|-------|
+| Auth & Security | 5/10 | JWT good; no rate limiting; plaintext creds |
+| Data Architecture | 4/10 | Base64 images critical; pagination missing |
+| Error Handling | 7/10 | Backend GlobalExceptionHandler excellent |
+| Logging | 3/10 | Debug logs in production; no structured logging |
+| Configuration | 3/10 | Plaintext secrets; show-sql=true |
+| Performance | 4/10 | N+1 queries; no caching; no pagination |
+| Monitoring | 1/10 | None |
+| Testing | 1/10 | None beyond boilerplate |
+| Deployment | 3/10 | No CI/CD; no Docker; no env separation |
+| **Overall** | **3.4/10** | Requires work before production |
 
-Evidence:
+---
 
-- `frontend/web/components/auth/AuthGuard.tsx`
-- `frontend/web/middleware.ts`
+## 12. Recommended Architecture Improvements
 
-Issue:
+### 12.1 Immediate (Phase 0–1)
 
-- both client-side guard and middleware are present but not consistently used.
+1. Fix `getHomeRoute()` → always return `/dashboard`
+2. Fix `AuthGuard` redirect from `/home` → `/dashboard`
+3. Sync middleware matcher to current route list
+4. Move credentials to environment variables
+5. Fix N+1 query in `getAllPrivilegedUsers()`
+6. Remove dual token storage (pick one)
+7. Create `SuperAdminController`
 
-Fix:
+### 12.2 Short Term (Phase 2–4)
 
-- define a single guard strategy per route type
-- avoid overlapping auth control unless intentional
+1. Delete all dead code files
+2. Remove `Staff` and `StudentVerification` entities
+3. Add `PageLoader`, `PageError`, `PageEmpty`, `StatusBadge` shared components
+4. Extract `useRoleSwitch()` hook
+5. Add `DataTable` shared component
+6. Add `categories` table and controller
 
-## 6. Database audit
+### 12.3 Medium Term (Phase 5–6)
 
-### 6.1 Duplicate user lifecycle tables
+1. Add pagination to all list endpoints
+2. Replace base64 images with file upload system
+3. Add OTP rate limiting
+4. Add missing DB indexes
+5. Disable `show-sql` in production profile
+6. Add soft delete to core entities
 
-Current design:
+### 12.4 Long Term
 
-- `users` stores active accounts with status
-- `pending_users` stores pre-approved registrations
-- `student_verifications` stores verification review records
+1. Migrate email to transactional service (SendGrid/Mailgun)
+2. Add Redis caching for analytics and session
+3. Implement WebSocket messaging
+4. Add structured logging (SLF4J + ELK or Datadog)
+5. Add comprehensive test suite
+6. Set up CI/CD pipeline
 
-Problem:
+---
 
-- `pending_users` duplicates `users.status` semantics
-- `student_verifications` duplicates state and is not clearly tied to a separate workflow
+## 13. Folder Structure Assessment
 
-Recommendation:
+### 13.1 Backend — Current Structure ✅ Acceptable
 
-- if onboarding staging is desired, keep `pending_users` for unapproved registrations only
-- keep `users` for authenticated accounts
-- store `student_verifications` as a history record linked to `users` only after approval
+The backend is organized by technical layer (`controller/`, `service/`, `repository/`, `entity/`, `dto/`, `mapper/`) rather than by domain module. This is acceptable for the current scale. For a larger team or microservices migration, domain-driven structure would be preferred.
 
-### 6.2 `staff` table mismatch
+**Action required:** Remove `Staff.java`, `StaffRepository.java`, `StudentVerification.java`, `StudentVerificationRepository.java`.
 
-Current design:
+### 13.2 Frontend — Current Structure ✅ Good With Gaps
 
-- `staff` table exists with admin roles, but auth code ignores it.
+The `(dashboard)` route group is a solid architecture. The `components/ui/` directory exists but is empty — this is where shared UI components should live.
 
-Problem:
+**Key gap:** `components/ui/` is empty. All shared UI components should live here.
 
-- DB schema claims a staff domain, but the code does not use it.
+---
 
-Recommendation:
+## 14. Refactor Priority Matrix
 
-- remove `staff` if unused or implement a staff auth flow that matches the schema
-- if removed, update `audit_logs.created_by`, `bookings.approved_by`, `reports.reviewed_by`, `penalties.issued_by`, and `notifications.created_by` to use a consistent actor model
+```
+                    HIGH IMPACT
+                         │
+          Phase 0        │      Phase 3
+    (Auth routing fix)   │  (SuperAdmin API)
+                         │
+    ─────────────────────┼─────────────────────
+    LOW EFFORT           │              HIGH EFFORT
+                         │
+          Phase 1        │      Phase 6
+    (Security cleanup)   │  (File upload arch)
+                         │
+                    LOW IMPACT
+```
 
-### 6.3 Polymorphic reference fields
+---
 
-Current design:
+## 15. Conclusion
 
-- `reports.entity_type`, `notifications.related_entity_type`, `audit_logs.entity_type`
+ResourceX is an architecturally sound project that made the right call consolidating four separate frontend systems into one. The backend service layer is well-structured and the database schema is clean and properly indexed.
 
-Problem:
+The primary blockers before this can be considered a production-grade system are:
 
-- no referential integrity for polymorphic relationships
+1. **Fix the broken admin login redirect** (Phase 0 — 30 minutes of work)
+2. **Secure credentials using environment variables** (Phase 1 — 1 hour)
+3. **Create the missing SuperAdminController** (Phase 3 — 2-3 hours)
+4. **Replace base64 image storage** (Phase 6 — most complex, multiple days)
 
-Recommendation:
+Everything else is important but not a blocker for basic functional correctness.
 
-- normalize by splitting into typed notification/report tables or
-- enforce object relationships with application-level constraints
+The engineering roadmap at `ENGINEERING_ROADMAP.md` provides the complete phased implementation plan with dependency ordering, effort estimates, and risk analysis.
 
-### 6.4 Inconsistent university relation
+---
 
-Current design:
-
-- `universities` table exists
-- `users.university` is a VARCHAR string
-
-Problem:
-
-- string-based university references are inconsistent with normalized DB design
-
-Recommendation:
-
-- add `university_id` foreign key to `users`
-- remove free-form `users.university` if the goal is relational integrity
-
-### 6.5 Missing performance indexes
-
-Observed gaps:
-
-- no index on `bookings.approved_by`
-- no index on `penalties.issued_by`
-- no index on `trust_events.created_by`
-- no compound index on `notifications(related_entity_type, related_entity_id)`
-
-Recommendation:
-
-- add indexes on these foreign keys
-- add compound indexes for polymorphic lookup fields used in reporting
-
-## 7. Backend audit
-
-### 7.1 Security config problems
-
-Evidence:
-
-- `backend/src/main/java/com/resourcex/resourcex/security/SecurityConfig.java`
-
-Problem:
-
-- permit list contains stale route `/api/auth/current-user`
-- `@EnableMethodSecurity` is enabled but route-level auth is still coarse-grained for many resources
-
-Recommendation:
-
-- keep public auth routes explicit
-- tighten permissions on `/api/users/**`, `/api/bookings/**`, `/api/disputes/**`, and `/api/payments/**`
-- add logging for unauthorized attempts
-
-### 7.2 JWT payload and user resolution
-
-Evidence:
-
-- `backend/src/main/java/com/resourcex/resourcex/security/JwtService.java`
-- `backend/src/main/java/com/resourcex/resourcex/service/impl/AuthServiceImpl.java`
-- `backend/src/main/java/com/resourcex/resourcex/security/CustomUserDetailsServiceImpl.java`
-
-Problem:
-
-- JWT token does not include roles.
-- `loadUserByUsername` uses the `users` table only.
-- if a user has no roles, default `ROLE_USER` is assigned implicitly.
-
-Recommendation:
-
-- embed `roles` claim in JWT
-- build `UserDetails` consistently from token claims and DB
-- consider a custom `UserPrincipal` type for richer identity data
-
-### 7.3 Redundant role logic
-
-Evidence:
-
-- `backend/src/main/java/com/resourcex/resourcex/service/impl/SuperAdminServiceImpl.java`
-- `backend/src/main/java/com/resourcex/resourcex/service/impl/AuthServiceImpl.java`
-
-Problem:
-
-- role promotion and default role resolution are scattered across services.
-
-Recommendation:
-
-- centralize role assignment and lookup in a dedicated RBAC service
-- remove scattered role string logic where possible
-
-### 7.4 Controller + DTO mismatch
-
-Evidence:
-
-- `backend/src/main/java/com/resourcex/resourcex/controller/AuthController.java`
-- `backend/src/main/java/com/resourcex/resourcex/dto/response/AuthResponse.java`
-- `frontend/web/types/auth.ts`
-
-Problem:
-
-- backend response contract does not fully match frontend expectations
-- backend returns `token`, while frontend admin page also expects `accessToken` and `refreshToken`
-
-Recommendation:
-
-- maintain a single documented auth contract
-- update frontend types to match backend or vice versa
-
-## 8. Frontend audit
-
-### 8.1 Route structure inconsistency
-
-Evidence:
-
-- `frontend/web/app/(admin)/layout.tsx`
-- `frontend/web/middleware.ts`
-- `frontend/web/app/auth/login/page.tsx`
-
-Problem:
-
-- inconsistent route naming and legacy path matching
-- admin routes use mixed case and nonstandard path elements
-
-Recommendation:
-
-- normalize to lowercase, kebab-case routes
-- align folder names with route names
-- use centralized route constants for auth/middleware
-
-### 8.2 Auth state fragmentation
-
-Evidence:
-
-- `frontend/web/context/AuthContext.tsx`
-- `frontend/web/components/auth/AuthGuard.tsx`
-- `frontend/web/app/(admin)/AdminLogin/page.tsx`
-
-Problem:
-
-- auth logic is split between context and page-level code
-- admin login bypasses shared auth context
-
-Recommendation:
-
-- unify auth flows into `AuthContext`
-- use shared login and refresh logic for both student and admin
-
-### 8.3 API integration duplication
-
-Evidence:
-
-- `frontend/web/lib/api.ts`
-- `frontend/web/app/(admin)/AdminLogin/page.tsx`
-
-Problem:
-
-- separate axios clients and request logic exist
-- auth retry / error handling is duplicated
-
-Recommendation:
-
-- use one API client for all app requests
-- share auth interceptors and request metadata
-
-### 8.4 Unstable naming and terminology
-
-Evidence:
-
-- `frontend/web/types/auth.ts`
-- `frontend/web/lib/auth.ts`
-- `frontend/web/app/(admin)/page.tsx`
-
-Problem:
-
-- role strings mix `ROLE_USER`, `ROLE_ADMIN`, and free-form string types
-- UI uses `student` and `user` interchangeably
-
-Recommendation:
-
-- standardize on one domain vocabulary: `user` for general accounts, `admin` for privileged accounts, `moderator` for staff-like admin roles
-- ensure frontend role checks use normalized constants
-
-## 9. Authentication audit
-
-### 9.1 Duplicate auth systems
-
-- student login and admin login are implemented separately in the UI
-- backend uses a single auth controller, but frontend treats them as different flows
-
-Ideal architecture:
-
-- one login page
-- backend authenticates and issues role-aware JWT
-- frontend redirects by role
-
-### 9.2 Insecure session persistence
-
-- tokens are stored in localStorage and cookies
-- no HttpOnly secure cookie mechanism is used
-
-Recommendation:
-
-- prefer secure cookies if the server can manage session or JWT storage
-- if localStorage is used, avoid dual storage in cookies unless strictly needed
-
-## 10. Authorization audit
-
-### 10.1 Role-based access control
-
-Current state:
-
-- backend protects `/api/admin/**`, `/api/superadmin/**`, and many resources by roles
-- admin route protection is also attempted in frontend middleware
-
-Problems:
-
-- frontend middleware role parsing is not authoritative
-- admin access is bypassed by false frontend state
-- backend role definitions are split between `RoleConstants` and schema `staff.role`
-
-Recommendation:
-
-- enforce RBAC in backend only
-- treat frontend route guards as UX convenience, not security
-- centralize permission checks in an RBAC service
-
-### 10.2 Missing super admin consistency
-
-- `SecurityConfig` allows `/api/superadmin/**` for `SUPER_ADMIN`
-- no explicit superadmin login path exists
-
-Recommendation:
-
-- clearly define superadmin responsibilities and routes
-- ensure superadmin role is set in the same auth model as other roles
-
-## 11. API consistency audit
-
-Observations:
-
-- backend uses `/api/auth/login`, `/api/auth/register`, `/api/auth/me`
-- frontend uses `api.post('/auth/login')` and `api.get('/auth/me')`
-- security config uses `/api/auth/current-user`
-
-Mismatch:
-
-- `/api/auth/current-user` is stale
-- admin frontend expects `accessToken` and `refreshToken`
-- token format is inconsistent across components
-
-Fix:
-
-- define a consistent auth API contract
-- align backend and frontend naming exactly
-- remove obsolete response fields and endpoints
-
-## 12. Naming consistency audit
-
-Bad naming patterns found:
-
-- `AdminLogin` vs `/auth/login`
-- `disputesAdmin` vs `disputes`
-- `trust-scores` vs `trust_scores` vs `trustScores`
-- `users` vs `student`
-- `role` vs `roles` vs `ROLE_ADMIN`
-
-Recommendation:
-
-- adopt a single naming standard for routes and API paths
-- prefer lowercase, kebab-case for frontend URLs
-- prefer `ROLE_*` values in backend role strings consistently
-
-## 13. Security audit
-
-### 13.1 Hardcoded insecure admin bypass
-
-- `frontend/web/app/(admin)/layout.tsx` uses `fakeAdminAccess = true`
-- remove immediately from production code
-
-### 13.2 Client-side-only role enforcement
-
-- `frontend/web/middleware.ts` trusts cookie-parsed roles
-- cookies are client-controlled and not JWT-validated
-
-### 13.3 Missing JWT claim entropy
-
-- `JwtService` uses only email subject
-- no role or session metadata is embedded
-
-### 13.4 Token storage risk
-
-- token stored in localStorage and cookie with `SameSite=Lax`
-- no secure or HttpOnly flags
-
-Fix:
-
-- centralize token issuance and claims
-- use secure cookie policy or a short-lived JWT with refresh
-- never trust frontend-only role metadata for security decisions
-
-## 14. Scalability audit
-
-### 14.1 Service layer cleanliness
-
-- auth and RBAC logic are spread across services
-- role resolution, promotion, and authorization are not centralized
-
-Recommendation:
-
-- create a dedicated auth/RBAC module in backend
-- separate user management, booking, dispute, and notification services into clear domains
-
-### 14.2 Frontend modularity
-
-- auth logic is fragmented across `AuthContext`, `AuthGuard`, and individual pages
-- admin UI is partially decoupled from the shared auth experience
-
-Recommendation:
-
-- unify auth state management in one context/hook
-- use shared components for login, redirect, and error handling
-
-## 15. Technical debt audit
-
-High debt items:
-
-- `fakeAdminAccess` bypass
-- stale auth endpoint `/api/auth/current-user`
-- unused `staff` schema table
-- duplicated session persistence logic
-- mixed route naming and layout structure
-
-Immediate cleanup:
-
-- remove stale code and simplify auth paths
-- document the auth contract clearly
-- remove schema tables or wire them properly
-
-## 16. Refactor roadmap
-
-1. Fix backend auth route contract and JWT payload.
-2. Remove or restructure `staff` table and unify RBAC.
-3. Refactor frontend to one login page and central auth context.
-4. Remove fake admin bypass and implement server-backed admin guard.
-5. Normalize route names and middleware matching.
-6. Consolidate auth storage into a shared utility.
-7. Add missing DB indexes and clean polymorphic schema fields.
-
-## 17. Migration strategy
-
-### Step 1: Auth contract cleanup
-
-- update `SecurityConfig` to permit `/api/auth/me`
-- verify `/api/auth/login` and `/api/auth/register`
-- standardize `AuthResponse`
-
-### Step 2: RBAC normalization
-
-- choose between single account or separate staff model
-- migrate roles into `user_roles` if using single account
-- remove or deprecate `staff` if unused
-
-### Step 3: Frontend consolidation
-
-- merge admin / student login into one page
-- remove `fakeAdminAccess`
-- use shared route constants and auth client
-
-### Step 4: Database normalization
-
-- refactor `users.university` to `university_id` if using `universities`
-- simplify onboarding tables
-- add missing indexes for admin queries
-
-## 18. Recommended future architecture
-
-The ideal architecture for ResourceX is:
-
-- backend: domain modules with explicit auth/RBAC service, entity-only user model, and secure JWT auth
-- frontend: one shared auth layer, role-based redirect, and separate student/admin route groups
-- database: normalized user roles, staging tables only for registration, and coherent actor/notification references
-
-## 19. Recommended folder structure
-
-### Backend
-
-- `backend/src/main/java/com/resourcex/resourcex/auth/`
-  - security config, filters, jwt, auth service, auth controller
-- `backend/src/main/java/com/resourcex/resourcex/user/`
-  - user entity, user service, user controller
-- `backend/src/main/java/com/resourcex/resourcex/admin/`
-  - admin controllers, services, DTOs
-- `backend/src/main/java/com/resourcex/resourcex/booking/`
-- `backend/src/main/java/com/resourcex/resourcex/dispute/`
-- `backend/src/main/java/com/resourcex/resourcex/notification/`
-
-### Frontend
-
-- `frontend/web/lib/` for shared API and auth utilities
-- `frontend/web/context/` for auth state
-- `frontend/web/app/(student)/` for student routes
-- `frontend/web/app/(admin)/` for admin routes
-- `frontend/web/components/` for shared UI components
-
-## 20. Recommended RBAC architecture
-
-- use one RBAC source of truth: `roles` + `user_roles`
-- store role strings as `ROLE_USER`, `ROLE_ADMIN`, `ROLE_MODERATOR`, `ROLE_SUPER_ADMIN`
-- enforce roles in backend with `@PreAuthorize` or route matchers
-- keep frontend role checks as UX guards only
-
-## 21. Recommended auth flow
-
-1. User submits credentials to `/api/auth/login`
-2. Backend verifies credentials and status
-3. Backend issues JWT with subject + roles + expiry
-4. Frontend stores token safely and redirects based on role
-5. frontend refreshes session via `/api/auth/me`
-6. backend validates token and returns current user + roles
-
-## 22. Recommended database improvements
-
-- remove `staff` or wire it into auth
-- simplify onboarding tables
-- store `university_id` as a foreign key
-- normalize polymorphic entity references or use typed child tables
-- add missing indexes for admin action lookups
-
-## 23. Recommended frontend architecture
-
-- one auth page with role redirect
-- one shared axios client and auth interceptor
-- shared `AuthContext` for user, roles, refresh, logout
-- role-specific route groups under `/student` and `/admin`
-- remove `fakeAdminAccess` and use actual guard components
-
-## 24. Recommended backend architecture
-
-- central auth module with `JwtService`, `AuthService`, `CustomUserDetailsService`, and RBAC utilities
-- route-based security config with exact public paths
-- explicit admin and superadmin controllers for admin-only operations
-- remove dead SQL artifacts or transition them cleanly
-
-## 25. Immediate fixes vs long-term refactors
-
-### Immediate fixes
-
-- fix `/api/auth/me` / `/current-user` mismatch
-- remove `fakeAdminAccess`
-- remove duplicate admin login page behavior
-- align auth response fields
-- fix token storage duplication
-
-### Long-term refactors
-
-- choose one RBAC model and remove unused `staff`
-- normalize onboarding schema and verification tables
-- redesign frontend route naming and layout grouping
-- centralize backend RBAC service
-- implement secure token handling with refresh or secure cookies
+*End of Architecture Audit v2.0*

@@ -135,4 +135,80 @@ public class EmailServiceImpl implements EmailService {
         .replace("\"", "&quot;")
         .replace("'", "&#39;");
   }
+
+  @Override
+  public void sendPasswordResetEmail(String toEmail, String resetToken) {
+    if (toEmail == null || toEmail.isBlank()) {
+      throw new EmailDeliveryException("Recipient email is required");
+    }
+
+    if (resetToken == null || resetToken.isBlank()) {
+      throw new EmailDeliveryException("Reset token is required");
+    }
+
+    if (fromEmail == null || fromEmail.isBlank()) {
+      log.error("Email sender is not configured");
+      throw new EmailDeliveryException("Email sender is not configured. Please contact support.");
+    }
+
+    try {
+      MimeMessage message = mailSender.createMimeMessage();
+      MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
+
+      helper.setFrom(fromEmail);
+      helper.setTo(toEmail.trim().toLowerCase());
+      helper.setSubject("Reset your ResourceX Password");
+
+      String resetLink = "http://localhost:3000/auth/reset-password?token=" + resetToken;
+
+      String template = """
+          <html>
+          <body style="margin:0;padding:40px 20px;background-color:#0b0f19;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;">
+            <div style="max-width:480px;margin:0 auto;background:#111827;border-radius:16px;overflow:hidden;border:1px solid #1f2937;">
+              <div style="height:6px;background:linear-gradient(90deg,#3b82f6 0%%,#8b5cf6 100%%);"></div>
+              <div style="padding:40px 32px;">
+                <div style="margin-bottom:32px;text-align:center;">
+                  <span style="font-size:20px;font-weight:800;color:#ffffff;letter-spacing:0.5px;">
+                    Resource<span style="color:#3b82f6;">X</span>
+                  </span>
+                </div>
+                <h2 style="margin:0 0 12px 0;color:#ffffff;font-size:22px;font-weight:700;text-align:center;">
+                  Reset Your Password
+                </h2>
+                <p style="margin:0 0 32px 0;font-size:15px;color:#9ca3af;line-height:1.6;text-align:center;">
+                  Click the button below to reset your password. This link will expire in 1 hour.
+                </p>
+                <div style="margin:32px 0;text-align:center;">
+                  <a href="{{LINK}}" style="display:inline-block;background:#3b82f6;color:#ffffff;font-size:16px;font-weight:600;padding:12px 24px;border-radius:8px;text-decoration:none;">
+                    Reset Password
+                  </a>
+                </div>
+                <hr style="border:0;height:1px;background:#1f2937;margin-bottom:24px;">
+                <p style="margin:0;font-size:12px;color:#6b7280;text-align:center;line-height:1.5;">
+                  &copy; 2026 ResourceX Inc. All rights reserved.<br>
+                  If you did not request a password reset, please ignore this email.
+                </p>
+              </div>
+            </div>
+          </body>
+          </html>
+          """;
+
+      helper.setText(template.replace("{{LINK}}", resetLink), true);
+
+      mailSender.send(message);
+
+    } catch (MailException ex) {
+      log.error("Failed to send password reset email to {}: {}", toEmail, ex.getMessage(), ex);
+      throw new EmailDeliveryException(
+          "Failed to send password reset email. Please try again later.",
+          ex);
+
+    } catch (Exception ex) {
+      log.error("Unexpected error sending password reset email to {}: {}", toEmail, ex.getMessage(), ex);
+      throw new EmailDeliveryException(
+          "Unexpected error while sending password reset email.",
+          ex);
+    }
+  }
 }

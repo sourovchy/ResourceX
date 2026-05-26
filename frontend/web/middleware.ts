@@ -1,44 +1,34 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
-const STUDENT_PATHS = [
+const PROTECTED_PATHS = [
 	"/dashboard",
-	"/borrow",
-	"/my-bookings",
-	"/my-posts",
-	"/inbox",
-	"/disputes",
-	"/notifications",
-	"/profile",
-	"/history",
-];
-
-const ADMIN_PATHS = [
-	"/home",
-	"/analytics",
-	"/users",
-	"/items",
 	"/bookings",
-	"/disputesAdmin",
+	"/disputes",
+	"/analytics",
+	"/items",
+	"/users",
+	"/categories",
 	"/penalties",
 	"/trust-scores",
-	"/categories",
-	"/announcements",
-	"/adminProfile",
+	"/staff-management",
+	"/notifications",
+	"/profile",
+	"/borrow",
+	"/my-posts",
+	"/inbox",
+	"/history",
 ];
 
 export function middleware(request: NextRequest) {
 	const { pathname } = request.nextUrl;
 	const token = request.cookies.get("resourcex_token")?.value;
 
-	const isStudentRoute = STUDENT_PATHS.some(
-		(path) => pathname === path || pathname.startsWith(`${path}/`),
-	);
-	const isAdminRoute = ADMIN_PATHS.some(
+	const isProtectedRoute = PROTECTED_PATHS.some(
 		(path) => pathname === path || pathname.startsWith(`${path}/`),
 	);
 
-	if ((isAdminRoute || isStudentRoute) && !token) {
+	if (isProtectedRoute && !token) {
 		return NextResponse.redirect(new URL("/auth/login", request.url));
 	}
 
@@ -48,24 +38,20 @@ export function middleware(request: NextRequest) {
 export const config = {
 	matcher: [
 		"/dashboard/:path*",
-		"/borrow/:path*",
-		"/my-bookings/:path*",
-		"/my-posts/:path*",
-		"/inbox/:path*",
-		"/disputes/:path*",
-		"/notifications/:path*",
-		"/profile/:path*",
-		"/history/:path*",
-		"/home/:path*",
-		"/analytics/:path*",
-		"/users/:path*",
-		"/items/:path*",
 		"/bookings/:path*",
-		"/disputesAdmin/:path*",
+		"/disputes/:path*",
+		"/analytics/:path*",
+		"/items/:path*",
+		"/users/:path*",
+		"/categories/:path*",
 		"/penalties/:path*",
 		"/trust-scores/:path*",
-		"/categories/:path*",
-		"/announcements/:path*",
-		"/adminProfile/:path*",
+		"/staff-management/:path*",
+		"/notifications/:path*",
+		"/profile/:path*",
+		"/borrow/:path*",
+		"/my-posts/:path*",
+		"/inbox/:path*",
+		"/history/:path*",
 	],
 };

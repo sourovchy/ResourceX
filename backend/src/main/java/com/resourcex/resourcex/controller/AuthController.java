@@ -29,5 +29,17 @@ public class AuthController {
     @GetMapping("/me")
     public CurrentUserResponse me() {
         return authService.getCurrentUser();
-    } // is it present?
+    }
+
+    @PostMapping("/forgot-password")
+    public org.springframework.http.ResponseEntity<?> forgotPassword(@Valid @RequestBody com.resourcex.resourcex.dto.request.ForgotPasswordRequest request) {
+        authService.forgotPassword(request);
+        return org.springframework.http.ResponseEntity.ok(java.util.Map.of("message", "Password reset email sent"));
+    }
+
+    @PostMapping("/reset-password")
+    public org.springframework.http.ResponseEntity<?> resetPassword(@Valid @RequestBody com.resourcex.resourcex.dto.request.ResetPasswordRequest request) {
+        authService.resetPassword(request);
+        return org.springframework.http.ResponseEntity.ok(java.util.Map.of("message", "Password has been reset successfully"));
+    }
 }

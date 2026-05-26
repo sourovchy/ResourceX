@@ -26,21 +26,21 @@ const ActionCard = ({
 		<Link
 			href={href}
 			className={`
-				group bg-surface border border-borderLight p-5 rounded-2xl shadow-sm 
-				hover:shadow-md hover:border-outline outline-none focus:ring-4 focus:ring-primaryLight 
-				transition-all flex flex-col gap-3
+				group flex min-h-[140px] flex-col gap-3 rounded-2xl border border-borderLight bg-surface p-4 shadow-sm transition-all
+				hover:border-outline hover:shadow-md focus:outline-none focus:ring-4 focus:ring-primaryLight
+				sm:min-h-[160px] sm:gap-4 sm:p-5
 				${className}
 			`.trim()}>
 			<div
-				className={`w-12 h-12 flex items-center justify-center rounded-xl bg-opacity-80 transition-colors ${bgIcon}`}>
-				{icon}
+				className={`flex h-10 w-10 items-center justify-center rounded-xl bg-opacity-80 transition-colors sm:h-12 sm:w-12 ${bgIcon}`}>
+				<div className="scale-90 sm:scale-100">{icon}</div>
 			</div>
-			<div>
-				<h3 className="text-sm font-bold text-textPrimary group-hover:text-primary transition-colors">
+			<div className="min-w-0 flex-1">
+				<h3 className="break-words text-sm font-bold text-textPrimary transition-colors group-hover:text-primary sm:text-base">
 					{title}
 				</h3>
 				{description && (
-					<p className="text-xs text-textSecondary mt-1 leading-relaxed">
+					<p className="mt-1 line-clamp-3 break-words text-xs leading-relaxed text-textSecondary sm:text-sm">
 						{description}
 					</p>
 				)}

@@ -9,12 +9,17 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.web.PageableDefault;
 
 @RestController
 @RequestMapping("/api/admin")
 @RequiredArgsConstructor
-
+@org.springframework.security.access.prepost.PreAuthorize("hasAnyRole('ADMIN','MODERATOR','SUPER_ADMIN')")
 public class AdminController {
+
 
     private final AdminService adminService;
 
@@ -24,8 +29,9 @@ public class AdminController {
     }
 
     @GetMapping("/pending-users")
-    public List<PendingUserResponse> getPendingUsers() {
-        return adminService.getPendingUsers();
+    public Page<PendingUserResponse> getPendingUsers(
+            @PageableDefault(size = 10, sort = "pendingUserId", direction = Sort.Direction.DESC) Pageable pageable) {
+        return adminService.getPendingUsers(pageable);
     }
 
     @PostMapping("/approve/{id}")

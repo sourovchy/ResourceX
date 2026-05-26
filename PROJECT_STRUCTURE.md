@@ -8,9 +8,10 @@ This document summarizes the current backend, frontend, and database organizatio
 ResourceX/
 |-- .gitignore
 |-- README.md
-|-- PROJECT_ROADMAP.md
+|-- ENGINEERING_ROADMAP.md
+|-- PROJECT_ARCHITECTURE_AUDIT.md
 |-- PROJECT_STRUCTURE.md
-|-- OTP_SYSTEM_CHANGES.md
+|-- WorkToDO.md
 |-- next.config.mjs
 |-- backend/
 |-- frontend/
@@ -38,69 +39,96 @@ backend/
     |   |   `-- com/
     |   |       `-- resourcex/
     |   |           `-- resourcex/
-    |   |               |-- CampusvaultApplication.java
+    |   |               |-- ResourceXApplication.java
     |   |               |-- config/
-    |   |               |   |-- MailConfig.java
-    |   |               |   `-- WebConfig.java
+    |   |               |   |-- CorsConfig.java
+    |   |               |   `-- MailConfig.java
     |   |               |-- controller/
     |   |               |   |-- AdminController.java
+    |   |               |   |-- AdminReportsController.java
     |   |               |   |-- AnalyticsController.java
     |   |               |   |-- AuthController.java
     |   |               |   |-- BookingController.java
+    |   |               |   |-- CategoryController.java
+    |   |               |   |-- ConversationController.java
     |   |               |   |-- DisputeController.java
     |   |               |   |-- ItemController.java
+    |   |               |   |-- MessageController.java
     |   |               |   |-- NotificationController.java
     |   |               |   |-- OtpController.java
     |   |               |   |-- PaymentController.java
+    |   |               |   |-- PenaltyController.java
     |   |               |   |-- ReviewController.java
+    |   |               |   |-- SuperAdminController.java
+    |   |               |   |-- TrustController.java
     |   |               |   `-- UserController.java
     |   |               |-- dto/
     |   |               |   |-- request/
+    |   |               |   |   |-- ConversationRequest.java
     |   |               |   |   |-- CreateBookingRequest.java
     |   |               |   |   |-- CreateDisputeRequest.java
     |   |               |   |   |-- CreateItemRequest.java
+    |   |               |   |   |-- CreatePrivilegedUserRequest.java
     |   |               |   |   |-- CreateReviewRequest.java
+    |   |               |   |   |-- ForgotPasswordRequest.java
     |   |               |   |   |-- LoginRequest.java
+    |   |               |   |   |-- MessageRequest.java
     |   |               |   |   |-- NotificationRequest.java
     |   |               |   |   |-- OtpRequest.java
     |   |               |   |   |-- OtpVerifyRequest.java
     |   |               |   |   |-- PaymentRequest.java
     |   |               |   |   |-- PenaltyRequest.java
     |   |               |   |   |-- RegisterRequest.java
+    |   |               |   |   |-- RejectUserRequest.java
+    |   |               |   |   |-- ResetPasswordRequest.java
     |   |               |   |   |-- ResolutionRequest.java
     |   |               |   |   |-- UpdateItemRequest.java
     |   |               |   |   `-- UpdateUserRequest.java
     |   |               |   `-- response/
+    |   |               |       |-- AdminTrustUserResponse.java
     |   |               |       |-- AnalyticsResponse.java
     |   |               |       |-- ApiResponse.java
     |   |               |       |-- AuthResponse.java
     |   |               |       |-- BookingResponse.java
+    |   |               |       |-- CategoryResponse.java
+    |   |               |       |-- ConversationResponse.java
+    |   |               |       |-- CurrentUserResponse.java
     |   |               |       |-- DashboardStatsResponse.java
     |   |               |       |-- DisputeResponse.java
     |   |               |       |-- ItemResponse.java
+    |   |               |       |-- MessageResponse.java
     |   |               |       |-- NotificationResponse.java
     |   |               |       |-- OtpResponse.java
     |   |               |       |-- PaymentResponse.java
+    |   |               |       |-- PenaltyResponse.java
     |   |               |       |-- PendingUserResponse.java
     |   |               |       |-- ReviewResponse.java
+    |   |               |       |-- SimpleReportResponse.java
+    |   |               |       |-- StudentProfileResponse.java
+    |   |               |       |-- TrustAuditResponse.java
+    |   |               |       |-- TrustEventResponse.java
     |   |               |       `-- UserResponse.java
     |   |               |-- entity/
     |   |               |   |-- AuditLog.java
     |   |               |   |-- Booking.java
+    |   |               |   |-- Category.java
+    |   |               |   |-- Conversation.java
     |   |               |   |-- Dispute.java
     |   |               |   |-- Item.java
     |   |               |   |-- ItemImage.java
+    |   |               |   |-- Message.java
     |   |               |   |-- Notification.java
     |   |               |   |-- OtpStatus.java
     |   |               |   |-- OtpToken.java
+    |   |               |   |-- PasswordResetToken.java
     |   |               |   |-- Payment.java
     |   |               |   |-- Penalty.java
     |   |               |   |-- PendingUser.java
+    |   |               |   |-- PendingUserStatus.java
     |   |               |   |-- Report.java
     |   |               |   |-- Review.java
     |   |               |   |-- Role.java
-    |   |               |   |-- Staff.java
-    |   |               |   |-- StudentVerification.java
+    |   |               |   |-- StudentProfile.java
     |   |               |   |-- TrustEvent.java
     |   |               |   |-- University.java
     |   |               |   |-- User.java
@@ -109,6 +137,7 @@ backend/
     |   |               |-- exception/
     |   |               |   |-- BadRequestException.java
     |   |               |   |-- ConflictException.java
+    |   |               |   |-- EmailDeliveryException.java
     |   |               |   |-- ForbiddenException.java
     |   |               |   |-- GlobalExceptionHandler.java
     |   |               |   |-- InternalServerException.java
@@ -122,33 +151,43 @@ backend/
     |   |               |   `-- RequestLoggingFilter.java
     |   |               |-- mapper/
     |   |               |   |-- BookingMapper.java
+    |   |               |   |-- ConversationMapper.java
     |   |               |   |-- DisputeMapper.java
     |   |               |   |-- ItemMapper.java
+    |   |               |   |-- MessageMapper.java
     |   |               |   |-- NotificationMapper.java
     |   |               |   |-- PaymentMapper.java
+    |   |               |   |-- PenaltyMapper.java
     |   |               |   |-- ReviewMapper.java
     |   |               |   `-- UserMapper.java
     |   |               |-- repository/
     |   |               |   |-- AuditLogRepository.java
     |   |               |   |-- BookingRepository.java
+    |   |               |   |-- CategoryRepository.java
+    |   |               |   |-- ConversationRepository.java
     |   |               |   |-- DisputeRepository.java
     |   |               |   |-- ItemImageRepository.java
     |   |               |   |-- ItemRepository.java
+    |   |               |   |-- MessageRepository.java
     |   |               |   |-- NotificationRepository.java
     |   |               |   |-- OtpRepository.java
+    |   |               |   |-- PasswordResetTokenRepository.java
     |   |               |   |-- PaymentRepository.java
     |   |               |   |-- PenaltyRepository.java
     |   |               |   |-- PendingUserRepository.java
+    |   |               |   |-- ReportRepository.java
     |   |               |   |-- ReviewRepository.java
     |   |               |   |-- RoleRepository.java
-    |   |               |   |-- StaffRepository.java
-    |   |               |   |-- StudentVerificationRepository.java
+    |   |               |   |-- StudentProfileRepository.java
     |   |               |   |-- TrustEventRepository.java
     |   |               |   |-- UniversityRepository.java
     |   |               |   |-- UserRepository.java
     |   |               |   `-- UserRoleRepository.java
+    |   |               |-- scheduler/
+    |   |               |   `-- AutomationScheduler.java
     |   |               |-- security/
     |   |               |   |-- CustomUserDetailsServiceImpl.java
+    |   |               |   |-- JwtAuthenticationFilter.java
     |   |               |   |-- JwtService.java
     |   |               |   `-- SecurityConfig.java
     |   |               |-- service/
@@ -156,13 +195,17 @@ backend/
     |   |               |   |-- AnalyticsService.java
     |   |               |   |-- AuthService.java
     |   |               |   |-- BookingService.java
+    |   |               |   |-- ConversationService.java
     |   |               |   |-- DisputeService.java
     |   |               |   |-- EmailService.java
     |   |               |   |-- ItemService.java
+    |   |               |   |-- MessageService.java
     |   |               |   |-- NotificationService.java
     |   |               |   |-- OtpService.java
     |   |               |   |-- PaymentService.java
+    |   |               |   |-- PenaltyService.java
     |   |               |   |-- ReviewService.java
+    |   |               |   |-- SuperAdminService.java
     |   |               |   |-- TrustService.java
     |   |               |   |-- UserService.java
     |   |               |   `-- impl/
@@ -170,13 +213,17 @@ backend/
     |   |               |       |-- AnalyticsServiceImpl.java
     |   |               |       |-- AuthServiceImpl.java
     |   |               |       |-- BookingServiceImpl.java
+    |   |               |       |-- ConversationServiceImpl.java
     |   |               |       |-- DisputeServiceImpl.java
     |   |               |       |-- EmailServiceImpl.java
     |   |               |       |-- ItemServiceImpl.java
+    |   |               |       |-- MessageServiceImpl.java
     |   |               |       |-- NotificationServiceImpl.java
     |   |               |       |-- OtpServiceImpl.java
     |   |               |       |-- PaymentServiceImpl.java
+    |   |               |       |-- PenaltyServiceImpl.java
     |   |               |       |-- ReviewServiceImpl.java
+    |   |               |       |-- SuperAdminServiceImpl.java
     |   |               |       |-- TrustServiceImpl.java
     |   |               |       `-- UserServiceImpl.java
     |   |               |-- util/
@@ -187,6 +234,7 @@ backend/
     |   |               |   |-- JwtUtil.java
     |   |               |   |-- KeysUtil.java
     |   |               |   |-- PaginationUtil.java
+    |   |               |   |-- PasswordHashGenerator.java
     |   |               |   |-- PasswordUtil.java
     |   |               |   |-- ResponseUtil.java
     |   |               |   `-- constants/
@@ -197,9 +245,12 @@ backend/
     |   |               |       `-- RoleConstants.java
     |   |               `-- validator/
     |   |                   |-- BookingValidator.java
+    |   |                   |-- ConversationValidator.java
     |   |                   |-- ItemValidator.java
+    |   |                   |-- MessageValidator.java
     |   |                   |-- NotificationValidator.java
     |   |                   |-- PaymentValidator.java
+    |   |                   |-- TrustValidator.java
     |   |                   `-- UserValidator.java
     |   `-- resources/
     |       `-- application.properties
@@ -215,32 +266,31 @@ backend/
 
 ### Backend Package Responsibilities
 
-| Folder            | Purpose                                                                                                      |
-| ----------------- | ------------------------------------------------------------------------------------------------------------ |
-| `config/`         | Spring configuration such as CORS/web and mail setup.                                                        |
-| `controller/`     | REST API endpoints for auth, users, items, bookings, payments, disputes, reviews, admin, analytics, and OTP. |
-| `dto/request/`    | Request payload models received from the frontend/API clients.                                               |
-| `dto/response/`   | Response payload models returned by the API.                                                                 |
-| `entity/`         | JPA entity models representing database tables and domain records.                                           |
-| `exception/`      | Global and custom API exception handling.                                                                    |
-| `filter/`         | Request-level filters such as logging.                                                                       |
-| `mapper/`         | Entity-to-DTO and DTO-to-entity conversion helpers. Includes mappers for notifications.                      |
-| `repository/`     | Spring Data JPA repositories for database access. Includes notification queries and persistence.             |
-| `security/`       | JWT, Spring Security configuration, and user-details integration.                                            |
-| `service/`        | Service interfaces for business logic contracts. Includes notification service interface.                    |
-| `service/impl/`   | Concrete service implementations. Includes notification service implementation with transaction management.  |
-| `util/`           | Shared utility classes for dates, files, JWT, password, response, currency, pagination, and email.           |
-| `util/constants/` | Centralized constants for app values, messages, regex, roles, and error codes.                               |
-| `validator/`      | Request/domain validation helpers. Includes notification request validation and access control checks.       |
+| Folder            | Purpose                                                                                                                                                                       |
+| ----------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `config/`         | Spring configuration: CORS/web (`CorsConfig`) and mail setup (`MailConfig`).                                                                                                  |
+| `controller/`     | REST API endpoints for auth, users, items, bookings, payments, disputes, reviews, categories, conversations, messages, penalties, trust scores, admin, analytics, and OTP.    |
+| `dto/request/`    | Request payload models received from frontend/API clients. Includes conversation, message, privileged-user creation, forgot/reset-password, and reject-user payloads.         |
+| `dto/response/`   | Response payload models returned by the API. Includes category, conversation, message, penalty, student profile, trust audit/event, and current-user response shapes.         |
+| `entity/`         | JPA entity models representing database tables. Includes `Category`, `Conversation`, `Message`, `PasswordResetToken`, `PendingUserStatus`, and `StudentProfile` additions.    |
+| `exception/`      | Global and custom API exception handling. Added `EmailDeliveryException` for mail-send failures.                                                                              |
+| `filter/`         | Request-level filters such as logging (`RequestLoggingFilter`).                                                                                                               |
+| `mapper/`         | Entity-to-DTO converters. Extended with `ConversationMapper`, `MessageMapper`, and `PenaltyMapper`.                                                                           |
+| `repository/`     | Spring Data JPA repositories. Extended with `CategoryRepository`, `ConversationRepository`, `MessageRepository`, `PasswordResetTokenRepository`, `ReportRepository`, and `StudentProfileRepository`. |
+| `scheduler/`      | Spring `@Scheduled` background jobs (`AutomationScheduler`): booking expiry, OTP cleanup, dispute auto-escalation, trust recalculation, and notification pruning.             |
+| `security/`       | JWT, Spring Security configuration, and user-details integration. Added `JwtAuthenticationFilter` for stateless filter chain wiring.                                          |
+| `service/`        | Service interfaces for business logic contracts. Added `ConversationService`, `MessageService`, `PenaltyService`, and `SuperAdminService`.                                    |
+| `service/impl/`   | Concrete service implementations. Extended with `ConversationServiceImpl`, `MessageServiceImpl`, `PenaltyServiceImpl`, and `SuperAdminServiceImpl`.                           |
+| `util/`           | Shared utility classes. Added `PasswordHashGenerator` for BCrypt hash generation during dev/seeding.                                                                          |
+| `util/constants/` | Centralized constants for app values, messages, regex, roles, and error codes.                                                                                                |
+| `validator/`      | Request/domain validation helpers. Extended with `ConversationValidator`, `MessageValidator`, and `TrustValidator`.                                                           |
 
 ## Frontend
 
-The main frontend is a Next.js 14 application using React 18, TypeScript, Tailwind CSS, Axios, and Lucide React icons.
+The main frontend is a Next.js 14 application using React 18, TypeScript, Tailwind CSS, Axios, and Lucide React icons. The previous two separate route groups `(admin)` and `(student)` have been consolidated into a single unified `(dashboard)` route group with role-aware rendering per page.
 
 ```text
 frontend/
-|-- Arif/
-|   `-- index.html
 `-- web/
     |-- .eslintrc.json
     |-- CONSOLIDATION_REPORT.md
@@ -251,6 +301,7 @@ frontend/
     |-- package.json
     |-- postcss.config.js
     |-- tailwind.config.ts
+    |-- test.css
     |-- tsconfig.json
     |-- app/
     |   |-- globals.css
@@ -267,42 +318,22 @@ frontend/
     |   |   |   `-- page.tsx
     |   |   |-- register/
     |   |   |   `-- page.tsx
+    |   |   |-- reset-password/
+    |   |   |   `-- page.tsx
     |   |   |-- verify-email/
     |   |   |   `-- page.tsx
     |   |   `-- verify-phone/
     |   |       `-- page.tsx
-    |   |-- (admin)/
-    |   |   |-- layout.tsx
-    |   |   |-- AdminLogin/
-    |   |   |   `-- page.tsx
-    |   |   |-- adminProfile/
-    |   |   |   `-- page.tsx
-    |   |   |-- analytics/
-    |   |   |   `-- page.tsx
-    |   |   |-- announcements/
-    |   |   |   `-- page.tsx
-    |   |   |-- bookings/
-    |   |   |   `-- page.tsx
-    |   |   |-- categories/
-    |   |   |   `-- page.tsx
-    |   |   |-- disputesAdmin/
-    |   |   |   `-- page.tsx
-    |   |   |-- home/
-    |   |   |   `-- page.tsx
-    |   |   |-- items/
-    |   |   |   |-- page.tsx
-    |   |   |   `-- [id]/
-    |   |   |       `-- page.tsx
-    |   |   |-- penalties/
-    |   |   |   `-- page.tsx
-    |   |   |-- trust-scores/
-    |   |   |   `-- page.tsx
-    |   |   `-- users/
-    |   |       |-- page.tsx
-    |   |       `-- [id]/
-    |   |           `-- page.tsx
-    |   `-- (student)/
+    |   |-- terms/
+    |   |   `-- page.tsx
+    |   `-- (dashboard)/
     |       |-- layout.tsx
+    |       |-- analytics/
+    |       |   `-- page.tsx
+    |       |-- bookings/
+    |       |   |-- page.tsx
+    |       |   |-- AdminBookings.tsx
+    |       |   `-- StudentBookings.tsx
     |       |-- borrow/
     |       |   |-- page.tsx
     |       |   |-- book/
@@ -318,10 +349,14 @@ frontend/
     |       |   |       `-- page.tsx
     |       |   `-- wishlist/
     |       |       `-- page.tsx
+    |       |-- categories/
+    |       |   `-- page.tsx
     |       |-- dashboard/
     |       |   `-- page.tsx
     |       |-- disputes/
     |       |   |-- page.tsx
+    |       |   |-- AdminDisputes.tsx
+    |       |   |-- StudentDisputes.tsx
     |       |   |-- my/
     |       |   |   `-- page.tsx
     |       |   `-- raise/
@@ -331,6 +366,7 @@ frontend/
     |       |-- inbox/
     |       |   |-- page.tsx
     |       |   |-- components/
+    |       |   |   |-- ChatSidebar.tsx
     |       |   |   |-- ChatWindow.tsx
     |       |   |   |-- ConversationItem.tsx
     |       |   |   |-- ConversationList.tsx
@@ -346,8 +382,10 @@ frontend/
     |       |   |   `-- chat.ts
     |       |   `-- utils/
     |       |       `-- dummyData.ts
-    |       |-- my-bookings/
-    |       |   `-- page.tsx
+    |       |-- items/
+    |       |   |-- page.tsx
+    |       |   `-- [id]/
+    |       |       `-- page.tsx
     |       |-- my-posts/
     |       |   |-- page.tsx
     |       |   |-- active-rentals/
@@ -369,17 +407,31 @@ frontend/
     |       |       `-- page.tsx
     |       |-- notifications/
     |       |   `-- page.tsx
-    |       `-- profile/
+    |       |-- penalties/
+    |       |   `-- page.tsx
+    |       |-- profile/
+    |       |   |-- page.tsx
+    |       |   |-- AdminProfile.tsx
+    |       |   |-- StudentProfile.tsx
+    |       |   |-- edit/
+    |       |   |   `-- page.tsx
+    |       |   `-- my-reviews/
+    |       |       `-- page.tsx
+    |       |-- staff-management/
+    |       |   `-- page.tsx
+    |       |-- trust-scores/
+    |       |   `-- page.tsx
+    |       `-- users/
     |           |-- page.tsx
-    |           |-- edit/
-    |           |   `-- page.tsx
-    |           `-- my-reviews/
+    |           `-- [id]/
     |               `-- page.tsx
     |-- components/
     |   |-- COMPONENTS_CHANGELOG.md
     |   |-- Navbar.tsx
     |   |-- TrustBadge.tsx
     |   |-- UnderConstruction.tsx
+    |   |-- auth/
+    |   |   `-- AuthGuard.tsx
     |   |-- cards/
     |   |   |-- ActionCard.tsx
     |   |   |-- BookingCard.tsx
@@ -387,22 +439,28 @@ frontend/
     |   |   `-- StatCard.tsx
     |   |-- layout/
     |   |   `-- AppShell.tsx
-    |   `-- misc/
-    |       |-- NotifBell.tsx
-    |       `-- ResolveModal.tsx
+    |   |-- misc/
+    |   |   |-- NotifBell.tsx
+    |   |   `-- ResolveModal.tsx
+    |   `-- ui/
     |-- context/
     |   `-- ThemeContext.tsx
     |-- hooks/
     |   `-- useChat.ts
     |-- lib/
     |   |-- api.ts
-    |   |-- approvalRequests.ts
     |   |-- auth.ts
     |   |-- dateUtils.ts
-    |   |-- mocks/
-    |   |   `-- dummyData.ts
+    |   |-- errorUtils.ts
     |   `-- services/
-    |       `-- chatService.ts
+    |       |-- analyticsService.ts
+    |       |-- bookingService.ts
+    |       |-- chatService.ts
+    |       |-- disputeService.ts
+    |       |-- penaltyService.ts
+    |       |-- reviewService.ts
+    |       |-- trustService.ts
+    |       `-- userService.ts
     |-- public/
     |   `-- logo.png
     |-- theme/
@@ -416,48 +474,75 @@ frontend/
     |   `-- typography.ts
     `-- types/
         |-- analytics.ts
+        |-- auth.ts
         |-- booking.ts
         |-- chat.ts
+        |-- dispute.ts
         |-- item.ts
         |-- payment.ts
+        |-- penalty.ts
         |-- review.ts
+        |-- trust.ts
         `-- user.ts
 ```
 
 ### Frontend Folder Responsibilities
 
-| Folder               | Purpose                                                                                                                                  |
-| -------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
-| `app/`               | Next.js App Router pages, layouts, route groups, and global CSS.                                                                         |
-| `app/auth/`          | Authentication pages such as login, register, verification, pending approval, and password reset.                                        |
-| `app/(admin)/`       | Admin dashboard routes for analytics, announcements, bookings, disputes, items, users, categories, penalties, trust scores, and profile. |
-| `app/(student)/`     | Student routes for dashboard, borrowing, bookings, history, disputes, inbox, notifications, profile, and posts.                          |
-| `components/`        | Shared reusable UI components.                                                                                                           |
-| `components/cards/`  | Card components for actions, bookings, items, and stats.                                                                                 |
-| `components/layout/` | Layout-level components such as the app shell.                                                                                           |
-| `components/misc/`   | Small supporting UI components such as modals and notifications.                                                                         |
-| `context/`           | React context providers, currently including theme state.                                                                                |
-| `hooks/`             | Shared custom React hooks.                                                                                                               |
-| `lib/`               | API clients, auth helpers, date utilities, approval requests, services, and mock data.                                                   |
-| `public/`            | Static frontend assets such as the logo.                                                                                                 |
-| `theme/`             | Design tokens for colors, spacing, typography, radius, shadows, and light/dark themes.                                                   |
-| `types/`             | Shared TypeScript domain types.                                                                                                          |
+| Folder                       | Purpose                                                                                                                                                                      |
+| ---------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `app/`                       | Next.js App Router pages, layouts, route groups, and global CSS.                                                                                                             |
+| `app/auth/`                  | Authentication pages: login, register, OTP/email verification, pending approval, password forgot/reset. Added `reset-password` route.                                        |
+| `app/terms/`                 | Terms & conditions static page.                                                                                                                                              |
+| `app/(dashboard)/`           | Unified dashboard route group (replaces former `(admin)` + `(student)` split). Single `layout.tsx` renders the correct shell based on the authenticated user's role.        |
+| `app/(dashboard)/analytics/` | Analytics dashboard — admin-only charts and KPI summaries.                                                                                                                   |
+| `app/(dashboard)/bookings/`  | Role-aware bookings page: `AdminBookings.tsx` and `StudentBookings.tsx` co-located and selected at runtime by `page.tsx`.                                                    |
+| `app/(dashboard)/borrow/`    | Item browsing and borrowing flow: listing, item detail, booking form, deposit tracker, review submission, and wishlist.                                                      |
+| `app/(dashboard)/categories/`| Category management page (admin).                                                                                                                                            |
+| `app/(dashboard)/dashboard/` | Student/admin landing dashboard with key stats and quick actions.                                                                                                            |
+| `app/(dashboard)/disputes/`  | Role-aware disputes page: `AdminDisputes.tsx` and `StudentDisputes.tsx` co-located. Sub-routes for raising and viewing personal disputes.                                    |
+| `app/(dashboard)/history/`   | Rental history page for students.                                                                                                                                            |
+| `app/(dashboard)/inbox/`     | Real-time peer-to-peer messaging. Self-contained module with its own `components/`, `hooks/`, `services/`, `types/`, and `utils/` sub-folders. Added `ChatSidebar.tsx`.      |
+| `app/(dashboard)/items/`     | Browse all listed items with dynamic `[id]` detail view.                                                                                                                     |
+| `app/(dashboard)/my-posts/`  | Lender management: posted items list, add/edit, active rentals, incoming requests, earnings, condition reports, and penalty views.                                            |
+| `app/(dashboard)/notifications/` | Notification centre for students.                                                                                                                                        |
+| `app/(dashboard)/penalties/` | Penalty management page (admin).                                                                                                                                             |
+| `app/(dashboard)/profile/`   | Role-aware profile page: `AdminProfile.tsx` and `StudentProfile.tsx` co-located. Sub-routes for editing and viewing own reviews.                                             |
+| `app/(dashboard)/staff-management/` | Super-admin staff management (create/deactivate admin and staff accounts).                                                                                          |
+| `app/(dashboard)/trust-scores/` | Trust score dashboard and audit log viewer (admin).                                                                                                                       |
+| `app/(dashboard)/users/`     | User directory with dynamic `[id]` detail view (admin).                                                                                                                      |
+| `components/auth/`           | Auth-related components: `AuthGuard.tsx` for route protection.                                                                                                               |
+| `components/cards/`          | Card components for actions, bookings, items, and stats.                                                                                                                     |
+| `components/layout/`         | Layout-level components such as the app shell (`AppShell.tsx`).                                                                                                              |
+| `components/misc/`           | Small supporting UI components such as modals and notification bell.                                                                                                         |
+| `components/ui/`             | Primitive UI component library (reserved/empty — for future headless components).                                                                                            |
+| `context/`                   | React context providers, currently including theme state (`ThemeContext`).                                                                                                   |
+| `hooks/`                     | Shared custom React hooks (e.g., `useChat`).                                                                                                                                 |
+| `lib/`                       | API client (`api.ts`), auth helpers (`auth.ts`), date utilities, error utilities, and domain service modules.                                                                |
+| `lib/services/`              | Typed API service modules: analytics, booking, chat, dispute, penalty, review, trust, and user services.                                                                     |
+| `public/`                    | Static frontend assets (logo, images).                                                                                                                                       |
+| `theme/`                     | Design tokens for colors, spacing, typography, radius, shadows, and light/dark themes.                                                                                       |
+| `types/`                     | Shared TypeScript domain types. Added `auth.ts`, `dispute.ts`, `penalty.ts`, and `trust.ts`.                                                                                 |
 
 ## Database
 
 ```text
 database/
-|-- entity_breakdown.md
-|-- er_diagram.pdf
-|-- er_diagram.png
-|-- er_diagram.sql
-|-- er_diagram.svg
 |-- queries.sql
 |-- schema.sql
 |-- seed_data.sql
 |-- triggers.sql
 `-- views.sql
 ```
+
+### Database File Responsibilities
+
+| File            | Purpose                                                                             |
+| --------------- | ----------------------------------------------------------------------------------- |
+| `schema.sql`    | Full DDL — all table definitions, indexes, and foreign keys.                        |
+| `seed_data.sql` | Reference/demo data for roles, universities, categories, and sample users.          |
+| `queries.sql`   | Ad-hoc and diagnostic SQL queries used during development.                          |
+| `triggers.sql`  | MySQL triggers for automated side-effects (e.g., trust-event side-effects).        |
+| `views.sql`     | Reusable SQL views for reporting and analytics queries.                              |
 
 ## Generated Or Local-Only Folders
 
