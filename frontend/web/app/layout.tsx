@@ -10,10 +10,11 @@ const inter = Inter({ subsets: ["latin"] });
 export const metadata: Metadata = {
 	title: "ResourceX",
 	description: "Cross-Campus Resource Sharing Platform",
-	viewport: {
-		width: "device-width",
-		initialScale: 1,
-	},
+};
+
+export const viewport = {
+	width: "device-width",
+	initialScale: 1,
 };
 
 export default function RootLayout({

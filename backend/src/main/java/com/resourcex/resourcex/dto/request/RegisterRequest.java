@@ -5,6 +5,7 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 import lombok.*;
+import com.resourcex.resourcex.util.constants.RegexConstants;
 
 @Getter
 @Setter
@@ -29,13 +30,17 @@ public class RegisterRequest {
     @NotBlank(message = "Password is required")
     @Size(min = 8, max = 100, message = "Password must be between 8 and 100 characters")
     @Pattern(
-            regexp = "^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d).+$",
-            message = "Password must contain uppercase, lowercase, and number"
+            regexp = "^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d)(?=.*[^A-Za-z0-9]).+$",
+            message = "Password must contain uppercase, lowercase, number, and special character"
     )
     private String password;
 
     @NotBlank(message = "Phone number is required")
     @Size(max = 20, message = "Phone number must not exceed 20 characters")
+    @Pattern(
+            regexp = RegexConstants.PHONE_REGEX,
+            message = "Invalid phone number format"
+    )
     private String phone;
 
     @Size(max = 150, message = "University name must not exceed 150 characters")

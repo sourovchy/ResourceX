@@ -24,6 +24,7 @@ import com.resourcex.resourcex.service.EmailService;
 import com.resourcex.resourcex.service.AuditLogService;
 import com.resourcex.resourcex.entity.AuditLog;
 import com.resourcex.resourcex.util.constants.RoleConstants;
+import com.resourcex.resourcex.util.PhoneUtil;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -52,6 +53,8 @@ public class AuthServiceImpl implements AuthService {
     @Transactional
     public AuthResponse register(RegisterRequest request) {
 
+        request.setPhone(PhoneUtil.normalizePhone(request.getPhone()));
+
         if (userRepository.existsByEmailIgnoreCase(request.getEmail())
                 || pendingUserRepository.existsByEmailIgnoreCase(request.getEmail())) {
             throw new ConflictException("Email already exists");
@@ -78,7 +81,7 @@ public class AuthServiceImpl implements AuthService {
                 .university(university)
                 .department(request.getDepartment())
                 .idCardDataUrl(request.getIdCardDataUrl())
-                .status(PendingUserStatus.PENDING)
+                .status(PendingUserStatus.REGISTERED)
                 .build();
 
         pendingUserRepository.save(pendingUser);
@@ -105,7 +108,20 @@ public class AuthServiceImpl implements AuthService {
     public AuthResponse login(LoginRequest request) {
 
         User user = userRepository.findByEmailIgnoreCase(request.getEmail())
-                .orElseThrow(() -> new UnauthorizedException("Invalid email or password"));
+                .orElseGet(() -> {
+                    var pendingOpt = pendingUserRepository.findByEmailIgnoreCase(request.getEmail());
+                    if (pendingOpt.isPresent()) {
+                        PendingUser pending = pendingOpt.get();
+                        if (pending.getStatus() == PendingUserStatus.REGISTERED) {
+                            throw new UnauthorizedException("Email not verified. Please verify your email.");
+                        } else if (pending.getStatus() == PendingUserStatus.PENDING_REVIEW || pending.getStatus() == PendingUserStatus.EMAIL_VERIFIED) {
+                            throw new UnauthorizedException("Your account is pending admin review.");
+                        } else if (pending.getStatus() == PendingUserStatus.REJECTED) {
+                            throw new UnauthorizedException("Your registration was rejected.");
+                        }
+                    }
+                    throw new UnauthorizedException("Invalid email or password");
+                });
 
         if (!passwordEncoder.matches(request.getPassword(), user.getPassword())) {
             throw new UnauthorizedException("Invalid email or password");

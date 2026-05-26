@@ -2,9 +2,10 @@
 
 import React, { useState } from "react";
 import Link from "next/link";
-import { Mail, Lock, ArrowRight, Eye, EyeOff, User } from "lucide-react";
+import { Mail, Lock, ArrowRight, Eye, EyeOff, User, Loader2 } from "lucide-react";
 import { AxiosError } from "axios";
 import { useAuth } from "@/context/AuthContext";
+import { useRouter } from "next/navigation";
 
 type ErrorResponse = {
 	message?: string;
@@ -12,6 +13,7 @@ type ErrorResponse = {
 
 export default function LoginPage() {
 	const { login } = useAuth();
+	const router = useRouter();
 
 	const [form, setForm] = useState({
 		email: "",
@@ -44,10 +46,26 @@ export default function LoginPage() {
 			await login(form.email.trim(), form.password);
 		} catch (err) {
 			const axiosError = err as AxiosError<ErrorResponse>;
-			setError(
-				axiosError.response?.data?.message ||
-					"Could not sign in. Please check your email and password.",
-			);
+			
+			if (!axiosError.response) {
+				setError("Network error. Please check your connection.");
+			} else if (axiosError.response.status >= 500) {
+				setError("Server error. Please try again later.");
+			} else if (axiosError.response.status === 401 || axiosError.response.status === 403 || axiosError.response.status === 404) {
+				const errorMsg = axiosError.response?.data?.message;
+				
+				if (errorMsg === "Your account is pending admin review.") {
+					router.push("/auth/pending-approval");
+					return;
+				}
+				
+				setError(errorMsg || "Invalid email or password.");
+			} else {
+				setError(
+					axiosError.response?.data?.message ||
+						"Invalid email or password.",
+				);
+			}
 		} finally {
 			setLoading(false);
 		}
@@ -100,6 +118,7 @@ export default function LoginPage() {
 									onChange={(e) => setForm({ ...form, email: e.target.value })}
 									className="w-full rounded-lg border border-outlineVariant bg-surface py-3 pl-10 pr-4 text-textPrimary outline-none transition focus:border-primary focus:ring-2 focus:ring-primary"
 									placeholder="yourname@university.edu"
+									maxLength={100}
 									required
 								/>
 							</div>
@@ -126,6 +145,7 @@ export default function LoginPage() {
 									onChange={(e) => setForm({ ...form, password: e.target.value })}
 									className="w-full rounded-lg border border-outlineVariant bg-surface py-3 pl-10 pr-10 text-textPrimary outline-none transition focus:border-primary focus:ring-2 focus:ring-primary"
 									placeholder="••••••••"
+									maxLength={128}
 									required
 								/>
 								<button
@@ -169,8 +189,17 @@ export default function LoginPage() {
 							type="submit"
 							disabled={loading}
 							className="mt-2 flex w-full items-center justify-center gap-2 rounded-lg bg-primary px-4 py-3 font-medium text-onPrimary shadow-md transition hover:bg-primaryDark hover:shadow-lg focus:ring-4 focus:ring-primaryLight disabled:cursor-not-allowed disabled:opacity-70">
-							{loading ? "Signing in..." : "Sign In"}
-							{!loading && <ArrowRight className="h-4 w-4" />}
+							{loading ? (
+								<>
+									<Loader2 className="h-5 w-5 animate-spin" />
+									Signing in...
+								</>
+							) : (
+								<>
+									Sign In
+									<ArrowRight className="h-4 w-4" />
+								</>
+							)}
 						</button>
 					</form>
 

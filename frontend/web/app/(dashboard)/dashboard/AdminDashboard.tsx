@@ -12,6 +12,7 @@ import {
 	ArrowRight,
 	Loader2,
 	DollarSign,
+	AlertCircle,
 } from "lucide-react";
 
 type DashboardStats = {
@@ -34,9 +35,9 @@ type PendingUser = {
 type ApiListResponse<T> =
 	| T[]
 	| {
-		data?: T[];
-		content?: T[];
-	};
+			data?: T[];
+			content?: T[];
+	  };
 
 function normalizeListResponse<T>(payload: ApiListResponse<T> | any): T[] {
 	if (Array.isArray(payload)) return payload;
@@ -88,106 +89,120 @@ export default function AdminHomePage() {
 
 	if (loading) {
 		return (
-			<div className="flex min-h-[60vh] items-center justify-center gap-3 px-4 text-center text-textSecondary">
-				<Loader2 className="h-5 w-5 animate-spin" />
-				<span className="text-sm font-medium sm:text-base">Loading admin dashboard...</span>
+			<div className="flex min-h-[60vh] flex-col items-center justify-center gap-3 text-textSecondary">
+				<Loader2 className="h-6 w-6 animate-spin text-primary" />
+				<span className="text-sm font-medium">Loading admin dashboard…</span>
 			</div>
 		);
 	}
 
 	return (
-		<div className="space-y-5 px-3 pb-20 sm:space-y-8 sm:px-0 sm:pb-0">
-			<div className="min-w-0">
-				<h1 className="text-xl font-bold tracking-tight text-textPrimary sm:text-2xl">
-					Overview
-				</h1>
-				<p className="mt-1 text-sm text-textSecondary">
-					Live platform metrics from the ResourceX database.
-				</p>
+		<div className="page-enter space-y-6 pb-20 sm:pb-0">
+			{/* Welcome strip (simplified for admin) */}
+			<div className="flex flex-col gap-4 rounded-xl border border-borderLight bg-surface p-5 shadow-sm sm:p-6">
+				<div className="min-w-0">
+					<p className="text-xs font-semibold uppercase tracking-widest text-textTertiary">
+						Admin Dashboard
+					</p>
+					<h1 className="mt-1 text-xl font-bold tracking-tight text-textPrimary sm:text-2xl">
+						Overview
+					</h1>
+					<p className="mt-1 text-sm text-textSecondary">
+						Live platform metrics from the ResourceX database.
+					</p>
+				</div>
 			</div>
 
+			{/* Error banner */}
 			{error && (
-				<div className="rounded-lg border border-error/50 bg-errorLight px-5 py-4 text-sm font-semibold text-error">
+				<div className="flex items-center gap-3 rounded-xl border border-error/40 bg-errorLight px-4 py-3 text-sm font-medium text-error animate-slide-down">
+					<AlertCircle className="h-4 w-4 shrink-0" />
 					{error}
 				</div>
 			)}
 
-			<div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+			{/* Stat cards – 2x2 on mobile, 4 across on large screens */}
+			<div className="grid grid-cols-2 gap-4 xl:grid-cols-4 stagger-children">
 				<StatCard
-					icon={<Users className="h-5 w-5 text-blue-500" />}
+					icon={<Users className="h-5 w-5 text-dashboardBlue" />}
 					title="Total Users"
 					value={String(stats?.totalUsers ?? 0)}
-					tint="bg-blue-50 dark:bg-blue-950/40"
-					iconColor="text-blue-500"
+					tint="bg-dashboardBlueTint"
 				/>
 				<StatCard
 					icon={<PackageOpen className="h-5 w-5 text-primary" />}
 					title="Active Rentals"
 					value={String(stats?.activeBookings ?? 0)}
 					tint="bg-primaryLight"
-					iconColor="text-primary"
 				/>
 				<StatCard
 					icon={<DollarSign className="h-5 w-5 text-success" />}
 					title="Revenue"
 					value={`৳${Number(stats?.revenue ?? 0).toLocaleString()}`}
 					tint="bg-successLight"
-					iconColor="text-success"
 				/>
 				<StatCard
 					icon={<UserPlus className="h-5 w-5 text-warning" />}
 					title="Pending Approvals"
 					value={String(stats?.pendingApprovals ?? pendingUsers.length)}
 					tint="bg-warningLight"
-					iconColor="text-warning"
 				/>
 			</div>
 
-			<section className="min-w-0 overflow-hidden rounded-lg border border-borderLight bg-surface shadow-sm">
-				<div className="flex flex-col gap-2 border-b border-borderLight px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-5">
-					<h2 className="flex items-center gap-2 font-bold text-textPrimary">
+			{/* Pending approvals panel – styled like StudentDashboard's panels */}
+			<section className="overflow-hidden rounded-xl border border-borderLight bg-surface shadow-sm">
+				<div className="flex items-center justify-between border-b border-borderLight px-5 py-4">
+					<h2 className="flex items-center gap-2 text-sm font-bold text-textPrimary">
 						<Clock className="h-4 w-4 text-warning" />
 						Pending Approvals
 					</h2>
-
 					<Link
 						href="/users?filter=PENDING"
-						className="inline-flex items-center gap-1 self-start text-xs font-semibold text-primary hover:underline sm:self-auto">
-						View all <ArrowRight className="h-3 w-3" />
+						className="text-xs font-semibold text-primary hover:underline">
+						View all
 					</Link>
 				</div>
 
 				<div className="divide-y divide-borderLight">
 					{pendingUsers.length === 0 ? (
-						<div className="px-4 py-10 text-center text-sm text-textSecondary sm:px-5 sm:py-12">
-							No pending approvals.
+						<div className="flex flex-col items-center justify-center gap-2 px-5 py-10 text-center">
+							<Clock className="h-8 w-8 text-borderLight" />
+							<p className="text-sm text-textSecondary">No pending approvals.</p>
 						</div>
 					) : (
-						pendingUsers.slice(0, 6).map((user) => (
-							<div
-								key={user.id}
-								className="flex flex-col gap-3 px-4 py-4 transition-colors hover:bg-surfaceVariant/50 sm:flex-row sm:items-center sm:justify-between sm:px-5">
-								<div className="flex min-w-0 items-center gap-3">
-									<div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primaryLight text-sm font-bold text-primary">
-										{user.name?.[0]?.toUpperCase() ?? "U"}
-									</div>
-									<div className="min-w-0">
-										<div className="break-words text-sm font-semibold text-textPrimary">
-											{user.name}
+						<>
+							{pendingUsers.slice(0, 6).map((user) => (
+								<div
+									key={user.id}
+									className="flex items-center justify-between gap-4 px-5 py-3.5 transition-colors hover:bg-surfaceVariant/60">
+									<div className="flex min-w-0 items-center gap-3">
+										<div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primaryLight text-sm font-bold text-primary">
+											{user.name?.[0]?.toUpperCase() ?? "U"}
 										</div>
-										<div className="break-words text-xs text-textTertiary">
-											{user.studentId} · {user.email}
+										<div className="min-w-0">
+											<div className="truncate text-sm font-semibold text-textPrimary">
+												{user.name}
+											</div>
+											<div className="truncate text-xs text-textTertiary">
+												{user.studentId} · {user.email}
+											</div>
 										</div>
 									</div>
+									<Link
+										href={`/users/${user.id}`}
+										className="shrink-0 text-xs font-bold text-primary hover:underline">
+										Review
+									</Link>
 								</div>
-
+							))}
+							{pendingUsers.length > 6 && (
 								<Link
-									href={`/users/${user.id}`}
-									className="self-start text-xs font-bold text-primary hover:underline sm:self-auto">
-									Review
+									href="/users?filter=PENDING"
+									className="flex items-center justify-center px-5 py-3 text-xs font-semibold text-textSecondary transition-colors hover:bg-surfaceVariant/60 hover:text-primary">
+									View all {pendingUsers.length} pending users →
 								</Link>
-							</div>
-						))
+							)}
+						</>
 					)}
 				</div>
 			</section>

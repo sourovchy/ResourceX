@@ -4,6 +4,7 @@ import com.resourcex.resourcex.dto.request.NotificationRequest;
 import com.resourcex.resourcex.dto.response.ApiResponse;
 import com.resourcex.resourcex.dto.response.NotificationResponse;
 import com.resourcex.resourcex.entity.Notification;
+import com.resourcex.resourcex.service.AuthService;
 import com.resourcex.resourcex.service.NotificationService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -22,6 +23,7 @@ import java.util.Map;
 public class NotificationController {
 
     private final NotificationService notificationService;
+    private final AuthService authService;
 
     /**
      * Create a new notification (admin/moderator only)
@@ -52,7 +54,7 @@ public class NotificationController {
         // Note: In production, extract userId from SecurityContext
         // For now, this is a placeholder that should be implemented with proper
         // security
-        List<NotificationResponse> response = notificationService.getNotificationsByUserId(1L);
+        List<NotificationResponse> response = notificationService.getNotificationsByUserId(authService.getCurrentUser().getUser().getUserId());
         return ResponseEntity.ok(response);
     }
 
@@ -63,7 +65,7 @@ public class NotificationController {
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<List<NotificationResponse>> getMyUnreadNotifications() {
         // Note: In production, extract userId from SecurityContext
-        List<NotificationResponse> response = notificationService.getUnreadNotificationsByUserId(1L);
+        List<NotificationResponse> response = notificationService.getUnreadNotificationsByUserId(authService.getCurrentUser().getUser().getUserId());
         return ResponseEntity.ok(response);
     }
 
@@ -74,8 +76,9 @@ public class NotificationController {
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<Map<String, Object>> getUnreadCount() {
         // Note: In production, extract userId from SecurityContext
-        Long unreadCount = notificationService.getUnreadCountByUserId(1L);
-        Long totalCount = notificationService.getTotalCountByUserId(1L);
+        Long userId = authService.getCurrentUser().getUser().getUserId();
+        Long unreadCount = notificationService.getUnreadCountByUserId(userId);
+        Long totalCount = notificationService.getTotalCountByUserId(userId);
 
         Map<String, Object> response = new HashMap<>();
         response.put("unreadCount", unreadCount);
@@ -92,7 +95,7 @@ public class NotificationController {
     public ResponseEntity<List<NotificationResponse>> getNotificationsByType(
             @PathVariable Notification.NotificationType type) {
         // Note: In production, extract userId from SecurityContext
-        List<NotificationResponse> response = notificationService.getNotificationsByUserIdAndType(1L, type);
+        List<NotificationResponse> response = notificationService.getNotificationsByUserIdAndType(authService.getCurrentUser().getUser().getUserId(), type);
         return ResponseEntity.ok(response);
     }
 
@@ -125,7 +128,7 @@ public class NotificationController {
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<ApiResponse<Void>> markAllAsRead() {
         // Note: In production, extract userId from SecurityContext
-        notificationService.markAllAsRead(1L);
+        notificationService.markAllAsRead(authService.getCurrentUser().getUser().getUserId());
 
         ApiResponse<Void> response = ApiResponse.<Void>builder()
                 .success(true)
@@ -162,7 +165,7 @@ public class NotificationController {
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<ApiResponse<Void>> deleteReadNotifications() {
         // Note: In production, extract userId from SecurityContext
-        notificationService.deleteReadNotifications(1L);
+        notificationService.deleteReadNotifications(authService.getCurrentUser().getUser().getUserId());
 
         ApiResponse<Void> response = ApiResponse.<Void>builder()
                 .success(true)

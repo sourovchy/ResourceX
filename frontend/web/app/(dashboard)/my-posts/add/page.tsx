@@ -30,6 +30,13 @@ export default function AddItemPage() {
 	});
 
 	const [images, setImages] = useState<File[]>([]);
+	const [categories, setCategories] = useState<any[]>([]);
+
+	React.useEffect(() => {
+		api.get("/categories")
+			.then((res) => setCategories(res.data?.content ?? res.data ?? []))
+			.catch(console.error);
+	}, []);
 
 	const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
 		e.preventDefault();
@@ -147,6 +154,7 @@ export default function AddItemPage() {
 							type="text"
 							placeholder="e.g. Sony Alpha A7III"
 							className="w-full rounded-xl border border-borderLight bg-surface px-4 py-3 text-sm text-textPrimary transition focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
+							maxLength={100}
 							required
 						/>
 					</div>
@@ -163,10 +171,9 @@ export default function AddItemPage() {
 								className="w-full rounded-xl border border-borderLight bg-surface px-4 py-3 text-sm text-textPrimary transition focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
 								required>
 								<option value="">Select Category</option>
-								<option value="Electronics">Electronics</option>
-								<option value="Academic">Academic</option>
-								<option value="Events">Events</option>
-								<option value="Outdoors">Outdoors</option>
+								{categories.map((c) => (
+									<option key={c.id || c.name} value={c.name}>{c.name}</option>
+								))}
 							</select>
 						</div>
 
@@ -199,6 +206,7 @@ export default function AddItemPage() {
 							rows={4}
 							placeholder="Describe the item, what is included, and any important rules..."
 							className="w-full resize-none rounded-xl border border-borderLight bg-surface px-4 py-3 text-sm text-textPrimary transition focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
+							maxLength={1000}
 							required
 						/>
 					</div>
@@ -221,6 +229,7 @@ export default function AddItemPage() {
 								onChange={handleChange}
 								type="number"
 								min="0"
+								max="100000"
 								placeholder="Rental cost per day e.g. 500"
 								className="w-full rounded-xl border border-borderLight bg-surface px-4 py-3 text-sm text-textPrimary transition focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
 								required
@@ -238,6 +247,7 @@ export default function AddItemPage() {
 								onChange={handleChange}
 								type="number"
 								min="0"
+								max="100000"
 								placeholder="Optional security deposit e.g. 100"
 								className="w-full rounded-xl border border-borderLight bg-surface px-4 py-3 text-sm text-textPrimary transition focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
 							/>

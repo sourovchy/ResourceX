@@ -2,10 +2,10 @@ import Link from "next/link";
 import { Facebook, Github, Instagram, Linkedin, Mail, Bug } from "lucide-react";
 
 const socialLinks = [
-	{ name: "Facebook", href: "https://www.facebook.com", icon: Facebook },
+	{ name: "Facebook",  href: "https://www.facebook.com",  icon: Facebook  },
 	{ name: "Instagram", href: "https://www.instagram.com", icon: Instagram },
-	{ name: "GitHub", href: "https://github.com", icon: Github },
-	{ name: "LinkedIn", href: "https://www.linkedin.com", icon: Linkedin },
+	{ name: "GitHub",    href: "https://github.com",        icon: Github    },
+	{ name: "LinkedIn",  href: "https://www.linkedin.com",  icon: Linkedin  },
 ];
 
 const supportLinks = [
@@ -21,82 +21,95 @@ const supportLinks = [
 	},
 ];
 
+const quickLinks = [
+	{ name: "Home",               href: "/"        },
+	{ name: "Terms & Conditions", href: "/terms"   },
+	{ name: "Privacy Policy",     href: "/privacy" },
+];
+
 export default function Footer() {
 	return (
 		<footer className="border-t border-borderLight bg-surface">
-			<div className="mx-auto grid max-w-7xl gap-10 px-4 py-10 sm:px-6 lg:grid-cols-[1.2fr_0.9fr_0.9fr] lg:px-8 lg:py-14">
-				<div className="space-y-5 text-center lg:text-left">
-					<div className="inline-flex items-center gap-3 justify-center lg:justify-start">
-						<div className="flex h-11 w-11 items-center justify-center rounded-xl bg-primary text-sm font-black text-onPrimary shadow-sm">
-							RX
-						</div>
-						<div className="text-left">
-							<p className="text-lg font-black tracking-tight text-textPrimary">
+			<div className="mx-auto max-w-7xl px-6 py-12 lg:py-14">
+
+				{/* Top grid */}
+				<div className="grid gap-10 lg:grid-cols-[1.4fr_1fr_1fr]">
+
+					{/* Brand */}
+					<div className="space-y-4">
+						<Link href="/" className="inline-flex items-center gap-2.5 group">
+							<div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary text-sm font-black text-onPrimary transition-transform group-hover:scale-105">
+								RX
+							</div>
+							<span className="text-base font-black tracking-tight text-textPrimary">
 								ResourceX
-							</p>
-							<p className="max-w-md text-sm leading-relaxed text-textSeconkary">
-								Empowering campus communities with a trusted student-to-student rental marketplace.
-							</p>
-						</div>
+							</span>
+						</Link>
+						<p className="max-w-xs text-sm leading-relaxed text-textSecondary">
+							Empowering campus communities with a trusted student-to-student
+							rental marketplace.
+						</p>
 					</div>
 
-					<p className="text-sm text-textSecondary">
-						© {new Date().getFullYear()} ResourceX. All rights reserved.
-					</p>
-				</div>
-
-				<div className="text-center lg:text-left">
-					<h3 className="mb-4 text-sm font-semibold uppercase tracking-wide text-textPrimary">
-						Quick Links
-					</h3>
-					<div className="flex flex-wrap justify-center gap-x-5 gap-y-3 lg:justify-start">
-						<Link href="/terms" className="text-sm text-textSecondary transition hover:text-primary">
-							Terms & Conditions
-						</Link>
-						<Link href="/privacy" className="text-sm text-textSecondary transition hover:text-primary">
-							Privacy Policy
-						</Link>
-						<Link href="/" className="text-sm text-textSecondary transition hover:text-primary">
-							Home
-						</Link>
-					</div>
-				</div>
-
-				<div className="grid gap-8 sm:grid-cols-2 lg:grid-cols-1">
-					<div className="text-center sm:text-left">
-						<h3 className="mb-4 text-sm font-semibold uppercase tracking-wide text-textPrimary">
-							Follow Us
+					{/* Quick links */}
+					<div>
+						<h3 className="mb-4 text-xs font-semibold uppercase tracking-widest text-textTertiary">
+							Quick links
 						</h3>
-						<div className="flex flex-wrap justify-center gap-3 sm:justify-start">
-							{socialLinks.map(({ name, href, icon: Icon }) => (
-								<a
-									key={name}
-									href={href}
-									target="_blank"
-									rel="noreferrer"
-									aria-label={name}
-									className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-borderLight bg-background text-textSecondary transition hover:border-primary hover:text-primary hover:shadow-sm focus:outline-none focus:ring-2 focus:ring-primaryLight">
-									<Icon className="h-4 w-4" />
-								</a>
+						<ul className="space-y-2.5">
+							{quickLinks.map(({ name, href }) => (
+								<li key={name}>
+									<Link
+										href={href}
+										className="text-sm text-textSecondary transition-colors hover:text-primary">
+										{name}
+									</Link>
+								</li>
 							))}
-						</div>
+						</ul>
 					</div>
 
-					<div className="text-center sm:text-left">
-						<h3 className="mb-4 text-sm font-semibold uppercase tracking-wide text-textPrimary">
+					{/* Support */}
+					<div>
+						<h3 className="mb-4 text-xs font-semibold uppercase tracking-widest text-textTertiary">
 							Support
 						</h3>
-						<div className="space-y-3">
+						<div className="space-y-2.5">
 							{supportLinks.map(({ name, href, icon: Icon }) => (
 								<a
 									key={name}
 									href={href}
-									className="inline-flex w-full items-center justify-center gap-2 rounded-xl border border-borderLight bg-background px-4 py-3 text-sm font-medium text-textSecondary transition hover:border-primary hover:text-primary hover:shadow-sm sm:justify-start">
+									className="flex items-center gap-2.5 text-sm text-textSecondary transition-colors hover:text-primary">
 									<Icon className="h-4 w-4 shrink-0" />
-									<span>{name}</span>
+									{name}
 								</a>
 							))}
 						</div>
+					</div>
+				</div>
+
+				{/* Divider */}
+				<div className="my-8 border-t border-divider" />
+
+				{/* Bottom row */}
+				<div className="flex flex-col items-center gap-4 sm:flex-row sm:justify-between">
+					<p className="text-xs text-textTertiary">
+						© {new Date().getFullYear()} ResourceX. All rights reserved.
+					</p>
+
+					{/* Social icons */}
+					<div className="flex items-center gap-2">
+						{socialLinks.map(({ name, href, icon: Icon }) => (
+							<a
+								key={name}
+								href={href}
+								target="_blank"
+								rel="noreferrer"
+								aria-label={name}
+								className="flex h-8 w-8 items-center justify-center rounded-lg border border-borderLight bg-background text-textTertiary transition hover:border-primary/40 hover:bg-primaryLight/40 hover:text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/30">
+								<Icon className="h-3.5 w-3.5" />
+							</a>
+						))}
 					</div>
 				</div>
 			</div>

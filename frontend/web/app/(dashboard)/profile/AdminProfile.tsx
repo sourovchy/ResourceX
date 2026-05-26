@@ -215,7 +215,7 @@ export default function AdminProfilePage() {
 						<Link
 							href="/profile/edit"
 							className="mt-6 flex w-full items-center justify-center gap-2 rounded-xl bg-primary py-2.5 font-bold text-white shadow-sm transition hover:bg-primaryDark">
-							<Settings className="h-4 w-4" /> System Settings
+							<Settings className="h-4 w-4" /> Profile Settings
 						</Link>
 					</div>
 

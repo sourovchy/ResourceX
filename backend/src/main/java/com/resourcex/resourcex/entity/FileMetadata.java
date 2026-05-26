@@ -26,7 +26,7 @@ public class FileMetadata {
     private Long fileId;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "uploader_id", nullable = false)
+    @JoinColumn(name = "uploader_id", nullable = true)
     private User uploader;
 
     @ManyToOne(fetch = FetchType.LAZY)

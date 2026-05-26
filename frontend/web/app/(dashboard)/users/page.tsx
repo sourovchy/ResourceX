@@ -75,7 +75,11 @@ const FILTERS: FilterType[] = [
 	"REJECTED",
 ];
 
-const SUMMARY_CARDS: { label: string; status: FilterType | null; color: string }[] = [
+const SUMMARY_CARDS: {
+	label: string;
+	status: FilterType | null;
+	color: string;
+}[] = [
 	{ label: "Pending Review", status: "PENDING", color: "text-warning" },
 	{ label: "Verified", status: "VERIFIED", color: "text-success" },
 	{ label: "Suspended", status: "SUSPENDED", color: "text-error" },
@@ -160,61 +164,186 @@ export default function AdminUsersPage() {
 	const [pageIndex, setPageIndex] = useState(0);
 	const [totalPages, setTotalPages] = useState(0);
 
-	const fetchUsers = async (page: number) => {
+	const fetchUsers = async (page: number, currentFilter: FilterType) => {
 		setLoading(true);
 		try {
-			const res = await api.get(`/admin/pending-users?page=${page}&size=10`);
-			const payload = res.data;
+			let combinedMappedUsers: AdminUser[] = [];
+			let maxTotalPages = 1;
 
-			let data = [];
-			if (payload?.data?.content) {
-				data = payload.data.content;
-				setTotalPages(payload.data.totalPages || 0);
-			} else if (Array.isArray(payload?.data)) {
-				data = payload.data;
-				setTotalPages(1);
-			} else if (Array.isArray(payload)) {
-				data = payload;
-				setTotalPages(1);
-			} else if (Array.isArray(payload?.content)) {
-			    data = payload.content;
-			    setTotalPages(payload.totalPages || 0);
+			if (currentFilter === "ALL") {
+				const [resNormal, resPending] = await Promise.all([
+					api.get(`/users?page=${page}&size=10`),
+					api.get(`/admin/pending-users?page=${page}&size=10`),
+				]);
+
+				let dataNormal = [];
+				if (resNormal.data?.data?.content) {
+					dataNormal = resNormal.data.data.content;
+					maxTotalPages = Math.max(
+						maxTotalPages,
+						resNormal.data.data.totalPages || 0,
+					);
+				} else if (Array.isArray(resNormal.data?.content)) {
+					dataNormal = resNormal.data.content;
+					maxTotalPages = Math.max(
+						maxTotalPages,
+						resNormal.data.totalPages || 0,
+					);
+				} else if (Array.isArray(resNormal.data)) {
+					dataNormal = resNormal.data;
+				}
+
+				const mappedNormal = dataNormal.map((u: any) => ({
+					id: u.userId?.toString() || u.id?.toString(),
+					name: u.name,
+					email: u.email,
+					phone: u.studentProfile?.phone || "N/A",
+					studentId: u.studentProfile?.studentId || "N/A",
+					university: u.studentProfile?.university || "N/A",
+					department: u.studentProfile?.department || "N/A",
+					idCardDataUrl:
+						u.studentProfile?.idCardDataUrl || u.avatarUrl || undefined,
+					status:
+						u.status === "ACTIVE"
+							? "VERIFIED"
+							: u.status === "SUSPENDED"
+								? "SUSPENDED"
+								: "REJECTED",
+					trustScore: u.studentProfile?.trustScore || 0,
+					bookings: 0,
+					registered: new Date(u.createdAt).toLocaleDateString(),
+					lastActive: "N/A",
+					warningCount: 0,
+					verificationSubmitted: new Date(u.createdAt).toLocaleDateString(),
+					documentCount: u.studentProfile?.idCardDataUrl ? 1 : 0,
+					note: "Standard user",
+				}));
+
+				let dataPending = [];
+				if (resPending.data?.data?.content) {
+					dataPending = resPending.data.data.content;
+					maxTotalPages = Math.max(
+						maxTotalPages,
+						resPending.data.data.totalPages || 0,
+					);
+				} else if (Array.isArray(resPending.data?.content)) {
+					dataPending = resPending.data.content;
+					maxTotalPages = Math.max(
+						maxTotalPages,
+						resPending.data.totalPages || 0,
+					);
+				} else if (Array.isArray(resPending.data)) {
+					dataPending = resPending.data;
+				}
+
+				const mappedPending = dataPending.map((u: any) => ({
+					id: u.id?.toString(),
+					name: u.name,
+					email: u.email,
+					phone: u.phone || "N/A",
+					studentId: u.studentId || "N/A",
+					university: u.university || "N/A",
+					department: u.department || "N/A",
+					idCardDataUrl: u.idCardDataUrl || undefined,
+					status: "PENDING",
+					trustScore: 0,
+					bookings: 0,
+					registered: new Date(u.createdAt).toLocaleDateString(),
+					lastActive: "N/A",
+					warningCount: 0,
+					verificationSubmitted: new Date(u.createdAt).toLocaleDateString(),
+					documentCount: u.idCardDataUrl ? 1 : 0,
+					note: "Awaiting admin review",
+				}));
+
+				combinedMappedUsers = [...mappedPending, ...mappedNormal];
+				setTotalPages(maxTotalPages);
+			} else {
+				const isPending = currentFilter === "PENDING";
+				const endpoint = isPending
+					? `/admin/pending-users?page=${page}&size=10`
+					: `/users?page=${page}&size=10`;
+
+				const res = await api.get(endpoint);
+				const payload = res.data;
+
+				let data = [];
+				if (payload?.data?.content) {
+					data = payload.data.content;
+					setTotalPages(payload.data.totalPages || 0);
+				} else if (Array.isArray(payload?.data)) {
+					data = payload.data;
+					setTotalPages(1);
+				} else if (Array.isArray(payload)) {
+					data = payload;
+					setTotalPages(1);
+				} else if (Array.isArray(payload?.content)) {
+					data = payload.content;
+					setTotalPages(payload.totalPages || 0);
+				}
+
+				combinedMappedUsers = data.map((u: any) => {
+					if (isPending) {
+						return {
+							id: u.id?.toString(),
+							name: u.name,
+							email: u.email,
+							phone: u.phone || "N/A",
+							studentId: u.studentId || "N/A",
+							university: u.university || "N/A",
+							department: u.department || "N/A",
+							idCardDataUrl: u.idCardDataUrl || undefined,
+							status: "PENDING",
+							trustScore: 0,
+							bookings: 0,
+							registered: new Date(u.createdAt).toLocaleDateString(),
+							lastActive: "N/A",
+							warningCount: 0,
+							verificationSubmitted: new Date(u.createdAt).toLocaleDateString(),
+							documentCount: u.idCardDataUrl ? 1 : 0,
+							note: "Awaiting admin review",
+						};
+					}
+
+					return {
+						id: u.userId?.toString() || u.id?.toString(),
+						name: u.name,
+						email: u.email,
+						phone: u.studentProfile?.phone || "N/A",
+						studentId: u.studentProfile?.studentId || "N/A",
+						university: u.studentProfile?.university || "N/A",
+						department: u.studentProfile?.department || "N/A",
+						idCardDataUrl:
+							u.studentProfile?.idCardDataUrl || u.avatarUrl || undefined,
+						status:
+							u.status === "ACTIVE"
+								? "VERIFIED"
+								: u.status === "SUSPENDED"
+									? "SUSPENDED"
+									: "REJECTED",
+						trustScore: u.studentProfile?.trustScore || 0,
+						bookings: 0,
+						registered: new Date(u.createdAt).toLocaleDateString(),
+						lastActive: "N/A",
+						warningCount: 0,
+						verificationSubmitted: new Date(u.createdAt).toLocaleDateString(),
+						documentCount: u.studentProfile?.idCardDataUrl ? 1 : 0,
+						note: "Standard user",
+					};
+				});
 			}
 
-			const mappedUsers: AdminUser[] = data.map((u: any) => ({
-				id: u.id.toString(),
-				name: u.name,
-				email: u.email,
-				phone: u.phone,
-				studentId: u.studentId,
-				university: u.university,
-				department: u.department,
-				idCardDataUrl: u.idCardDataUrl,
-				status: STATUS_MAP[u.status] || "PENDING",
-				trustScore: 0,
-				bookings: 0,
-				registered: new Date(u.createdAt).toLocaleDateString(),
-				lastActive: "N/A",
-				warningCount: 0,
-				verificationSubmitted: new Date(u.createdAt).toLocaleDateString(),
-				documentCount: u.idCardDataUrl ? 1 : 0,
-				note:
-					u.status === "PENDING_APPROVAL"
-						? "Verified, awaiting approval"
-						: "Awaiting verification",
-			}));
-
-			setUsers(mappedUsers);
+			setUsers(combinedMappedUsers);
 		} catch (err) {
-			console.error("Failed to fetch pending users:", err);
+			console.error("Failed to fetch users:", err);
 		} finally {
 			setLoading(false);
 		}
 	};
 
 	useEffect(() => {
-		fetchUsers(pageIndex);
-	}, [pageIndex]);
+		fetchUsers(pageIndex, filter);
+	}, [pageIndex, filter]);
 
 	const filteredUsers = useMemo(() => {
 		return users.filter((u) => {
@@ -253,7 +382,7 @@ export default function AdminUsersPage() {
 
 		try {
 			await api.post(`/admin/approve/${selectedUser.id}`);
-			fetchUsers(pageIndex);
+			fetchUsers(pageIndex, filter);
 			closeModal();
 		} catch (err) {
 			console.error("Failed to approve user:", err);
@@ -266,7 +395,7 @@ export default function AdminUsersPage() {
 
 		try {
 			await api.post(`/admin/reject/${selectedUser.id}`);
-			fetchUsers(pageIndex);
+			fetchUsers(pageIndex, filter);
 			closeModal();
 		} catch (err) {
 			console.error("Failed to reject user:", err);
@@ -274,13 +403,25 @@ export default function AdminUsersPage() {
 		}
 	};
 
-	const suspendUser = () => {
-		// Placeholder for future implementation
-		closeModal();
+	const suspendUser = async () => {
+		if (!selectedUser) return;
+		try {
+			await api.post(`/admin/block/${selectedUser.id}`);
+			fetchUsers(pageIndex, filter);
+			closeModal();
+		} catch (err) {
+			console.error(err);
+		}
 	};
 
-	const reactivateUser = (userId: string) => {
-		// Placeholder for future implementation
+	const reactivateUser = async (userId: string) => {
+		try {
+			await api.post(`/admin/unblock/${userId}`);
+			fetchUsers(pageIndex, filter);
+			closeModal();
+		} catch (err) {
+			console.error(err);
+		}
 	};
 
 	const restoreForReview = (userId: string) => {
@@ -294,21 +435,24 @@ export default function AdminUsersPage() {
 					<h1 className="text-2xl font-bold text-textPrimary">
 						User Management
 					</h1>
-					<p className="text-textSecondary text-sm mt-1">
+					<p className="mt-1 text-sm text-textSecondary">
 						Manage student accounts, verifications, and suspensions.
 					</p>
 				</div>
 
-				<div className="flex w-full items-center gap-2 bg-surface border border-borderLight px-3 py-2 rounded-xl shadow-sm text-sm text-textSecondary sm:w-auto">
-					<Users className="w-4 h-4" />
+				<div className="flex w-full items-center gap-2 rounded-xl border border-borderLight bg-surface px-3 py-2 text-sm text-textSecondary shadow-sm sm:w-auto">
+					<Users className="h-4 w-4" />
 					<span className="font-bold text-textPrimary">{users.length}</span>
 					<span>total users</span>
 				</div>
 			</div>
 
-			<div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+			{/* Stat cards – 2 columns on mobile, 4 on desktop (matching AdminHomePage) */}
+			<div className="grid grid-cols-2 gap-4 xl:grid-cols-4">
 				{SUMMARY_CARDS.map((card) => (
-					<div key={card.label} className="rounded-2xl border border-borderLight bg-surface p-4 shadow-sm">
+					<div
+						key={card.label}
+						className="rounded-2xl border border-borderLight bg-surface p-4 shadow-sm">
 						<div className="text-xs font-semibold uppercase tracking-wider text-textTertiary">
 							{card.label}
 						</div>
@@ -321,27 +465,28 @@ export default function AdminUsersPage() {
 				))}
 			</div>
 
-			<div className="flex flex-col gap-3 lg:flex-row lg:items-center">
-				<div className="relative w-full flex-1">
-					<Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-textTertiary" />
+			{/* Search + filter row – responsive, filters wrap on mobile (pattern from AdminBookingsPage) */}
+			<div className="flex flex-col gap-3 sm:flex-row sm:items-start">
+				<div className="relative min-w-0 flex-1">
+					<Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-textTertiary" />
 					<input
 						type="text"
 						value={search}
 						onChange={(e) => setSearch(e.target.value)}
 						placeholder="Search by name, email, or student ID..."
-						className="w-full pl-9 pr-4 py-2.5 bg-surface border border-outlineVariant rounded-xl focus:ring-2 focus:ring-primary focus:border-primary outline-none transition text-textPrimary text-sm"
+						className="w-full rounded-xl border border-outlineVariant bg-surface py-2.5 pl-9 pr-4 text-sm text-textPrimary outline-none transition focus:border-primary focus:ring-2 focus:ring-primary"
 					/>
 				</div>
 
-				<div className="flex w-full gap-2 overflow-x-auto pb-1 lg:w-auto lg:pb-0">
+				<div className="flex flex-wrap gap-2">
 					{FILTERS.map((f) => (
 						<button
 							key={f}
 							onClick={() => setFilter(f)}
-							className={`px-4 py-2 rounded-xl text-sm font-semibold transition border whitespace-nowrap ${
+							className={`rounded-xl border px-3 py-2 text-xs font-semibold transition ${
 								filter === f
-									? "bg-primary text-onPrimary border-primary shadow"
-									: "bg-surface border-outlineVariant text-textSecondary hover:bg-surfaceVariant"
+									? "border-primary bg-primary text-onPrimary shadow"
+									: "border-outlineVariant bg-surface text-textSecondary hover:bg-surfaceVariant"
 							}`}>
 							{f}
 						</button>
@@ -353,154 +498,170 @@ export default function AdminUsersPage() {
 				Note: Search and filtering apply only to the current page.
 			</div>
 
-			<div className="overflow-x-auto">
-				<DataTable
-					columns={[
-						{
-							header: "Student",
-							cell: (u) => (
-								<div className="flex min-w-0 items-center gap-3">
-									<div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primaryLight text-sm font-bold text-primary">
-										{u.name[0]}
-									</div>
-									<div className="min-w-0">
-										<div className="break-words font-semibold text-textPrimary">
-											{u.name}
+			<div className="overflow-x-auto rounded-2xl border border-borderLight bg-surface shadow-sm">
+				<div className="min-w-full">
+					<DataTable
+						columns={[
+							{
+								header: "Student",
+								cell: (u) => (
+									<div className="flex min-w-0 items-center gap-3">
+										<div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primaryLight text-sm font-bold text-primary">
+											{u.name[0]}
 										</div>
-										<div className="break-all text-xs text-textTertiary">
-											{u.email}
+										<div className="min-w-0">
+											<div className="break-words font-semibold text-textPrimary">
+												{u.name}
+											</div>
+											<div className="break-all text-xs text-textTertiary">
+												{u.email}
+											</div>
 										</div>
 									</div>
-								</div>
-							)
-						},
-						{
-							header: "Student ID",
-							cell: (u) => <span className="break-all font-mono text-xs text-textSecondary">{u.studentId}</span>
-						},
-						{
-							header: "Status",
-							cell: (u) => (
-								<span
-									className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-bold ${STATUS_COLORS[u.status]}`}>
-									{u.status}
-								</span>
-							)
-						},
-						{
-							header: "Trust",
-							cell: (u) => (
-								<div className="space-y-1">
-									<div className={`font-bold text-sm ${getTrustColor(u.trustScore)}`}>
-										{u.trustScore > 0 ? u.trustScore : "—"}
+								),
+							},
+							{
+								header: "Student ID",
+								cell: (u) => (
+									<span className="break-all font-mono text-xs text-textSecondary">
+										{u.studentId}
+									</span>
+								),
+							},
+							{
+								header: "Status",
+								cell: (u) => (
+									<span
+										className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-bold ${STATUS_COLORS[u.status]}`}>
+										{u.status}
+									</span>
+								),
+							},
+							{
+								header: "Trust",
+								cell: (u) => (
+									<div className="space-y-1">
+										<div
+											className={`text-sm font-bold ${getTrustColor(u.trustScore)}`}>
+											{u.trustScore > 0 ? u.trustScore : "—"}
+										</div>
+										<div className="text-xs text-textTertiary">
+											{getTrustLabel(u.trustScore)}
+										</div>
 									</div>
-									<div className="text-xs text-textTertiary">
-										{getTrustLabel(u.trustScore)}
-									</div>
-								</div>
-							)
-						},
-						{
-							header: "Warnings",
-							cell: (u) => <span className="text-sm font-semibold text-textSecondary">{u.warningCount}</span>
-						},
-						{
-							header: "Bookings",
-							accessorKey: "bookings"
-						},
-						{
-							header: "Last Active",
-							cell: (u) => <span className="text-xs text-textSecondary">{u.lastActive}</span>
-						},
-						{
-							header: "Actions",
-							cell: (u) => (
-								<div className="flex flex-wrap items-center justify-start gap-2 lg:justify-end">
-									{u.status === "PENDING" && (
-										<>
+								),
+							},
+							{
+								header: "Warnings",
+								cell: (u) => (
+									<span className="text-sm font-semibold text-textSecondary">
+										{u.warningCount}
+									</span>
+								),
+							},
+							{
+								header: "Bookings",
+								accessorKey: "bookings",
+							},
+							{
+								header: "Last Active",
+								cell: (u) => (
+									<span className="text-xs text-textSecondary">
+										{u.lastActive}
+									</span>
+								),
+							},
+							{
+								header: "Actions",
+								cell: (u) => (
+									<div className="flex flex-wrap items-center justify-start gap-2 lg:justify-end">
+										{u.status === "PENDING" && (
+											<>
+												<button
+													type="button"
+													onClick={() => openReview(u.id, "APPROVE")}
+													className="flex items-center gap-1 rounded-lg bg-success px-2.5 py-1.5 text-xs font-bold text-white transition hover:opacity-90">
+													<CheckCircle2 className="h-3.5 w-3.5" />
+													Approve
+												</button>
+												<button
+													type="button"
+													onClick={() => openReview(u.id, "REJECT")}
+													className="flex items-center gap-1 rounded-lg bg-errorLight px-2.5 py-1.5 text-xs font-bold text-error transition hover:bg-error/20">
+													<XCircle className="h-3.5 w-3.5" />
+													Reject
+												</button>
+											</>
+										)}
+
+										{u.status === "VERIFIED" && (
 											<button
 												type="button"
-												onClick={() => openReview(u.id, "APPROVE")}
-												className="flex items-center gap-1 px-2.5 py-1.5 bg-success text-white rounded-lg text-xs font-bold hover:opacity-90 transition">
-												<CheckCircle2 className="w-3.5 h-3.5" />
-												Approve
+												onClick={() => openReview(u.id, "SUSPEND")}
+												className="flex items-center gap-1 rounded-lg bg-errorLight px-2.5 py-1.5 text-xs font-bold text-error transition hover:bg-error/20">
+												<ShieldOff className="h-3.5 w-3.5" />
+												Suspend
 											</button>
+										)}
+
+										{u.status === "SUSPENDED" && (
 											<button
 												type="button"
-												onClick={() => openReview(u.id, "REJECT")}
-												className="flex items-center gap-1 px-2.5 py-1.5 bg-errorLight text-error rounded-lg text-xs font-bold hover:bg-error/20 transition">
-												<XCircle className="w-3.5 h-3.5" />
-												Reject
+												onClick={() => openReview(u.id, "REACTIVATE")}
+												className="flex items-center gap-1 rounded-lg bg-successLight px-2.5 py-1.5 text-xs font-bold text-success transition hover:bg-success/20">
+												<RefreshCcw className="h-3.5 w-3.5" />
+												Reactivate
 											</button>
-										</>
-									)}
+										)}
 
-									{u.status === "VERIFIED" && (
+										{u.status === "REJECTED" && (
+											<button
+												type="button"
+												onClick={() => restoreForReview(u.id)}
+												className="flex items-center gap-1 rounded-lg bg-warningLight px-2.5 py-1.5 text-xs font-bold text-warning transition hover:opacity-90">
+												<Clock className="h-3.5 w-3.5" />
+												Re‑review
+											</button>
+										)}
+
 										<button
 											type="button"
-											onClick={() => openReview(u.id, "SUSPEND")}
-											className="flex items-center gap-1 px-2.5 py-1.5 bg-errorLight text-error rounded-lg text-xs font-bold hover:bg-error/20 transition">
-											<ShieldOff className="w-3.5 h-3.5" />
-											Suspend
+											onClick={() => openReview(u.id, null)}
+											className="flex items-center gap-1 rounded-lg bg-surfaceVariant px-2.5 py-1.5 text-xs font-bold text-textSecondary transition hover:bg-borderLight">
+											<Eye className="h-3.5 w-3.5" />
+											View
 										</button>
-									)}
-
-									{u.status === "SUSPENDED" && (
-										<button
-											type="button"
-											onClick={() => openReview(u.id, "REACTIVATE")}
-											className="flex items-center gap-1 px-2.5 py-1.5 bg-successLight text-success rounded-lg text-xs font-bold hover:bg-success/20 transition">
-											<RefreshCcw className="w-3.5 h-3.5" />
-											Reactivate
-										</button>
-									)}
-
-									{u.status === "REJECTED" && (
-										<button
-											type="button"
-											onClick={() => restoreForReview(u.id)}
-											className="flex items-center gap-1 px-2.5 py-1.5 bg-warningLight text-warning rounded-lg text-xs font-bold hover:opacity-90 transition">
-											<Clock className="w-3.5 h-3.5" />
-											Re-review
-										</button>
-									)}
-
-									<button
-										type="button"
-										onClick={() => openReview(u.id, null)}
-										className="flex items-center gap-1 px-2.5 py-1.5 bg-surfaceVariant text-textSecondary rounded-lg text-xs font-bold hover:bg-borderLight transition">
-										<Eye className="w-3.5 h-3.5" />
-										View
-									</button>
-								</div>
-							)
-						}
-					]}
-					data={filteredUsers}
-					pageIndex={pageIndex}
-					totalPages={totalPages}
-					onPageChange={setPageIndex}
-					isLoading={loading}
-					emptyMessage="No users match your search."
-					emptyDescription="Try adjusting your search query or filter."
-				/>
+									</div>
+								),
+							},
+						]}
+						data={filteredUsers}
+						pageIndex={pageIndex}
+						totalPages={totalPages}
+						onPageChange={setPageIndex}
+						isLoading={loading}
+						emptyMessage="No users match your search."
+						emptyDescription="Try adjusting your search query or filter."
+					/>
+				</div>
 			</div>
 
+			{/* Modal – unchanged apart from small spacing adjustments */}
 			{selectedUser && (
 				<div className="fixed inset-0 z-50 flex items-end justify-center bg-black/50 p-3 backdrop-blur-sm sm:items-center sm:p-6">
 					<div className="w-full max-w-4xl overflow-hidden rounded-3xl border border-borderLight bg-surface shadow-2xl max-h-[calc(100vh-1.5rem)] overflow-y-auto sm:max-h-[calc(100vh-3rem)]">
 						<div className="flex flex-col gap-3 border-b border-borderLight px-4 py-4 sm:flex-row sm:items-start sm:justify-between sm:px-5">
 							<div className="min-w-0">
 								<div className="flex items-center gap-2">
-									<h2 className="text-lg font-bold text-textPrimary truncate">
+									<h2 className="truncate text-lg font-bold text-textPrimary">
 										{selectedUser.name}
 									</h2>
 									<span
-										className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold ${STATUS_COLORS[selectedUser.status]}`}>
+										className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-bold ${STATUS_COLORS[selectedUser.status]}`}>
 										{selectedUser.status}
 									</span>
 								</div>
-								<p className="text-sm text-textSecondary mt-1 truncate">
+								<p className="mt-1 truncate text-sm text-textSecondary">
 									{selectedUser.email}
 								</p>
 							</div>
@@ -508,46 +669,54 @@ export default function AdminUsersPage() {
 							<button
 								type="button"
 								onClick={closeModal}
-								className="p-2 rounded-xl hover:bg-surfaceVariant transition"
+								className="rounded-xl p-2 transition hover:bg-surfaceVariant"
 								aria-label="Close modal">
-								<X className="w-5 h-5 text-textSecondary" />
+								<X className="h-5 w-5 text-textSecondary" />
 							</button>
 						</div>
 
 						<div className="grid grid-cols-1 gap-0 lg:grid-cols-3">
 							<div className="space-y-5 border-b border-borderLight p-4 sm:p-5 lg:col-span-2 lg:border-b-0 lg:border-r">
 								<div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-	{PROFILE_METRICS.map((metric) => {
-		const value = metric.value(selectedUser);
-		const valueClassName = metric.valueClassName?.(selectedUser) ?? "text-textPrimary";
+									{PROFILE_METRICS.map((metric) => {
+										const value = metric.value(selectedUser);
+										const valueClassName =
+											metric.valueClassName?.(selectedUser) ??
+											"text-textPrimary";
 
-		return (
-			<div key={metric.label} className="rounded-2xl bg-surfaceVariant/40 p-4">
-				<div className="text-xs font-semibold uppercase tracking-wider text-textTertiary">
-					{metric.label}
-				</div>
-				<div className={`mt-1 font-semibold ${valueClassName}`}>
-					{value}
-				</div>
-			</div>
-		);
-	})}
-</div>
+										return (
+											<div
+												key={metric.label}
+												className="rounded-2xl bg-surfaceVariant/40 p-4">
+												<div className="text-xs font-semibold uppercase tracking-wider text-textTertiary">
+													{metric.label}
+												</div>
+												<div className={`mt-1 font-semibold ${valueClassName}`}>
+													{value}
+												</div>
+											</div>
+										);
+									})}
+								</div>
 
-								<div className="bg-surfaceVariant/30 rounded-2xl p-4">
-									<div className="flex items-center gap-2 text-sm font-bold text-textPrimary mb-3">
-										<Info className="w-4 h-4 text-primary" />
+								<div className="rounded-2xl bg-surfaceVariant/30 p-4">
+									<div className="mb-3 flex items-center gap-2 text-sm font-bold text-textPrimary">
+										<Info className="h-4 w-4 text-primary" />
 										Provided verification info
 									</div>
 
 									<div className="grid grid-cols-1 gap-3 text-sm sm:grid-cols-2">
-	{VERIFICATION_FIELDS.map((field) => (
-		<div key={field.label}>
-			<div className="text-xs text-textTertiary">{field.label}</div>
-			<div className="font-medium text-textPrimary">{field.value(selectedUser)}</div>
-		</div>
-	))}
-</div>
+										{VERIFICATION_FIELDS.map((field) => (
+											<div key={field.label}>
+												<div className="text-xs text-textTertiary">
+													{field.label}
+												</div>
+												<div className="font-medium text-textPrimary">
+													{field.value(selectedUser)}
+												</div>
+											</div>
+										))}
+									</div>
 
 									{selectedUser.idCardDataUrl ? (
 										<div className="mt-4">
@@ -557,12 +726,12 @@ export default function AdminUsersPage() {
 											<img
 												src={selectedUser.idCardDataUrl}
 												alt="Submitted student ID card"
-												className="max-h-80 w-full rounded-xl border border-borderLight object-contain bg-surface"
+												className="max-h-80 w-full rounded-xl border border-borderLight bg-surface object-contain"
 											/>
 										</div>
 									) : (
 										<div className="mt-4 text-xs text-textTertiary">
-											No submitted ID-card image available for this user.
+											No submitted ID‑card image available for this user.
 										</div>
 									)}
 								</div>
@@ -570,7 +739,7 @@ export default function AdminUsersPage() {
 
 							<div className="space-y-4 p-4 sm:p-5">
 								<div className="flex items-center gap-2 text-sm font-bold text-textPrimary">
-									<AlertTriangle className="w-4 h-4 text-warning" />
+									<AlertTriangle className="h-4 w-4 text-warning" />
 									Admin decision
 								</div>
 
@@ -588,20 +757,20 @@ export default function AdminUsersPage() {
 								</div>
 
 								<div>
-									<label className="block text-xs font-bold text-textTertiary uppercase tracking-wider mb-2">
+									<label className="mb-2 block text-xs font-bold uppercase tracking-wider text-textTertiary">
 										Feedback
 									</label>
 									<textarea
 										value={decisionFeedback}
 										onChange={(e) => setDecisionFeedback(e.target.value)}
 										placeholder="Write a short reason or feedback..."
-										className="w-full min-h-32 resize-none rounded-xl border border-outlineVariant bg-surface px-3 py-2 text-sm text-textPrimary outline-none focus:ring-2 focus:ring-primary"
+										className="min-h-32 w-full resize-none rounded-xl border border-outlineVariant bg-surface px-3 py-2 text-sm text-textPrimary outline-none focus:ring-2 focus:ring-primary"
 									/>
 								</div>
 
 								{reviewMode === "SUSPEND" && (
 									<div>
-										<label className="block text-xs font-bold text-textTertiary uppercase tracking-wider mb-2">
+										<label className="mb-2 block text-xs font-bold uppercase tracking-wider text-textTertiary">
 											Suspension period
 										</label>
 										<select
@@ -623,15 +792,15 @@ export default function AdminUsersPage() {
 											<button
 												type="button"
 												onClick={approveUser}
-												className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-success text-white rounded-xl text-sm font-bold hover:opacity-90 transition">
-												<CheckCircle2 className="w-4 h-4" />
+												className="flex w-full items-center justify-center gap-2 rounded-xl bg-success px-4 py-2.5 text-sm font-bold text-white transition hover:opacity-90">
+												<CheckCircle2 className="h-4 w-4" />
 												Approve
 											</button>
 											<button
 												type="button"
 												onClick={rejectUser}
-												className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-errorLight text-error rounded-xl text-sm font-bold hover:bg-error/20 transition">
-												<XCircle className="w-4 h-4" />
+												className="flex w-full items-center justify-center gap-2 rounded-xl bg-errorLight px-4 py-2.5 text-sm font-bold text-error transition hover:bg-error/20">
+												<XCircle className="h-4 w-4" />
 												Reject
 											</button>
 										</>
@@ -641,8 +810,8 @@ export default function AdminUsersPage() {
 										<button
 											type="button"
 											onClick={suspendUser}
-											className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-errorLight text-error rounded-xl text-sm font-bold hover:bg-error/20 transition">
-											<ShieldOff className="w-4 h-4" />
+											className="flex w-full items-center justify-center gap-2 rounded-xl bg-errorLight px-4 py-2.5 text-sm font-bold text-error transition hover:bg-error/20">
+											<ShieldOff className="h-4 w-4" />
 											Suspend
 										</button>
 									)}
@@ -654,8 +823,8 @@ export default function AdminUsersPage() {
 												reactivateUser(selectedUser.id);
 												closeModal();
 											}}
-											className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-successLight text-success rounded-xl text-sm font-bold hover:bg-success/20 transition">
-											<RefreshCcw className="w-4 h-4" />
+											className="flex w-full items-center justify-center gap-2 rounded-xl bg-successLight px-4 py-2.5 text-sm font-bold text-success transition hover:bg-success/20">
+											<RefreshCcw className="h-4 w-4" />
 											Reactivate
 										</button>
 									)}
@@ -664,17 +833,17 @@ export default function AdminUsersPage() {
 										<button
 											type="button"
 											onClick={() => restoreForReview(selectedUser.id)}
-											className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-warningLight text-warning rounded-xl text-sm font-bold hover:opacity-90 transition">
-											<Clock className="w-4 h-4" />
+											className="flex w-full items-center justify-center gap-2 rounded-xl bg-warningLight px-4 py-2.5 text-sm font-bold text-warning transition hover:opacity-90">
+											<Clock className="h-4 w-4" />
 											Send back to review
 										</button>
 									)}
 
 									<Link
-										href={`/users/${selectedUser.id}`}
-										className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-surfaceVariant text-textSecondary rounded-xl text-sm font-bold hover:bg-borderLight transition"
+										href={`/users/${selectedUser.id}${selectedUser.status === "PENDING" ? "?type=pending" : ""}`}
+										className="flex w-full items-center justify-center gap-2 rounded-xl bg-surfaceVariant px-4 py-2.5 text-sm font-bold text-textSecondary transition hover:bg-borderLight"
 										onClick={closeModal}>
-										<Eye className="w-4 h-4" />
+										<Eye className="h-4 w-4" />
 										Open full profile
 									</Link>
 								</div>

@@ -98,12 +98,7 @@ export default function MyPostsPage() {
 				</div>
 
 				<div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:flex-wrap sm:justify-end">
-					<Link href="/my-posts/active-rentals" className="flex w-full items-center justify-center gap-2 rounded-xl bg-surfaceVariant px-4 py-2 text-sm font-semibold text-textSecondary transition hover:bg-borderLight sm:w-auto">
-						<Eye className="h-4 w-4" /> Active Rentals
-					</Link>
-					<Link href="/my-posts/earnings" className="flex w-full items-center justify-center gap-2 rounded-xl bg-successLight px-4 py-2 text-sm font-semibold text-successDark transition hover:opacity-80 sm:w-auto">
-						<TrendingUp className="h-4 w-4" /> Earnings
-					</Link>
+
 					<Link href="/my-posts/add" className="flex w-full items-center justify-center gap-2 rounded-xl bg-primary px-5 py-2.5 text-sm font-bold text-white shadow-sm transition-colors hover:bg-primaryDark sm:w-auto">
 						<PlusCircle className="h-4 w-4" /> Add New Item
 					</Link>

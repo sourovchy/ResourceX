@@ -64,7 +64,16 @@ api.interceptors.response.use(
 			data,
 		});
 
-		if (typeof window !== "undefined" && [401, 403].includes(status)) {
+		const publicPaths = [
+			"/auth/login",
+			"/auth/register",
+			"/otp/request",
+			"/otp/resend",
+			"/otp/verify",
+		];
+		const isPublicRequest = url && publicPaths.some((path) => url.startsWith(path));
+
+		if (typeof window !== "undefined" && [401, 403].includes(status) && !isPublicRequest) {
 			logger.warn(
 				`[Auth Error] ${status} - Clearing session and redirecting to login`,
 			);

@@ -9,6 +9,7 @@ import org.springframework.data.domain.Pageable;
 public interface AdminService {
     DashboardStatsResponse getDashboardStats();
     Page<PendingUserResponse> getPendingUsers(Pageable pageable);
+    PendingUserResponse getPendingUserById(Long pendingId);
     void approveUser(Long pendingId);
     void rejectUser(Long pendingId, String reason);
     void blockItem(Long itemId, String reason);

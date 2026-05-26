@@ -2,97 +2,163 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Light Theme (Clean, Crisp, Professional) */
+/* Light theme */
 :root {
-    --color-primary: #4f46e5;         /* Modern Indigo */
-    --color-primaryLight: #e0e7ff;
-    --color-primaryDark: #4338ca;
-    --color-onPrimary: #ffffff;
+  color-scheme: light;
 
-    --color-accent: #0f172a;          /* Slate Accent for premium contrast */
-    --color-accentLight: #f1f5f9;
-    --color-accentDark: #020617;
+  /* Primary — Claude coral/orange */
+  --color-primary: #da7756;
+  --color-primaryLight: #fdf0ec;
+  --color-primaryMuted: #f4c4ae;
+  --color-primaryDark: #8f3c24;
+  --color-primaryHover: #c45e3e;
+  --color-onPrimary: #ffffff;
 
-    --color-success: #10b981; /* Emerald Green */
-    --color-secondary: #6366f1;
-    --color-successLight: #ecfdf5;
-    --color-successDark: #047857;
+  /* Accent — warm ink */
+  --color-accent: #1a1816;
+  --color-accentLight: #f3f1ec;
+  --color-accentDark: #0d0b09;
 
-    --color-error: #ef4444;
-    /* Rose/Red */
-    --color-errorLight: #fef2f2;
-    --color-errorDark: #b91c1c;
+  /* Semantic */
+  --color-success: #22c55e;
+  --color-successLight: #dcfce7;
+  --color-successDark: #166534;
 
-    --color-warning: #f59e0b;         /* Amber */
-    --color-warningLight: #fffbeb;
-    --color-warningDark: #b45309;
+  --color-error: #ef4444;
+  --color-errorLight: #fee2e2;
+  --color-errorDark: #991b1b;
 
-    --color-background: #fafafa;      /* Soft Off-White (Less straining than pure white) */
-    --color-surface: #ffffff;
-    --color-surfaceVariant: #f4f4f5;
-    --color-card: #ffffff;
+  --color-warning: #eab308;
+  --color-warningLight: #fef9c3;
+  --color-warningDark: #854d0e;
 
-    --color-textPrimary: #09090b;     /* Deep Zinc (More organic than pure #000) */
-    --color-textSecondary: #52525b;
-    --color-textTertiary: #a1a1aa;
-    --color-onSurface: #09090b;
+  --color-info: #38bdf8;
+  --color-infoLight: #e0f2fe;
+  --color-infoDark: #0369a1;
 
-    /* Borders and Dividers */
-    --color-border: #d9d9df;          /* Subtly crisp lines */
-    --color-borderLight: #dedee8;
-    --color-outline: #71717a;
-    --color-outlineVariant: #d4d4d8;
-    --color-divider: #e4e4e7;
+  --color-secondary: #da7756;
+
+  /* Surfaces — warm off-white */
+  --color-background: #faf9f7;
+  --color-surface: #f3f1ec;
+  --color-surfaceVariant: #ede9e1;
+  --color-card: #ffffff;
+
+  /* Text — warm charcoal */
+  --color-textPrimary: #1a1816;
+  --color-textSecondary: #5c5851;
+  --color-textTertiary: #9c9890;
+  --color-onSurface: #1a1816;
+
+  /* Borders */
+  --color-border: #e8e5de;
+  --color-borderLight: #f0ede8;
+  --color-outline: #b5b1aa;
+  --color-outlineVariant: #d4d1ca;
+  --color-divider: #ece9e2;
+
+  /* Animation */
+  --duration-fast: 150ms;
+  --duration-base: 250ms;
+  --duration-slow: 400ms;
+  --duration-page: 350ms;
+
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-in-out: cubic-bezier(0.45, 0, 0.55, 1);
+  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
-/* Dark Theme (Sleek, Premium, High-End Developer Aesthetic) */
+/* Dark theme */
 .dark {
-    --color-primary: #6366f1;         /* Indigo Glow */
-    --color-primaryLight: #1e1b4b;
-    --color-primaryDark: #818cf8;
-    --color-onPrimary: #ffffff;
+  color-scheme: dark;
 
-    --color-accent: #f8fafc;
-    --color-accentLight: #0f172a;
-    --color-accentDark: #cbd5e1;
+  /* Primary */
+  --color-primary: #e8895c;
+  --color-primaryLight: #3d2118;
+  --color-primaryMuted: #5a2f1c;
+  --color-primaryDark: #f4c4ae;
+  --color-primaryHover: #f09970;
+  --color-onPrimary: #1a1816;
 
-    --color-success: #34d399;
-    --color-secondary: #38bdf8;
-    --color-successLight: #064e3b;
-    --color-successDark: #a7f3d0;
+  /* Accent */
+  --color-accent: #f5f1ec;
+  --color-accentLight: #1c1a17;
+  --color-accentDark: #d4cfc8;
 
-    --color-error: #f87171;
-    --color-errorLight: #451a1a;
-    --color-errorDark: #fca5a5;
+  /* Semantic */
+  --color-success: #4ade80;
+  --color-successLight: #14532d;
+  --color-successDark: #86efac;
 
-    --color-warning: #fbbf24;
-    --color-warningLight: #451a03;
-    --color-warningDark: #fcd34d;
+  --color-error: #f87171;
+  --color-errorLight: #450a0a;
+  --color-errorDark: #fca5a5;
 
-    --color-background: #09090b;      /* Sleek Obsidian/Zinc Black */
-    --color-surface: #121214;         /* Rich Elevated Dark Surface */
-    --color-surfaceVariant: #18181b;
-    --color-card: #141417;
+  --color-warning: #facc15;
+  --color-warningLight: #422006;
+  --color-warningDark: #fde68a;
 
-    --color-textPrimary: #f4f4f5;
-    --color-textSecondary: #a1a1aa;
-    --color-textTertiary: #71717a;
-    --color-onSurface: #f4f4f5;
+  --color-info: #7dd3fc;
+  --color-infoLight: #0c2a3e;
+  --color-infoDark: #bae6fd;
 
-    /* Borders and Dividers */
-    --color-border: #27272a;          /* Muted dark borders */
-    --color-borderLight: #1f1f23;
-    --color-outline: #52525b;
-    --color-outlineVariant: #3f3f46;
-    --color-divider: #27272a;
+  --color-secondary: #e8895c;
+
+  /* Surfaces — warm charcoal */
+  --color-background: #141210;
+  --color-surface: #1c1a17;
+  --color-surfaceVariant: #242119;
+  --color-card: #1c1a17;
+
+  /* Text */
+  --color-textPrimary: #f5f1ec;
+  --color-textSecondary: #b5b0a8;
+  --color-textTertiary: #7a756e;
+  --color-onSurface: #f5f1ec;
+
+  /* Borders */
+  --color-border: #2e2b27;
+  --color-borderLight: #242119;
+  --color-outline: #4a4641;
+  --color-outlineVariant: #3d3a35;
+  --color-divider: #2e2b27;
 }
 
-/* Smooth theme transitions */
-*,
-*::before,
-*::after {
-    transition:
-        background-color 0.2s cubic-bezier(0.4, 0, 0.2, 1),
-        border-color 0.2s cubic-bezier(0.4, 0, 0.2, 1),
-        color 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+/* ─── Base ──────────────────────────────────────────────────────── */
+
+html {
+  background: var(--color-background);
+}
+
+body {
+  background: var(--color-background);
+  color: var(--color-textPrimary);
+}
+
+/* ─── Theme transition ──────────────────────────────────────────── */
+
+html.theme-transitioning,
+html.theme-transitioning * {
+  transition:
+    background-color var(--duration-base) ease,
+    color var(--duration-base) ease,
+    border-color var(--duration-base) ease,
+    box-shadow var(--duration-base) ease,
+    fill var(--duration-base) ease,
+    stroke var(--duration-base) ease;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html.theme-transitioning,
+  html.theme-transitioning * {
+    transition: none !important;
+  }
+
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
 }

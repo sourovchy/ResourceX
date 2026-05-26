@@ -43,6 +43,10 @@ export function storeSession(
 	localStorage.setItem(AUTH_USER_KEY, JSON.stringify(userWithRoles));
 	localStorage.setItem(AUTH_ROLES_KEY, JSON.stringify(roles));
 
+	if (typeof document !== "undefined") {
+		document.cookie = `${AUTH_TOKEN_KEY}=${token}; path=/; max-age=86400; SameSite=Lax`;
+	}
+
 	logger.debug("[Auth] Session stored with roles:", roles);
 }
 
@@ -52,6 +56,11 @@ export function clearSession() {
 	localStorage.removeItem(AUTH_TOKEN_KEY);
 	localStorage.removeItem(AUTH_USER_KEY);
 	localStorage.removeItem(AUTH_ROLES_KEY);
+	
+	if (typeof document !== "undefined") {
+		document.cookie = `${AUTH_TOKEN_KEY}=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT`;
+	}
+
 	logger.debug("[Auth] Session cleared");
 }
 

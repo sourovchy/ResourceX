@@ -1,17 +1,49 @@
 import React from "react";
 import { Bell } from "lucide-react";
 
-const NotifBell = ({ count }: { count?: number }) => {
-	return (
-		<button
-			aria-label="Notifications"
-			className="relative flex h-9 w-9 items-center justify-center rounded-full text-gray-500 transition-all hover:bg-blue-50 hover:text-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-200 sm:h-10 sm:w-10">
-			<Bell className="h-4 w-4 sm:h-5 sm:w-5" />
+interface NotifBellProps {
+  count?: number;
+  onClick?: () => void;
+  className?: string;
+}
 
-			{count && count > 0 && (
-				<span className="absolute right-1.5 top-1.5 flex h-2.5 w-2.5 rounded-full border-2 border-white bg-red-500 sm:h-3 sm:w-3"></span>
-			)}
-		</button>
-	);
+const NotifBell = ({ count = 0, onClick, className = "" }: NotifBellProps) => {
+  const hasNotification = count > 0;
+
+  return (
+    <button
+      type="button"
+      aria-label={
+        hasNotification
+          ? `Notifications, ${count} unread`
+          : "Notifications"
+      }
+      aria-live="polite"
+      onClick={onClick}
+      className={`
+        relative flex h-9 w-9 items-center justify-center rounded-full
+        text-gray-500 transition-all duration-200
+        hover:bg-blue-50 hover:text-blue-600
+        focus:outline-none focus:ring-2 focus:ring-blue-200
+        sm:h-10 sm:w-10
+        ${className}
+      `}
+    >
+      <Bell className="h-4 w-4 sm:h-5 sm:w-5" />
+
+      {hasNotification && (
+        <span
+          className="
+            absolute -right-0.5 -top-0.5 min-w-4 rounded-full
+            bg-red-500 px-1 text-[10px] font-semibold leading-4 text-white
+            shadow-sm
+          "
+        >
+          {count > 9 ? "9+" : count}
+        </span>
+      )}
+    </button>
+  );
 };
+
 export default NotifBell;

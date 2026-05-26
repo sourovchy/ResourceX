@@ -1,10 +1,11 @@
 "use client";
 
-import React, { useState, Suspense } from "react";
+import React, { useState, Suspense, useMemo } from "react";
 import Link from "next/link";
 import { useSearchParams, useRouter } from "next/navigation";
 import { Lock, ArrowLeft, Loader2, Eye, EyeOff } from "lucide-react";
 import api from "@/lib/api";
+import { validatePasswordChecks, isPasswordStrong } from "@/lib/validation";
 
 function ResetPasswordForm() {
 	const searchParams = useSearchParams();
@@ -17,6 +18,9 @@ function ResetPasswordForm() {
 	const [loading, setLoading] = useState(false);
 	const [error, setError] = useState("");
 	const [success, setSuccess] = useState(false);
+
+	const passwordChecks = useMemo(() => validatePasswordChecks(newPassword), [newPassword]);
+	const passwordIsStrong = useMemo(() => isPasswordStrong(newPassword), [newPassword]);
 
 	const handleSubmit = async (e: React.FormEvent) => {
 		e.preventDefault();
@@ -32,8 +36,8 @@ function ResetPasswordForm() {
 			return;
 		}
 
-		if (newPassword.length < 8) {
-			setError("Password must be at least 8 characters long.");
+		if (!passwordIsStrong) {
+			setError("Please ensure your password meets all requirements.");
 			return;
 		}
 
@@ -87,6 +91,8 @@ function ResetPasswordForm() {
 						onChange={(e) => setNewPassword(e.target.value)}
 						className="w-full rounded-lg border border-outlineVariant bg-surface py-3 pl-10 pr-10 text-textPrimary outline-none transition-all focus:border-primary focus:ring-2 focus:ring-primary"
 						placeholder="New password"
+						minLength={8}
+						maxLength={128}
 						required
 					/>
 					<button
@@ -96,6 +102,17 @@ function ResetPasswordForm() {
 					>
 						{showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
 					</button>
+				</div>
+				<div className="grid grid-cols-1 gap-1.5 pt-1 sm:grid-cols-2 sm:gap-2">
+					{passwordChecks.map((check) => (
+						<div
+							key={check.label}
+							className={`text-xs font-medium ${
+								check.valid ? "text-success" : "text-textTertiary"
+							}`}>
+							{check.valid ? "OK" : "-"} {check.label}
+						</div>
+					))}
 				</div>
 			</div>
 
@@ -111,6 +128,8 @@ function ResetPasswordForm() {
 						onChange={(e) => setConfirmPassword(e.target.value)}
 						className="w-full rounded-lg border border-outlineVariant bg-surface py-3 pl-10 pr-4 text-textPrimary outline-none transition-all focus:border-primary focus:ring-2 focus:ring-primary"
 						placeholder="Confirm new password"
+						minLength={8}
+						maxLength={128}
 						required
 					/>
 				</div>

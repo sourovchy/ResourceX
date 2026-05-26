@@ -43,7 +43,7 @@ public class AdminServiceImpl implements AdminService {
                                 .totalUsers(userRepository.count())
                                 .activeBookings(approvedBookings)
                                 .revenue(paymentRepository.sumSuccessfulRevenue().doubleValue())
-                                .pendingApprovals(pendingUserRepository.countByStatus(PendingUserStatus.PENDING))
+                                .pendingApprovals(pendingUserRepository.countByStatus(PendingUserStatus.PENDING_REVIEW))
                                 .build();
         }
 
@@ -52,8 +52,16 @@ public class AdminServiceImpl implements AdminService {
         public Page<PendingUserResponse> getPendingUsers(Pageable pageable) {
 
                 return pendingUserRepository
-                        .findByStatus(PendingUserStatus.PENDING, pageable)
+                        .findByStatus(PendingUserStatus.PENDING_REVIEW, pageable)
                         .map(this::mapToResponse);
+        }
+
+        @Override
+        @Transactional(readOnly = true)
+        public PendingUserResponse getPendingUserById(Long pendingId) {
+                return pendingUserRepository.findById(pendingId)
+                        .map(this::mapToResponse)
+                        .orElseThrow(() -> new ResourceNotFoundException("Pending user not found"));
         }
 
         @Override
@@ -63,7 +71,7 @@ public class AdminServiceImpl implements AdminService {
                 PendingUser pending = pendingUserRepository.findByIdForUpdate(pendingId)
                                 .orElseThrow(() -> new ResourceNotFoundException("Pending user not found"));
 
-                if (pending.getStatus() != PendingUserStatus.PENDING) {
+                if (pending.getStatus() != PendingUserStatus.PENDING_REVIEW) {
                         throw new ConflictException("Pending user is not awaiting approval");
                 }
 
@@ -90,6 +98,7 @@ public class AdminServiceImpl implements AdminService {
                                 .phone(pending.getPhone())
                                 .university(pending.getUniversity())
                                 .department(pending.getDepartment())
+                                .idCardDataUrl(pending.getIdCardDataUrl())
                                 .trustScore(100)
                                 .emailVerified(false)
                                 .phoneVerified(false)
@@ -125,7 +134,7 @@ public class AdminServiceImpl implements AdminService {
                 PendingUser pending = pendingUserRepository.findByIdForUpdate(pendingId)
                                 .orElseThrow(() -> new ResourceNotFoundException("Pending user not found"));
 
-                if (pending.getStatus() != PendingUserStatus.PENDING) {
+                if (pending.getStatus() != PendingUserStatus.PENDING_REVIEW) {
                         throw new ConflictException("Pending user cannot be rejected in current status");
                 }
 

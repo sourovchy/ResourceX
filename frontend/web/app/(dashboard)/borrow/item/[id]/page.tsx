@@ -141,6 +141,10 @@ export default function ItemDetailPage({ params }: { params: { id: string } }) {
 		};
 	}, [params.id]);
 
+	const ownerTrustScore = useMemo(() => {
+		return Number(item?.owner?.trustScore ?? 100);
+	}, [item?.owner?.trustScore]);
+
 	if (loading) {
 		return (
 			<div className="flex min-h-[60vh] flex-col items-center justify-center gap-3 px-4 text-center">
@@ -172,10 +176,6 @@ export default function ItemDetailPage({ params }: { params: { id: string } }) {
 		item.imageUrls?.[0] ||
 		"https://placehold.co/800x500?text=No+Image";
 	const allImages = (item.imageUrls?.length ?? 0) > 0 ? item.imageUrls ?? [] : [itemImage];
-
-	const ownerTrustScore = useMemo(() => {
-		return Number(item.owner?.trustScore ?? 100);
-	}, [item.owner?.trustScore]);
 
 	return (
 		<div className="mx-auto max-w-4xl space-y-5 px-3 pb-20 sm:space-y-6 sm:px-0">

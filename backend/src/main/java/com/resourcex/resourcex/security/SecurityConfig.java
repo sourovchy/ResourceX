@@ -59,7 +59,7 @@ public class SecurityConfig {
                                                 .requestMatchers("/api/otp/**")
                                                 .permitAll()
 
-                                                // Public File endpoints
+                                                // Public File endpoints (GET only – uploads require auth)
                                                 .requestMatchers(HttpMethod.GET, "/api/files/**")
                                                 .permitAll()
 

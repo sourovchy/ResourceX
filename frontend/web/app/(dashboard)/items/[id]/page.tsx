@@ -186,9 +186,7 @@ export default function AdminItemDetailPage() {
 			setSubmitting(true);
 			setError("");
 
-			await api.post(`/admin/block-item/${id}`, {
-				reason: removeReason.trim(),
-			});
+			await api.post(`/admin/block-item/${id}?reason=${encodeURIComponent(removeReason.trim())}`);
 
 			router.push("/items");
 		} catch (err) {

@@ -10,7 +10,10 @@ import {
 	Loader2,
 	RefreshCw,
 } from "lucide-react";
-import { analyticsService, AnalyticsResponse } from "../../../lib/services/analyticsService";
+import {
+	analyticsService,
+	AnalyticsResponse,
+} from "../../../lib/services/analyticsService";
 
 const getTailwindColor = (colorClass: string) => {
 	const colors: Record<string, string> = {
@@ -40,10 +43,10 @@ function formatCurrency(value?: number) {
 
 // BAR CHART
 function BarChart({
-					  data,
-					  maxVal,
-					  color,
-				  }: {
+	data,
+	maxVal,
+	color,
+}: {
 	data: { label: string; value: number }[];
 	maxVal: number;
 	color: string;
@@ -82,9 +85,9 @@ function BarChart({
 
 // HORIZONTAL BAR CHART
 function HBarChart({
-					   data,
-					   maxVal,
-				   }: {
+	data,
+	maxVal,
+}: {
 	data: { label: string; value: number; color: string }[];
 	maxVal: number;
 }) {
@@ -122,8 +125,8 @@ function HBarChart({
 
 // DONUT CHART
 function DonutChart({
-						slices,
-					}: {
+	slices,
+}: {
 	slices: { label: string; pct: number; color: string }[];
 }) {
 	let cumulative = 0;
@@ -140,17 +143,17 @@ function DonutChart({
 	const gradient =
 		slices.length > 0
 			? slices
-				.map((s) => {
-					const start = cumulative;
-					cumulative += s.pct;
-					const color = colorMap[s.color] || "#ccc";
-					return `${color} ${start}% ${cumulative}%`;
-				})
-				.join(", ")
+					.map((s) => {
+						const start = cumulative;
+						cumulative += s.pct;
+						const color = colorMap[s.color] || "#ccc";
+						return `${color} ${start}% ${cumulative}%`;
+					})
+					.join(", ")
 			: "#e5e7eb 0% 100%";
 
 	return (
-		<div className="mt-6 flex flex-col items-center gap-6 sm:gap-10 sm:flex-row">
+		<div className="mt-6 flex flex-col items-center gap-6 sm:flex-row sm:gap-10">
 			<div
 				className="relative h-28 w-28 shrink-0 rounded-full shadow-md transition-transform duration-300 hover:scale-105 sm:h-32 sm:w-32"
 				style={{
@@ -188,23 +191,25 @@ function DonutChart({
 	);
 }
 
-// CARD WRAPPER
+// CARD WRAPPER – consistent with admin panel card styling
 function ChartCard({
-					   title,
-					   icon,
-					   children,
-				   }: {
+	title,
+	icon,
+	children,
+}: {
 	title: string;
 	icon: React.ReactNode;
 	children: React.ReactNode;
 }) {
 	return (
-		<div className="min-w-0 rounded-2xl border border-border/50 bg-surface p-4 shadow-sm transition-shadow hover:shadow-md sm:p-6">
-			<h2 className="flex items-center gap-2.5 text-sm font-bold uppercase tracking-wider text-textPrimary break-words">
-				<span className="rounded-lg bg-surfaceVariant p-2">{icon}</span>
-				{title}
-			</h2>
-			{children}
+		<div className="overflow-hidden rounded-xl border border-borderLight bg-surface shadow-sm transition-shadow hover:shadow-md">
+			<div className="border-b border-borderLight px-5 py-4">
+				<h2 className="flex items-center gap-2.5 text-sm font-bold uppercase tracking-wider text-textPrimary">
+					<span className="rounded-lg bg-surfaceVariant p-2">{icon}</span>
+					{title}
+				</h2>
+			</div>
+			<div className="p-5">{children}</div>
 		</div>
 	);
 }
@@ -223,7 +228,7 @@ export default function AdminAnalyticsPage() {
 		} catch (err: any) {
 			setError(
 				err?.response?.data?.message ||
-				"Failed to load analytics from the backend.",
+					"Failed to load analytics from the backend.",
 			);
 		}
 	};
@@ -291,7 +296,7 @@ export default function AdminAnalyticsPage() {
 	const chartConfigs = [
 		{
 			title: "Top 5 Most Rented Items",
-			icon: <BarChart3 className="w-4 h-4 text-primary" />,
+			icon: <BarChart3 className="h-4 w-4 text-primary" />,
 			content: (
 				<BarChart
 					data={topItems}
@@ -302,7 +307,7 @@ export default function AdminAnalyticsPage() {
 		},
 		{
 			title: "Monthly Rental Revenue (৳)",
-			icon: <TrendingUp className="w-4 h-4 text-success" />,
+			icon: <TrendingUp className="h-4 w-4 text-success" />,
 			content: (
 				<BarChart
 					data={monthlyRevenue}
@@ -313,7 +318,7 @@ export default function AdminAnalyticsPage() {
 		},
 		{
 			title: "Late Return Stats by User",
-			icon: <Clock className="w-4 h-4 text-warning" />,
+			icon: <Clock className="h-4 w-4 text-warning" />,
 			content: (
 				<HBarChart
 					data={lateReturns}
@@ -323,25 +328,38 @@ export default function AdminAnalyticsPage() {
 		},
 		{
 			title: "Booking Status Distribution",
-			icon: <CheckCircle2 className="w-4 h-4 text-accent" />,
+			icon: <CheckCircle2 className="h-4 w-4 text-accent" />,
 			content: <DonutChart slices={bookingRatio} />,
 		},
 		{
 			title: "Category Distribution",
-			icon: <PieChart className="w-4 h-4 text-textSecondary" />,
+			icon: <PieChart className="h-4 w-4 text-textSecondary" />,
 			content: <DonutChart slices={categoryDistribution} />,
 		},
 	];
 
+	if (loading) {
+		return (
+			<div className="mx-auto max-w-7xl space-y-6 px-4 pb-20 sm:px-6 lg:px-8">
+				<div className="flex min-h-[60vh] flex-col items-center justify-center gap-3 text-textSecondary">
+					<Loader2 className="h-6 w-6 animate-spin text-primary" />
+					<span className="text-sm font-medium">Loading analytics data…</span>
+				</div>
+			</div>
+		);
+	}
+
 	return (
-		<div className="mx-auto max-w-7xl space-y-6 px-3 pb-10 sm:px-0 sm:space-y-8">
-			<div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between sm:gap-3">
-				<div className="min-w-0">
-					<h1 className="text-2xl font-extrabold tracking-tight text-textPrimary sm:text-3xl">
+		<div className="mx-auto max-w-7xl space-y-6 px-4 pb-20 sm:px-6 lg:px-8">
+			{/* Header – matches admin pattern */}
+			<div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+				<div>
+					<h1 className="text-2xl font-bold text-textPrimary tracking-tight sm:text-3xl">
 						Analytics
 					</h1>
 					<p className="mt-1 text-sm text-textSecondary">
-						Live platform-wide insights and performance metrics for the current period.
+						Live platform-wide insights and performance metrics for the current
+						period.
 					</p>
 				</div>
 
@@ -349,7 +367,7 @@ export default function AdminAnalyticsPage() {
 					type="button"
 					onClick={handleRefresh}
 					disabled={refreshing}
-					className="inline-flex w-full items-center justify-center gap-2 rounded-xl border border-borderLight bg-surface px-4 py-2 text-sm font-semibold text-textPrimary shadow-sm transition hover:bg-background disabled:opacity-60 sm:w-auto">
+					className="inline-flex w-full items-center justify-center gap-2 rounded-xl border border-outlineVariant bg-surface px-4 py-2 text-sm font-semibold text-textSecondary transition hover:bg-surfaceVariant disabled:opacity-60 sm:w-auto">
 					{refreshing ? (
 						<Loader2 className="h-4 w-4 animate-spin" />
 					) : (
@@ -359,55 +377,38 @@ export default function AdminAnalyticsPage() {
 				</button>
 			</div>
 
-			{loading ? (
-				<div className="space-y-5 sm:space-y-6">
-					<div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4 sm:gap-6">
-						{Array.from({ length: 4 }).map((_, index) => (
-							<div
-								key={index}
-								className="h-28 animate-pulse rounded-2xl border border-border/50 bg-surface p-5 shadow-sm">
-								<div className="h-3 w-24 rounded-full bg-surfaceVariant" />
-								<div className="mt-4 h-8 w-32 rounded-full bg-surfaceVariant" />
-								<div className="mt-4 h-10 w-10 rounded-full bg-surfaceVariant" />
-							</div>
-						))}
-					</div>
-
-					<div className="grid grid-cols-1 gap-6 lg:grid-cols-2 sm:gap-8">
-						{Array.from({ length: 5 }).map((_, index) => (
-							<div
-								key={index}
-								className="rounded-2xl border border-border/50 bg-surface p-6 shadow-sm">
-								<div className="h-4 w-44 animate-pulse rounded-full bg-surfaceVariant" />
-								<div className="mt-6 h-56 animate-pulse rounded-2xl bg-surfaceVariant" />
-							</div>
-						))}
-					</div>
-				</div>
-			) : error ? (
-				<div className="rounded-2xl border border-error bg-errorLight p-4 text-sm text-error mx-3 sm:mx-0">
+			{/* Error banner – consistent */}
+			{error && (
+				<div className="flex items-center gap-3 rounded-xl border border-error/40 bg-errorLight px-4 py-3 text-sm font-medium text-error">
+					<Loader2 className="h-4 w-4 shrink-0" />
 					{error}
 				</div>
-			) : null}
+			)}
 
-			<div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4 sm:gap-6">
+			{/* Summary cards – 2 columns mobile, 4 columns desktop */}
+			<div className="grid grid-cols-2 gap-4 xl:grid-cols-4">
 				{summaryCards.map((card) => (
 					<div
 						key={card.label}
-						className="relative overflow-hidden rounded-2xl border border-border/50 bg-surface p-4 shadow-sm transition-transform duration-200 hover:-translate-y-0.5 hover:shadow-md sm:p-5">
-						<div className="text-xs font-bold uppercase tracking-wider text-textSecondary">
+						className="relative overflow-hidden rounded-xl border border-borderLight bg-surface p-4 shadow-sm transition hover:shadow-md">
+						<div className="text-xs font-semibold uppercase tracking-wider text-textTertiary">
 							{card.label}
 						</div>
-						<div className={`mt-2 text-2xl font-black sm:text-3xl ${card.valueClass}`}>
+						<div className={`mt-2 text-2xl font-bold ${card.valueClass}`}>
 							{card.value}
 						</div>
-						<div className={`absolute -right-4 -bottom-4 h-16 w-16 rounded-full ${card.accentClass}`} />
-						<div className={`absolute right-5 top-5 h-2.5 w-2.5 rounded-full ${card.iconClass}`} />
+						<div
+							className={`absolute -right-4 -bottom-4 h-16 w-16 rounded-full ${card.accentClass}`}
+						/>
+						<div
+							className={`absolute right-5 top-5 h-2.5 w-2.5 rounded-full ${card.iconClass}`}
+						/>
 					</div>
 				))}
 			</div>
 
-			<div className="grid grid-cols-1 gap-6 lg:grid-cols-2 sm:gap-8">
+			{/* Charts grid – 1 column mobile, 2 columns desktop */}
+			<div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
 				{chartConfigs.map((chart) => (
 					<ChartCard key={chart.title} title={chart.title} icon={chart.icon}>
 						{chart.content}

@@ -1,90 +1,108 @@
 import React from 'react';
-import { Pagination } from './Pagination';
 import { Loader2, Database } from 'lucide-react';
+import { Pagination } from './Pagination';
 import { PageEmpty } from './PageEmpty';
 
 export interface ColumnDef<T> {
-    header: string;
-    accessorKey?: keyof T;
-    cell?: (row: T) => React.ReactNode;
+  header: string;
+  accessorKey?: keyof T;
+  cell?: (row: T) => React.ReactNode;
 }
 
 interface DataTableProps<T> {
-    columns: ColumnDef<T>[];
-    data: T[];
-    pageIndex: number;
-    totalPages: number;
-    onPageChange: (pageIndex: number) => void;
-    isLoading?: boolean;
-    emptyMessage?: string;
-    emptyDescription?: string;
+  columns: ColumnDef<T>[];
+  data: T[];
+  pageIndex: number;
+  totalPages: number;
+  onPageChange: (pageIndex: number) => void;
+  isLoading?: boolean;
+  emptyMessage?: string;
+  emptyDescription?: string;
 }
 
 export function DataTable<T>({
-    columns,
-    data,
-    pageIndex,
-    totalPages,
-    onPageChange,
-    isLoading = false,
-    emptyMessage = "No data found",
-    emptyDescription = "There are currently no records to display."
+  columns,
+  data,
+  pageIndex,
+  totalPages,
+  onPageChange,
+  isLoading = false,
+  emptyMessage = 'No data found',
+  emptyDescription = 'There are currently no records to display.',
 }: DataTableProps<T>) {
+  const isEmpty = !isLoading && data.length === 0;
 
-    if (!isLoading && data.length === 0) {
-        return (
-            <div className="bg-white rounded-lg shadow border border-border px-4 py-8 sm:p-6 flex flex-col items-center justify-center min-h-[240px] sm:min-h-[300px]">
-                <PageEmpty icon={Database} title={emptyMessage} description={emptyDescription} />
-            </div>
-        );
-    }
-
+  if (isEmpty) {
     return (
-        <div className="bg-white shadow rounded-lg border border-border overflow-hidden w-full">
-            <div className="relative min-h-[150px] overflow-x-auto">
-                {isLoading && (
-                    <div className="absolute inset-0 bg-white/60 backdrop-blur-[1px] z-10 flex items-center justify-center px-4">
-                        <Loader2 className="w-8 h-8 animate-spin text-primary" />
-                    </div>
-                )}
-                <table className="min-w-[640px] w-full divide-y divide-border">
-                    <thead className="bg-surfaceVariant">
-                        <tr>
-                            {columns.map((col, index) => (
-                                <th
-                                    key={index}
-                                    scope="col"
-                                    className="px-4 sm:px-6 py-3 sm:py-4 text-left text-[11px] sm:text-xs font-semibold text-textSecondary uppercase tracking-wider whitespace-nowrap"
-                                >
-                                    {col.header}
-                                </th>
-                            ))}
-                        </tr>
-                    </thead>
-                    <tbody className="bg-white divide-y divide-border">
-                        {data.map((row, rowIndex) => (
-                            <tr key={rowIndex} className="hover:bg-surfaceVariant/70 transition-colors duration-150">
-                                {columns.map((col, colIndex) => (
-                                    <td key={colIndex} className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-sm text-textPrimary align-top">
-                                        {col.cell 
-                                            ? col.cell(row) 
-                                            : col.accessorKey 
-                                                ? (row[col.accessorKey] as React.ReactNode) 
-                                                : null
-                                        }
-                                    </td>
-                                ))}
-                            </tr>
-                        ))}
-                    </tbody>
-                </table>
-            </div>
-            
-            <Pagination
-                pageIndex={pageIndex}
-                totalPages={totalPages}
-                onPageChange={onPageChange}
-            />
+      <div className="w-full rounded-lg border border-border bg-surface px-4 py-8 shadow-sm sm:px-6">
+        <div className="flex min-h-[240px] flex-col items-center justify-center sm:min-h-[300px]">
+          <PageEmpty
+            icon={Database}
+            title={emptyMessage}
+            description={emptyDescription}
+          />
         </div>
+      </div>
     );
+  }
+
+  return (
+    <div className="w-full overflow-hidden rounded-lg border border-border bg-surface shadow-sm">
+      <div className="relative min-h-[150px] overflow-x-auto">
+        {isLoading && (
+          <div className="absolute inset-0 z-10 flex items-center justify-center bg-surface/70 px-4 backdrop-blur-[1px]">
+            <Loader2 className="h-8 w-8 animate-spin text-primary" />
+          </div>
+        )}
+
+        <table className="w-full min-w-[640px] divide-y divide-border">
+          <thead className="bg-surfaceVariant">
+            <tr>
+              {columns.map((col, index) => (
+                <th
+                  key={index}
+                  scope="col"
+                  className="whitespace-nowrap px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-textSecondary sm:px-6 sm:py-4 sm:text-xs"
+                >
+                  {col.header}
+                </th>
+              ))}
+            </tr>
+          </thead>
+
+          <tbody className="divide-y divide-border bg-surface">
+            {data.map((row, rowIndex) => (
+              <tr
+                key={rowIndex}
+                className="transition-colors duration-150 hover:bg-surfaceVariant/70"
+              >
+                {columns.map((col, colIndex) => (
+                  <td
+                    key={colIndex}
+                    className="align-top px-4 py-3 text-sm text-textPrimary sm:px-6 sm:py-4"
+                  >
+                    <div className="max-w-[280px] truncate sm:max-w-none">
+                      {col.cell
+                        ? col.cell(row)
+                        : col.accessorKey
+                          ? (row[col.accessorKey] as React.ReactNode)
+                          : null}
+                    </div>
+                  </td>
+                ))}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      <div className="border-t border-border bg-surface px-2 py-3 sm:px-4">
+        <Pagination
+          pageIndex={pageIndex}
+          totalPages={totalPages}
+          onPageChange={onPageChange}
+        />
+      </div>
+    </div>
+  );
 }

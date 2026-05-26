@@ -9,6 +9,7 @@ import {
 	Loader2,
 	AlertTriangle,
 } from "lucide-react";
+import api from "@/lib/api";
 
 type ItemResponse = {
 	id?: string | number;
@@ -27,35 +28,7 @@ type BookingPayload = {
 	endDate: string;
 };
 
-function getAuthHeaders(): Record<string, string> {
-	if (typeof window === "undefined") return {};
 
-	const token =
-		localStorage.getItem("resourcex_token");
-
-	return token
-		? {
-			Authorization: `Bearer ${token}`,
-		}
-		: {};
-}
-
-async function fetchJson(url: string) {
-	const response = await fetch(url, {
-		method: "GET",
-		credentials: "include",
-		headers: {
-			"Content-Type": "application/json",
-			...getAuthHeaders(),
-		},
-	});
-
-	if (!response.ok) {
-		throw new Error(`Request failed with status ${response.status}`);
-	}
-
-	return await response.json();
-}
 
 function normalizeItem(data: any, fallbackId: string) {
 	return {
@@ -108,16 +81,7 @@ export default function BookItemPage({ params }: { params: { id: string } }) {
 
 	const finalTotal = totalRental + item.deposit;
 
-	if (loading) {
-		return (
-			<div className="flex min-h-[60vh] flex-col items-center justify-center gap-3 px-4 text-center">
-				<Loader2 className="h-10 w-10 animate-spin text-primary" />
-				<p className="text-sm font-medium text-textSecondary sm:text-base">
-					Loading item details...
-				</p>
-			</div>
-		);
-	}
+
 
 	useEffect(() => {
 		let active = true;
@@ -126,29 +90,14 @@ export default function BookItemPage({ params }: { params: { id: string } }) {
 			setLoading(true);
 			setError(null);
 
-			const endpoints = [
-				`/api/items/${params.id}`,
-				`/api/item/${params.id}`,
-				`/api/borrow/items/${params.id}`,
-			];
-
 			try {
-				for (const endpoint of endpoints) {
-					try {
-						const response = await fetchJson(endpoint);
-						const normalized = normalizeItem(response, params.id);
+				const response = await api.get(`/items/${params.id}`);
+				const normalized = normalizeItem(response.data, params.id);
 
-						if (!active) return;
+				if (!active) return;
 
-						setItem(normalized);
-						setLoading(false);
-						return;
-					} catch {
-						// try next endpoint
-					}
-				}
-
-				throw new Error("Unable to load item details.");
+				setItem(normalized);
+				setLoading(false);
 			} catch (err) {
 				if (!active) return;
 
@@ -200,39 +149,7 @@ export default function BookItemPage({ params }: { params: { id: string } }) {
 				endDate,
 			};
 
-			const endpoints = [
-				"/api/bookings",
-				"/api/booking/request",
-				"/api/borrow/bookings",
-			];
-
-			let success = false;
-
-			for (const endpoint of endpoints) {
-				try {
-					const response = await fetch(endpoint, {
-						method: "POST",
-						credentials: "include",
-						headers: {
-							"Content-Type": "application/json",
-							...getAuthHeaders(),
-						},
-						body: JSON.stringify(payload),
-					});
-
-					if (response.ok) {
-						success = true;
-						break;
-					}
-				} catch {
-					// try next endpoint
-				}
-			}
-
-			if (!success) {
-				throw new Error("Booking request submission failed.");
-			}
-
+			await api.post("/bookings", payload);
 			setSuccessMessage("Booking request submitted successfully.");
 		} catch (err) {
 			setError(

@@ -27,6 +27,8 @@ import org.springframework.transaction.support.TransactionTemplate;
 import java.security.SecureRandom;
 import java.time.Clock;
 import java.time.Instant;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.time.temporal.ChronoUnit;
 import java.util.EnumSet;
 import java.util.List;
@@ -105,8 +107,13 @@ public class OtpServiceImpl implements OtpService {
         otpRepository.save(token);
 
         if (purpose == TokenPurpose.EMAIL_VERIFICATION) {
-            pendingUserRepository.findByEmailIgnoreCase(email)
+            PendingUser pendingUser = pendingUserRepository.findByEmailIgnoreCase(email)
                     .orElseThrow(() -> new ResourceNotFoundException("Pending user not found"));
+            
+            pendingUser.setEmailVerified(true);
+            pendingUser.setVerifiedAt(LocalDateTime.ofInstant(now, ZoneId.systemDefault()));
+            pendingUser.setStatus(PendingUserStatus.PENDING_REVIEW);
+            pendingUserRepository.save(pendingUser);
         } else if (purpose == TokenPurpose.PASSWORD_RESET) {
             userRepository.findByEmailIgnoreCase(email)
                     .orElseThrow(() -> new ResourceNotFoundException("User not found"));
@@ -181,6 +188,10 @@ public class OtpServiceImpl implements OtpService {
 
             PendingUser pendingUser = pendingUserRepository.findByEmailIgnoreCase(email)
                     .orElseThrow(() -> new ResourceNotFoundException("Please register first"));
+
+            if (pendingUser.isEmailVerified()) {
+                throw new ConflictException("Email is already verified");
+            }
 
             if (pendingUser.getStatus() == PendingUserStatus.REJECTED) {
                 throw new UnauthorizedException("Registration was rejected");

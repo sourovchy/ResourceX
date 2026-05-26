@@ -27,4 +27,6 @@ public class UserResponse {
     private List<String> roles;
 
     private LocalDateTime createdAt;
+
+    private String avatarUrl;
 }

@@ -34,6 +34,11 @@ public class AdminController {
         return adminService.getPendingUsers(pageable);
     }
 
+    @GetMapping("/pending-users/{id}")
+    public PendingUserResponse getPendingUserById(@PathVariable Long id) {
+        return adminService.getPendingUserById(id);
+    }
+
     @PostMapping("/approve/{id}")
     public ResponseEntity<Void> approveUser(@PathVariable Long id) {
         adminService.approveUser(id);

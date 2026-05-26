@@ -37,9 +37,12 @@ export default function AppShell({
 		[pathname, navItems],
 	);
 
-	const toggleSidebar = () => {
+	const toggleDesktopSidebar = () => {
 		setCollapsed((prev) => !prev);
-		setMobileSidebarOpen((prev) => !prev);
+	};
+
+	const openMobileSidebar = () => {
+		setMobileSidebarOpen(true);
 	};
 
 	const closeMobileSidebar = () => {
@@ -62,7 +65,7 @@ export default function AppShell({
 					mobileSidebarOpen ? "translate-x-0" : "-translate-x-full"
 				} ${collapsed ? "md:w-[72px]" : "md:w-[260px]"}`}>
 				{/* Logo Section */}
-				<div className="flex h-14 items-center px-4 sm:h-16 sm:px-6 mb-2 sm:mb-4">
+				<div className="flex h-14 items-center justify-between px-4 sm:h-16 sm:px-6 mb-2 sm:mb-4">
 					<div className="flex items-center gap-3 min-w-0">
 						<div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center text-onPrimary font-bold shrink-0">
 							{isPrivilegedRole(role) ? "A" : "S"}
@@ -75,6 +78,13 @@ export default function AppShell({
 							ResourceX
 						</span>
 					</div>
+
+					{/* Close Button for Mobile */}
+					<button
+						onClick={closeMobileSidebar}
+						className="md:hidden rounded-lg p-1.5 text-textSecondary transition-colors hover:bg-surfaceVariant">
+						<X className="h-5 w-5" />
+					</button>
 				</div>
 
 				{/* Navigation */}
@@ -92,7 +102,7 @@ export default function AppShell({
 										active
 											? "bg-primaryLight text-primary font-medium"
 											: "text-textSecondary hover:bg-surfaceVariant hover:text-textPrimary"
-									} ${collapsed ? "justify-center md:justify-center" : "justify-start"}`}>
+									} justify-start ${collapsed ? "md:justify-center" : ""}`}>
 									<Icon
 										className={`h-5 w-5 shrink-0 ${active ? "text-primary" : ""}`}
 									/>
@@ -120,8 +130,8 @@ export default function AppShell({
 				<div className="border-t border-divider p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
 					<button type="button" onClick={logout} className="w-full">
 						<div
-							className={`flex items-center gap-3 rounded-xl p-3 text-error transition-colors hover:bg-errorLight ${
-								collapsed ? "justify-center md:justify-center" : "justify-start"
+							className={`flex items-center gap-3 rounded-xl p-3 text-error transition-colors hover:bg-errorLight justify-start ${
+								collapsed ? "md:justify-center" : ""
 							}`}>
 							<LogOut className="h-5 w-5" />
 							<span
@@ -141,11 +151,20 @@ export default function AppShell({
 				{/* HEADER */}
 				<header className="sticky top-0 z-20 flex h-14 items-center justify-between gap-3 border-b border-border bg-surface/80 px-3 backdrop-blur-md sm:h-16 sm:px-4 md:px-6">
 					<div className="flex min-w-0 items-center gap-2 sm:gap-4">
+						{/* Mobile Menu Toggle */}
 						<button
-							onClick={toggleSidebar}
+							onClick={openMobileSidebar}
+							aria-label="Open sidebar"
+							className="rounded-lg p-2 text-textSecondary transition-colors hover:bg-surfaceVariant md:hidden">
+							<Menu className="h-5 w-5" />
+						</button>
+
+						{/* Desktop Sidebar Toggle */}
+						<button
+							onClick={toggleDesktopSidebar}
 							aria-label="Toggle sidebar"
-							className="rounded-lg p-2 text-textSecondary transition-colors hover:bg-surfaceVariant">
-							{mobileSidebarOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+							className="hidden rounded-lg p-2 text-textSecondary transition-colors hover:bg-surfaceVariant md:block">
+							<Menu className="h-5 w-5" />
 						</button>
 
 						<h1 className="hidden min-w-0 truncate text-lg font-semibold text-textPrimary sm:block">

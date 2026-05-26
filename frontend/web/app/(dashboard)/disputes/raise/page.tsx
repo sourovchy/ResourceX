@@ -29,8 +29,7 @@ type BookingApiResponse =
 	}
 	| unknown;
 
-const BOOKING_ENDPOINTS = ["/bookings/my", "/bookings", "/api/bookings/my", "/api/bookings"];
-const DISPUTE_ENDPOINTS = ["/disputes", "/api/disputes", "/student/disputes"];
+const BOOKING_ENDPOINTS = ["/bookings/me"];
 
 function getAuthHeaders(): Record<string, string> {
 	if (typeof window === "undefined") return {};
@@ -135,39 +134,10 @@ export default function RaiseDisputePage() {
 		try {
 			setSubmitting(true);
 
-			const formData = new FormData();
-			formData.append("bookingId", selectedBooking);
-			formData.append("reason", description.trim());
-
-			evidenceFiles.forEach((file) => {
-				formData.append("evidence", file);
+			await api.post("/disputes", {
+				bookingId: Number(selectedBooking),
+				reason: description.trim(),
 			});
-
-			let success = false;
-
-			for (const endpoint of DISPUTE_ENDPOINTS) {
-				try {
-					const response = await fetch(endpoint, {
-						method: "POST",
-						credentials: "include",
-						headers: {
-							...getAuthHeaders(),
-						},
-						body: formData,
-					});
-
-					if (response.ok) {
-						success = true;
-						break;
-					}
-				} catch {
-					// try next endpoint
-				}
-			}
-
-			if (!success) {
-				throw new Error("Failed to submit dispute.");
-			}
 
 			setSubmitted(true);
 		} catch (err) {

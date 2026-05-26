@@ -2,7 +2,7 @@
 
 import React, { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { useParams } from "next/navigation";
+import { useParams, useSearchParams } from "next/navigation";
 import {
 	ArrowLeft,
 	Star,
@@ -20,6 +20,7 @@ import {
 	Mail,
 	AlertTriangle,
 } from "lucide-react";
+import api from "@/lib/api";
 
 type UserStatus = "VERIFIED" | "PENDING" | "SUSPENDED";
 
@@ -58,6 +59,7 @@ type AdminUserDetail = {
 	phone?: string;
 	department?: string;
 	year?: string;
+	idCardDataUrl?: string;
 	status: UserStatus;
 	trustScore: number;
 	registered: string;
@@ -80,6 +82,8 @@ type ApiUserDetailResponse = {
 export default function AdminUserDetailPage() {
 	const params = useParams<{ id?: string | string[] }>();
 	const userId = Array.isArray(params.id) ? params.id[0] : params.id;
+	const searchParams = useSearchParams();
+	const isPendingType = searchParams.get("type") === "pending";
 
 	const [user, setUser] = useState<AdminUserDetail | null>(null);
 	const [loading, setLoading] = useState(true);
@@ -128,41 +132,76 @@ export default function AdminUserDetailPage() {
 				setError(null);
 
 				const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL ?? "";
-				const endpoints = [
-					`${baseUrl}/api/admin/users/${encodeURIComponent(resolvedUserId)}`,
-					`${baseUrl}/api/users/${encodeURIComponent(resolvedUserId)}`,
-				];
+				try {
+					const endpoint = isPendingType 
+						? `/admin/pending-users/${encodeURIComponent(resolvedUserId)}` 
+						: `/users/${encodeURIComponent(resolvedUserId)}`;
+						
+					const response = await api.get(endpoint, {
+						signal: controller.signal,
+					});
 
-				for (const endpoint of endpoints) {
-					try {
-						const response = await fetch(endpoint, {
-							method: "GET",
-							headers: {
-								"Content-Type": "application/json",
-							},
-							signal: controller.signal,
-						});
-
-						if (!response.ok) {
-							throw new Error(`Failed to load user (${response.status})`);
-						}
-
-						const data: ApiUserDetailResponse = await response.json();
-						const nextUser = (data.user ?? data) as AdminUserDetail;
-
-						if (!nextUser?.id) {
-							throw new Error("User data was empty.");
-						}
-
-						setUser(nextUser);
-						setUserStatus(nextUser.status ?? "PENDING");
-						setTrustScore(nextUser.trustScore ?? 0);
-						setAdminFeedback("");
-						setLoading(false);
-						return;
-					} catch {
-						// try next endpoint
+					const payload = response.data;
+					
+					let nextUser: AdminUserDetail;
+					if (isPendingType) {
+						nextUser = {
+							id: payload.id?.toString(),
+							name: payload.name,
+							email: payload.email,
+							studentId: payload.studentId || "N/A",
+							phone: payload.phone || "N/A",
+							department: payload.department || "N/A",
+							year: payload.university || "N/A",
+							status: "PENDING",
+							trustScore: 0,
+							registered: new Date(payload.createdAt).toLocaleDateString(),
+							lastActive: "N/A",
+							warnings: 0,
+							verificationSubmitted: new Date(payload.createdAt).toLocaleDateString(),
+							verificationDocs: payload.idCardDataUrl ? ["ID Card"] : [],
+							idCardDataUrl: payload.idCardDataUrl || undefined,
+							bookings: [],
+							items: [],
+							disputes: [],
+							trustLog: []
+						};
+					} else {
+						nextUser = {
+							id: payload.userId?.toString() || payload.id?.toString(),
+							name: payload.name,
+							email: payload.email,
+							studentId: payload.studentProfile?.studentId || "N/A",
+							phone: payload.studentProfile?.phone || "N/A",
+							department: payload.studentProfile?.department || "N/A",
+							year: payload.studentProfile?.year || payload.studentProfile?.university || "N/A",
+							status: payload.status === "ACTIVE" ? "VERIFIED" : payload.status === "SUSPENDED" ? "SUSPENDED" : "PENDING",
+							trustScore: payload.studentProfile?.trustScore || 0,
+							registered: new Date(payload.createdAt).toLocaleDateString(),
+							lastActive: "N/A",
+							warnings: payload.studentProfile?.warningCount || 0,
+							verificationSubmitted: new Date(payload.createdAt).toLocaleDateString(),
+							verificationDocs: payload.studentProfile?.idCardDataUrl ? ["ID Card"] : [],
+							idCardDataUrl: payload.studentProfile?.idCardDataUrl || undefined,
+							bookings: [],
+							items: [],
+							disputes: [],
+							trustLog: []
+						};
 					}
+
+					if (!nextUser.id) {
+						throw new Error("User data was empty.");
+					}
+
+					setUser(nextUser);
+					setUserStatus(nextUser.status);
+					setTrustScore(nextUser.trustScore);
+					setAdminFeedback("");
+					setLoading(false);
+					return;
+				} catch (err) {
+					// handle error
 				}
 
 				throw new Error("Failed to load user details.");
@@ -183,37 +222,58 @@ export default function AdminUserDetailPage() {
 		return () => controller.abort();
 	}, [userId]);
 
-	const handleVerify = () => {
-		setUserStatus("VERIFIED");
-		setUser((prev) => (prev ? { ...prev, status: "VERIFIED" } : prev));
-		setAdminFeedback("User verified successfully.");
+	const handleVerify = async () => {
+		try {
+			await api.post(`/admin/approve/${userId}`);
+			setUserStatus("VERIFIED");
+			setUser((prev) => (prev ? { ...prev, status: "VERIFIED" } : prev));
+			setAdminFeedback("User verified successfully.");
+		} catch (err) { console.error(err); }
 	};
 
-	const handleSuspend = () => {
-		setUserStatus("SUSPENDED");
-		setUser((prev) => (prev ? { ...prev, status: "SUSPENDED" } : prev));
-		setAdminFeedback("User suspended due to policy violation.");
+	const handleReject = async () => {
+		try {
+			await api.post(`/admin/reject/${userId}`, { reason: adminFeedback || "Rejected by admin" });
+			setUserStatus("SUSPENDED");
+			setUser((prev) => (prev ? { ...prev, status: "SUSPENDED" } : prev));
+			setAdminFeedback("User rejected.");
+		} catch (err) { console.error(err); }
 	};
 
-	const handleReactivate = () => {
-		setUserStatus("VERIFIED");
-		setUser((prev) => (prev ? { ...prev, status: "VERIFIED" } : prev));
-		setAdminFeedback("User account reactivated.");
+	const handleSuspend = async () => {
+		try {
+			await api.post(`/admin/block/${userId}`);
+			setUserStatus("SUSPENDED");
+			setUser((prev) => (prev ? { ...prev, status: "SUSPENDED" } : prev));
+			setAdminFeedback("User suspended due to policy violation.");
+		} catch (err) { console.error(err); }
 	};
 
-	const handleTrustAdjustment = () => {
+	const handleReactivate = async () => {
+		try {
+			await api.post(`/admin/unblock/${userId}`);
+			setUserStatus("VERIFIED");
+			setUser((prev) => (prev ? { ...prev, status: "VERIFIED" } : prev));
+			setAdminFeedback("User account reactivated.");
+		} catch (err) { console.error(err); }
+	};
+
+	const handleTrustAdjustment = async () => {
 		const value = Number(adjustment.value);
 
 		if (Number.isNaN(value) || value === 0) return;
 
-		setTrustScore((prev) => prev + value);
+		try {
+			await api.post(`/trust/adjust/${userId}`, { adjustment: value, reason: adjustment.reason });
+			setTrustScore((prev) => prev + value);
 
-		setAdjustment({
-			value: "",
-			reason: "",
-		});
+			setAdjustment({
+				value: "",
+				reason: "",
+			});
 
-		setAdjusting(false);
+			setAdjusting(false);
+		} catch (err) { console.error(err); }
 	};
 
 	if (loading) {
@@ -349,18 +409,46 @@ export default function AdminUserDetailPage() {
 						</div>
 
 						<div className="mt-2 flex flex-wrap gap-2">
-							{user.verificationDocs.map((doc) => (
-								<div
-									key={doc}
-									className="px-3 py-1.5 rounded-lg bg-primaryLight text-primary text-xs font-semibold">
-									{doc}
-								</div>
-							))}
+							{user.verificationDocs.length > 0 ? (
+								user.verificationDocs.map((doc) => (
+									<div
+										key={doc}
+										className="px-3 py-1.5 rounded-lg bg-primaryLight text-primary text-xs font-semibold">
+										{doc}
+									</div>
+								))
+							) : (
+								<div className="text-sm text-textTertiary font-medium">None provided</div>
+							)}
 						</div>
 					</div>
 				</div>
 
-				<div className="mt-4">
+				<div className="mt-6 border-t border-borderLight pt-5">
+					<label className="block text-xs font-bold text-textTertiary uppercase mb-3">
+						Student ID Card Image
+					</label>
+					
+					{user.idCardDataUrl ? (
+						<div className="rounded-xl border border-borderLight overflow-hidden max-w-sm">
+							<img 
+								src={user.idCardDataUrl} 
+								alt="Student ID Card" 
+								className="w-full h-auto object-contain bg-surfaceVariant/30 max-h-[300px]"
+							/>
+						</div>
+					) : (
+						<div className="px-4 py-8 rounded-xl bg-surfaceVariant/50 text-center flex flex-col items-center justify-center gap-2 max-w-sm border border-dashed border-borderLight">
+							<div className="w-10 h-10 rounded-full bg-surface flex items-center justify-center">
+								<Shield className="w-5 h-5 text-textTertiary" />
+							</div>
+							<div className="text-sm font-semibold text-textSecondary mt-1">No ID Card Uploaded</div>
+							<div className="text-xs text-textTertiary">This user did not provide an ID card during registration.</div>
+						</div>
+					)}
+				</div>
+
+				<div className="mt-6 border-t border-borderLight pt-5">
 					<label className="block text-xs font-bold text-textTertiary uppercase mb-2">
 						Admin Feedback
 					</label>
@@ -371,9 +459,34 @@ export default function AdminUserDetailPage() {
 						placeholder="Write verification note or suspension reason..."
 						className="w-full min-h-[100px] px-4 py-3 rounded-xl bg-surface border border-outlineVariant focus:ring-2 focus:ring-primary focus:border-primary outline-none text-sm text-textPrimary resize-none"
 					/>
+					
+					{isPendingType ? (
+						<div className="mt-4 flex items-center gap-3">
+							<button onClick={handleVerify} className="px-5 py-2.5 bg-success text-white rounded-xl text-sm font-bold hover:opacity-90 transition">
+								Approve User
+							</button>
+							<button onClick={handleReject} className="px-5 py-2.5 bg-error text-white rounded-xl text-sm font-bold hover:opacity-90 transition">
+								Reject User
+							</button>
+						</div>
+					) : (
+						<div className="mt-4 flex items-center gap-3">
+							{userStatus === "SUSPENDED" ? (
+								<button onClick={handleReactivate} className="px-5 py-2.5 bg-success text-white rounded-xl text-sm font-bold hover:opacity-90 transition">
+									Reactivate User
+								</button>
+							) : (
+								<button onClick={handleSuspend} className="px-5 py-2.5 bg-error text-white rounded-xl text-sm font-bold hover:opacity-90 transition">
+									Suspend User
+								</button>
+							)}
+						</div>
+					)}
 				</div>
 			</div>
 
+			{!isPendingType && (
+				<>
 			{/* Trust Score */}
 			<div className="bg-surface border border-borderLight rounded-2xl shadow-sm p-5">
 				<div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -584,6 +697,8 @@ export default function AdminUserDetailPage() {
 					))}
 				</div>
 			</div>
+				</>
+			)}
 
 			{/* Admin Warning */}
 			<div className="bg-warningLight border border-warning/30 rounded-2xl p-5 flex items-start gap-3">

@@ -1,13 +1,7 @@
 "use client";
 
 import React, { useEffect, useMemo, useState } from "react";
-import {
-	ShieldAlert,
-	CheckCircle2,
-	X,
-	Loader2,
-	RefreshCw,
-} from "lucide-react";
+import { ShieldAlert, CheckCircle2, X, Loader2, RefreshCw } from "lucide-react";
 import api from "@/lib/api";
 
 type DisputeStatus = "OPEN" | "RESOLVED";
@@ -58,18 +52,13 @@ interface DisputeApiResponse {
 }
 
 function normalizeStatus(status?: string): DisputeStatus {
-	return status?.toUpperCase() === "RESOLVED"
-		? "RESOLVED"
-		: "OPEN";
+	return status?.toUpperCase() === "RESOLVED" ? "RESOLVED" : "OPEN";
 }
 
 function normalizeDispute(data: DisputeApiResponse): Dispute {
 	return {
 		id: data.id ?? data.disputeId ?? "",
-		bookingId:
-			data.bookingId ??
-			data.booking?.bookingId ??
-			"-",
+		bookingId: data.bookingId ?? data.booking?.bookingId ?? "-",
 
 		raisedBy:
 			data.raisedBy ??
@@ -79,31 +68,17 @@ function normalizeDispute(data: DisputeApiResponse): Dispute {
 			"Unknown",
 
 		against:
-			data.against ??
-			data.defendantName ??
-			data.targetUserName ??
-			"Unknown",
+			data.against ?? data.defendantName ?? data.targetUserName ?? "Unknown",
 
-		reason:
-			data.reason ??
-			data.description ??
-			"No reason provided.",
+		reason: data.reason ?? data.description ?? "No reason provided.",
 
-		evidence:
-			data.evidence ??
-			data.evidenceText ??
-			"No evidence uploaded",
+		evidence: data.evidence ?? data.evidenceText ?? "No evidence uploaded",
 
 		status: normalizeStatus(data.status),
 
-		date:
-			data.date ??
-			data.createdAt ??
-			new Date().toISOString(),
+		date: data.date ?? data.createdAt ?? new Date().toISOString(),
 
-		resolution:
-			data.resolution ??
-			data.adminDecision,
+		resolution: data.resolution ?? data.adminDecision,
 	};
 }
 
@@ -125,15 +100,15 @@ export default function AdminDisputesPage() {
 	const [submitting, setSubmitting] = useState(false);
 	const [error, setError] = useState<string | null>(null);
 
-	const [activeDispute, setActiveDispute] = useState<
-		string | number | null
-	>(null);
+	const [activeDispute, setActiveDispute] = useState<string | number | null>(
+		null,
+	);
 
 	const [decision, setDecision] = useState("");
 
-	const [filterOpen, setFilterOpen] = useState<
-		"ALL" | "OPEN" | "RESOLVED"
-	>("ALL");
+	const [filterOpen, setFilterOpen] = useState<"ALL" | "OPEN" | "RESOLVED">(
+		"ALL",
+	);
 
 	const fetchDisputes = async () => {
 		try {
@@ -168,16 +143,12 @@ export default function AdminDisputesPage() {
 
 	const filtered = useMemo(() => {
 		return disputes.filter(
-			(d) =>
-				filterOpen === "ALL" ||
-				d.status === filterOpen,
+			(d) => filterOpen === "ALL" || d.status === filterOpen,
 		);
 	}, [disputes, filterOpen]);
 
 	const openCount = useMemo(() => {
-		return disputes.filter(
-			(d) => d.status === "OPEN",
-		).length;
+		return disputes.filter((d) => d.status === "OPEN").length;
 	}, [disputes]);
 
 	const submitResolution = async () => {
@@ -192,13 +163,10 @@ export default function AdminDisputesPage() {
 			setSubmitting(true);
 			setError(null);
 
-			await api.patch(
-				`/disputes/${activeDispute}/resolve`,
-				{
-					resolution: decision.trim(),
-					status: "RESOLVED",
-				},
-			);
+			await api.patch(`/disputes/${activeDispute}/resolve`, {
+				resolution: decision.trim(),
+				status: "RESOLVED",
+			});
 
 			await fetchDisputes();
 
@@ -206,9 +174,7 @@ export default function AdminDisputesPage() {
 			setDecision("");
 		} catch (err) {
 			console.error(err);
-			setError(
-				"Failed to resolve dispute.",
-			);
+			setError("Failed to resolve dispute.");
 		} finally {
 			setSubmitting(false);
 		}
@@ -216,35 +182,36 @@ export default function AdminDisputesPage() {
 
 	if (loading) {
 		return (
-			<div className="flex items-center justify-center py-20">
-				<Loader2 className="h-10 w-10 animate-spin text-primary" />
+			<div className="flex min-h-[60vh] flex-col items-center justify-center gap-3 text-textSecondary">
+				<Loader2 className="h-6 w-6 animate-spin text-primary" />
+				<span className="text-sm font-medium">Loading disputes…</span>
 			</div>
 		);
 	}
 
 	return (
-		<div className="mx-auto max-w-5xl space-y-6">
-			<div className="flex items-center justify-between">
+		<div className="mx-auto max-w-7xl space-y-6 px-4 pb-20 sm:px-6 lg:px-8">
+			{/* Header – consistent with admin pages */}
+			<div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
 				<div>
-					<h1 className="text-2xl font-bold text-textPrimary">
+					<h1 className="text-2xl font-bold text-textPrimary tracking-tight">
 						Dispute Center
 					</h1>
-
 					<p className="mt-1 text-sm text-textSecondary">
 						Review and resolve disputes from the live backend system.
 					</p>
 				</div>
 
-				<div className="flex items-center gap-3">
+				<div className="flex flex-wrap gap-2">
 					<button
 						onClick={fetchDisputes}
-						className="flex items-center gap-2 rounded-xl border border-outlineVariant bg-surface px-4 py-2.5 text-sm font-semibold text-textSecondary transition hover:bg-surfaceVariant">
+						className="inline-flex items-center gap-2 rounded-xl border border-outlineVariant bg-surface px-4 py-2 text-sm font-semibold text-textSecondary transition hover:bg-surfaceVariant">
 						<RefreshCw className="h-4 w-4" />
 						Refresh
 					</button>
 
 					{openCount > 0 && (
-						<div className="flex items-center gap-2 rounded-xl border border-error/30 bg-errorLight px-4 py-2 text-sm font-bold text-error shadow-sm">
+						<div className="inline-flex items-center gap-2 rounded-xl border border-error/30 bg-errorLight px-4 py-2 text-sm font-bold text-error shadow-sm">
 							<ShieldAlert className="h-4 w-4" />
 							{openCount} Open
 						</div>
@@ -252,32 +219,30 @@ export default function AdminDisputesPage() {
 				</div>
 			</div>
 
+			{/* Error banner – same as admin home */}
 			{error && (
-				<div className="rounded-xl border border-error/30 bg-errorLight px-4 py-3 text-sm font-medium text-error">
+				<div className="flex items-center gap-3 rounded-xl border border-error/40 bg-errorLight px-4 py-3 text-sm font-medium text-error">
+					<ShieldAlert className="h-4 w-4 shrink-0" />
 					{error}
 				</div>
 			)}
 
-			{/* Filters */}
-			<div className="flex gap-2">
-				{(["ALL", "OPEN", "RESOLVED"] as const).map(
-					(f) => (
-						<button
-							key={f}
-							onClick={() =>
-								setFilterOpen(f)
-							}
-							className={`rounded-xl border px-4 py-2 text-sm font-semibold transition ${
-								filterOpen === f
-									? f === "OPEN"
-										? "border-error bg-error text-white shadow"
-										: "border-primary bg-primary text-onPrimary shadow"
-									: "border-outlineVariant bg-surface text-textSecondary hover:bg-surfaceVariant"
-							}`}>
-							{f}
-						</button>
-					),
-				)}
+			{/* Filters – responsive wrap, consistent button styling */}
+			<div className="flex flex-wrap gap-2">
+				{(["ALL", "OPEN", "RESOLVED"] as const).map((f) => (
+					<button
+						key={f}
+						onClick={() => setFilterOpen(f)}
+						className={`rounded-xl border px-3 py-2 text-xs font-semibold transition ${
+							filterOpen === f
+								? f === "OPEN"
+									? "border-error bg-error text-white shadow"
+									: "border-primary bg-primary text-onPrimary shadow"
+								: "border-outlineVariant bg-surface text-textSecondary hover:bg-surfaceVariant"
+						}`}>
+						{f}
+					</button>
+				))}
 			</div>
 
 			{/* Dispute Cards */}
@@ -285,25 +250,21 @@ export default function AdminDisputesPage() {
 				{filtered.map((d) => (
 					<div
 						key={d.id}
-						className={`overflow-hidden rounded-2xl border bg-surface shadow-sm ${
-							d.status === "OPEN"
-								? "border-error/40"
-								: "border-borderLight"
+						className={`overflow-hidden rounded-xl border bg-surface shadow-sm transition ${
+							d.status === "OPEN" ? "border-error/40" : "border-borderLight"
 						}`}>
 						<div className="p-5">
-							<div className="flex flex-wrap items-start justify-between gap-4">
-								<div className="min-w-0">
-									<div className="flex flex-wrap items-center gap-3">
+							<div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+								<div className="min-w-0 flex-1">
+									<div className="flex flex-wrap items-center gap-2">
 										<span className="font-mono text-xs font-bold text-textTertiary">
 											D-{d.id}
 										</span>
-
 										<span className="font-mono text-xs text-textTertiary">
 											Booking: BK-{d.bookingId}
 										</span>
-
 										<span
-											className={`rounded-full px-2.5 py-1 text-xs font-bold ${
+											className={`inline-flex rounded-full px-2.5 py-1 text-xs font-bold ${
 												d.status === "OPEN"
 													? "bg-errorLight text-error"
 													: "bg-successLight text-success"
@@ -312,19 +273,14 @@ export default function AdminDisputesPage() {
 										</span>
 									</div>
 
-									<div className="mt-2 flex flex-wrap items-center gap-2 text-sm">
+									<div className="mt-2 flex flex-wrap items-center gap-1 text-sm">
 										<span className="font-semibold text-textPrimary">
 											{d.raisedBy}
 										</span>
-
-										<span className="text-textTertiary">
-											vs
-										</span>
-
+										<span className="text-textTertiary">vs</span>
 										<span className="font-semibold text-textPrimary">
 											{d.against}
 										</span>
-
 										<span className="ml-1 text-xs text-textTertiary">
 											· {formatDate(d.date)}
 										</span>
@@ -334,19 +290,14 @@ export default function AdminDisputesPage() {
 										{d.reason}
 									</p>
 
-									<div className="mt-2 flex items-center gap-2 text-xs text-textTertiary">
-										<span className="font-bold">
-											Evidence:
-										</span>
-
-										{d.evidence}
+									<div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-textTertiary">
+										<span className="font-bold">Evidence:</span>
+										<span className="break-all">{d.evidence}</span>
 									</div>
 
 									{d.resolution && (
 										<div className="mt-3 rounded-lg border border-success/20 bg-successLight px-4 py-2 text-xs text-success">
-											<span className="font-bold">
-												Resolution:
-											</span>{" "}
+											<span className="font-bold">Resolution:</span>{" "}
 											{d.resolution}
 										</div>
 									)}
@@ -354,12 +305,8 @@ export default function AdminDisputesPage() {
 
 								{d.status === "OPEN" && (
 									<button
-										onClick={() =>
-											setActiveDispute(
-												d.id,
-											)
-										}
-										className="flex shrink-0 items-center gap-2 rounded-xl bg-primary px-4 py-2 text-sm font-bold text-onPrimary shadow transition hover:opacity-90">
+										onClick={() => setActiveDispute(d.id)}
+										className="inline-flex shrink-0 items-center justify-center gap-2 rounded-xl bg-primary px-4 py-2 text-sm font-bold text-onPrimary shadow transition hover:opacity-90">
 										<CheckCircle2 className="h-4 w-4" />
 										Resolve
 									</button>
@@ -374,13 +321,9 @@ export default function AdminDisputesPage() {
 									<h3 className="text-sm font-bold text-textPrimary">
 										Admin Decision
 									</h3>
-
 									<button
-										onClick={() =>
-											setActiveDispute(
-												null,
-											)
-										}>
+										onClick={() => setActiveDispute(null)}
+										className="rounded p-1 hover:bg-surface">
 										<X className="h-4 w-4 text-textTertiary transition hover:text-textPrimary" />
 									</button>
 								</div>
@@ -391,41 +334,26 @@ export default function AdminDisputesPage() {
 
 								<textarea
 									value={decision}
-									onChange={(e) =>
-										setDecision(
-											e.target.value,
-										)
-									}
+									onChange={(e) => setDecision(e.target.value)}
 									rows={4}
 									placeholder="Write resolution decision..."
 									className="w-full resize-none rounded-xl border border-outlineVariant bg-surface px-3 py-2.5 text-sm text-textPrimary outline-none transition focus:ring-2 focus:ring-primary"
 								/>
 
-								<div className="flex gap-3">
+								<div className="flex flex-wrap gap-3">
 									<button
 										onClick={() => {
-											setActiveDispute(
-												null,
-											);
-											setDecision(
-												"",
-											);
+											setActiveDispute(null);
+											setDecision("");
 										}}
 										className="rounded-xl border border-outlineVariant px-4 py-2.5 text-sm font-semibold text-textSecondary transition hover:bg-surface">
 										Cancel
 									</button>
-
 									<button
-										onClick={
-											submitResolution
-										}
-										disabled={
-											submitting
-										}
+										onClick={submitResolution}
+										disabled={submitting}
 										className="rounded-xl bg-success px-5 py-2.5 text-sm font-bold text-white shadow transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60">
-										{submitting
-											? "Submitting..."
-											: "Submit Decision & Resolve"}
+										{submitting ? "Submitting…" : "Submit Decision & Resolve"}
 									</button>
 								</div>
 							</div>

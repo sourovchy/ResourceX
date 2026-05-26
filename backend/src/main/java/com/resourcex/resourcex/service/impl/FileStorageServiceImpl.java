@@ -62,8 +62,15 @@ public class FileStorageServiceImpl implements FileStorageService {
 
     @Override
     public FileUploadResponse storeFile(MultipartFile file, FilePurpose purpose, UserDetails userDetails) {
-        User uploader = userRepository.findByEmailIgnoreCase(userDetails.getUsername())
-                .orElseThrow(() -> new UnauthorizedException("User not found"));
+        User uploader = null;
+        if (userDetails != null) {
+            uploader = userRepository.findByEmailIgnoreCase(userDetails.getUsername())
+                    .orElseThrow(() -> new UnauthorizedException("User not found"));
+        } else {
+            if (purpose != FilePurpose.ID_CARD) {
+                throw new UnauthorizedException("Authentication required to upload this file type");
+            }
+        }
 
         String originalName = StringUtils.cleanPath(file.getOriginalFilename() != null ? file.getOriginalFilename() : "unknown");
 

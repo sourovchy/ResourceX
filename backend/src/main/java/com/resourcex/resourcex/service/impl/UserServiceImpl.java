@@ -4,13 +4,18 @@ import com.resourcex.resourcex.dto.request.UpdateUserRequest;
 import com.resourcex.resourcex.dto.response.UserResponse;
 import com.resourcex.resourcex.entity.StudentProfile;
 import com.resourcex.resourcex.entity.User;
+import com.resourcex.resourcex.entity.UserRole;
 import com.resourcex.resourcex.exception.ResourceNotFoundException;
 import com.resourcex.resourcex.exception.UnauthorizedException;
 import com.resourcex.resourcex.mapper.UserMapper;
+import com.resourcex.resourcex.repository.FileMetadataRepository;
 import com.resourcex.resourcex.repository.StudentProfileRepository;
 import com.resourcex.resourcex.repository.UserRepository;
 import com.resourcex.resourcex.service.UserService;
+import com.resourcex.resourcex.util.constants.RoleConstants;
+import com.resourcex.resourcex.util.PhoneUtil;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
@@ -22,14 +27,22 @@ import java.util.List;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class UserServiceImpl implements UserService {
 
     private final UserRepository userRepository;
     private final StudentProfileRepository studentProfileRepository;
+    private final org.springframework.security.crypto.password.PasswordEncoder passwordEncoder;
+    private final com.resourcex.resourcex.repository.UserRoleRepository userRoleRepository;
+    private final com.resourcex.resourcex.service.FileStorageService fileStorageService;
+    private final FileMetadataRepository fileMetadataRepository;
 
     @Override
     public UserResponse getCurrentUser() {
-        return UserMapper.toResponse(resolveCurrentUser());
+        User user = resolveCurrentUser();
+        List<UserRole> userRoles = userRoleRepository.findAllByUser(user);
+        StudentProfile studentProfile = studentProfileRepository.findByUser(user).orElse(null);
+        return UserMapper.toResponse(user, userRoles, studentProfile);
     }
 
     @Override
@@ -41,7 +54,12 @@ public class UserServiceImpl implements UserService {
 
     @Override
     public Page<UserResponse> getAllUsers(Pageable pageable) {
-        return userRepository.findAll(pageable)
+        List<String> excludedRoles = List.of(
+            RoleConstants.ROLE_ADMIN,
+            RoleConstants.ROLE_MODERATOR,
+            RoleConstants.ROLE_SUPER_ADMIN
+        );
+        return userRepository.findAllExcludingRoles(excludedRoles, pageable)
                 .map(UserMapper::toResponse);
     }
 
@@ -49,8 +67,11 @@ public class UserServiceImpl implements UserService {
     @Transactional
     public UserResponse updateCurrentUser(UpdateUserRequest request) {
         User user = resolveCurrentUser();
-        applyUpdate(user, request);
-        return UserMapper.toResponse(userRepository.save(user));
+        applyUpdate(user, request, true);
+        User savedUser = userRepository.save(user);
+        List<UserRole> userRoles = userRoleRepository.findAllByUser(savedUser);
+        StudentProfile studentProfile = studentProfileRepository.findByUser(savedUser).orElse(null);
+        return UserMapper.toResponse(savedUser, userRoles, studentProfile);
     }
 
     @Override
@@ -58,8 +79,21 @@ public class UserServiceImpl implements UserService {
     public UserResponse updateUser(Long userId, UpdateUserRequest request) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found"));
-        applyUpdate(user, request);
+        applyUpdate(user, request, false);
         return UserMapper.toResponse(userRepository.save(user));
+    }
+
+    @Override
+    @Transactional
+    public void changePassword(com.resourcex.resourcex.dto.request.ChangePasswordRequest request) {
+        User user = resolveCurrentUser();
+        
+        if (!passwordEncoder.matches(request.getCurrentPassword(), user.getPassword())) {
+            throw new com.resourcex.resourcex.exception.BadRequestException("Incorrect current password");
+        }
+        
+        user.setPassword(passwordEncoder.encode(request.getNewPassword()));
+        userRepository.save(user);
     }
 
     private User resolveCurrentUser() {
@@ -73,16 +107,77 @@ public class UserServiceImpl implements UserService {
                 .orElseThrow(() -> new UnauthorizedException("Authenticated user not found"));
     }
 
-    private void applyUpdate(User user, UpdateUserRequest request) {
+    private void applyUpdate(User user, UpdateUserRequest request, boolean isCurrentUserUpdate) {
         if (request.getName() != null && !request.getName().isBlank()) {
             user.setName(request.getName().trim());
         }
 
+        boolean emailOrPhoneChanged = false;
+
+        if (request.getEmail() != null && !request.getEmail().isBlank() && !request.getEmail().equalsIgnoreCase(user.getEmail())) {
+            // Check if user is student
+            boolean isStudent = userRoleRepository.findAllByUser(user).stream()
+                    .anyMatch(role -> role.getRole().getName().equalsIgnoreCase(RoleConstants.ROLE_USER));
+            if (isStudent) {
+                throw new com.resourcex.resourcex.exception.ForbiddenException("Students are not allowed to change their email address");
+            }
+            if (userRepository.existsByEmailIgnoreCase(request.getEmail())) {
+                throw new com.resourcex.resourcex.exception.ConflictException("Email is already in use");
+            }
+            user.setEmail(request.getEmail().trim());
+            emailOrPhoneChanged = true;
+        }
+
         if (request.getPhone() != null && !request.getPhone().isBlank()) {
-            StudentProfile studentProfile = studentProfileRepository.findByUser(user)
-                    .orElseThrow(() -> new ResourceNotFoundException("Student profile not found"));
-            studentProfile.setPhone(request.getPhone().trim());
-            studentProfileRepository.save(studentProfile);
+            String normalizedPhone = PhoneUtil.normalizePhone(request.getPhone().trim());
+            java.util.Optional<StudentProfile> studentProfileOpt = studentProfileRepository.findByUser(user);
+            if (studentProfileOpt.isPresent()) {
+                StudentProfile studentProfile = studentProfileOpt.get();
+                if (!normalizedPhone.equals(studentProfile.getPhone())) {
+                    studentProfile.setPhone(normalizedPhone);
+                    studentProfileRepository.save(studentProfile);
+                    emailOrPhoneChanged = true;
+                }
+            }
+        }
+        
+        if (emailOrPhoneChanged && isCurrentUserUpdate) {
+            if (request.getCurrentPassword() == null || request.getCurrentPassword().isBlank()) {
+                throw new com.resourcex.resourcex.exception.BadRequestException("Current password is required to change email or phone number");
+            }
+            if (!passwordEncoder.matches(request.getCurrentPassword(), user.getPassword())) {
+                throw new com.resourcex.resourcex.exception.BadRequestException("Incorrect current password");
+            }
+        }
+
+        if (request.getAvatarUrl() != null && !request.getAvatarUrl().isBlank()) {
+            String newAvatarUrl = request.getAvatarUrl().trim();
+            // Delete old avatar file when replacing with a new one
+            if (user.getAvatarUrl() != null && !user.getAvatarUrl().equals(newAvatarUrl)) {
+                try {
+                    String oldUrl = user.getAvatarUrl();
+                    String storedName = oldUrl.substring(oldUrl.lastIndexOf('/') + 1);
+                    // Delete directly via the authenticated principal
+                    Object principal = SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+                    if (principal instanceof org.springframework.security.core.userdetails.UserDetails) {
+                        fileStorageService.deleteFile(storedName, (org.springframework.security.core.userdetails.UserDetails) principal);
+                    } else {
+                        // Fallback: delete file metadata and physical file directly
+                        fileMetadataRepository.findByStoredName(storedName).ifPresent(metadata -> {
+                            try {
+                                java.nio.file.Path filePath = java.nio.file.Paths.get("uploads").toAbsolutePath().normalize().resolve(storedName);
+                                java.nio.file.Files.deleteIfExists(filePath);
+                            } catch (Exception ex) {
+                                log.warn("Failed to delete old avatar file from disk: {}", storedName, ex);
+                            }
+                            fileMetadataRepository.delete(metadata);
+                        });
+                    }
+                } catch (Exception e) {
+                    log.warn("Failed to delete old avatar: {}", user.getAvatarUrl(), e);
+                }
+            }
+            user.setAvatarUrl(newAvatarUrl);
         }
     }
 }

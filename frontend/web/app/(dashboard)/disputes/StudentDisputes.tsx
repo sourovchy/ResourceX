@@ -3,7 +3,13 @@
 import React, { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import api from "@/lib/api";
-import { CheckCircle2, FileText, Loader2, Scale, AlertTriangle } from "lucide-react";
+import {
+	CheckCircle2,
+	FileText,
+	Loader2,
+	Scale,
+	AlertTriangle,
+} from "lucide-react";
 
 type Dispute = {
 	disputeId: number;
@@ -16,10 +22,10 @@ type Dispute = {
 
 type DisputeApiResponse =
 	| {
-		disputes?: unknown;
-		data?: unknown;
-		content?: unknown;
-	}
+			disputes?: unknown;
+			data?: unknown;
+			content?: unknown;
+	  }
 	| unknown;
 
 const DISPUTE_ENDPOINTS = ["/disputes", "/api/disputes", "/student/disputes"];
@@ -27,7 +33,9 @@ const DISPUTE_ENDPOINTS = ["/disputes", "/api/disputes", "/student/disputes"];
 function normalizeDispute(raw: any): Dispute {
 	return {
 		disputeId: Number(raw?.disputeId ?? raw?.id ?? raw?.dispute_id ?? 0),
-		bookingId: Number(raw?.bookingId ?? raw?.booking_id ?? raw?.booking?.bookingId ?? 0),
+		bookingId: Number(
+			raw?.bookingId ?? raw?.booking_id ?? raw?.booking?.bookingId ?? 0,
+		),
 		status: String(raw?.status ?? "open"),
 		createdAt: raw?.createdAt ?? raw?.created_at ?? raw?.createdOn,
 		reason: raw?.reason ?? raw?.description ?? raw?.message ?? raw?.details,
@@ -49,13 +57,12 @@ function extractDisputes(payload: DisputeApiResponse) {
 function getAuthHeaders(): Record<string, string> {
 	if (typeof window === "undefined") return {};
 
-	const token =
-		localStorage.getItem("resourcex_token");
+	const token = localStorage.getItem("resourcex_token");
 
 	return token
 		? {
-			Authorization: `Bearer ${token}`,
-		}
+				Authorization: `Bearer ${token}`,
+			}
 		: {};
 }
 
@@ -122,71 +129,87 @@ export default function DisputesPage() {
 	}, []);
 
 	const openCount = useMemo(
-		() => disputes.filter((dispute) => dispute.status.toLowerCase() !== "resolved").length,
+		() =>
+			disputes.filter((dispute) => dispute.status.toLowerCase() !== "resolved")
+				.length,
 		[disputes],
 	);
 
 	if (loading) {
 		return (
-			<div className="py-20 flex justify-center text-textSecondary">
-				<Loader2 className="w-5 h-5 animate-spin mr-2" />
-				Loading disputes...
+			<div className="flex min-h-[60vh] flex-col items-center justify-center gap-3 text-textSecondary">
+				<Loader2 className="h-6 w-6 animate-spin text-primary" />
+				<span className="text-sm font-medium">Loading disputes…</span>
 			</div>
 		);
 	}
 
 	return (
-		<div className="max-w-5xl mx-auto space-y-6 pb-20">
-			<div className="flex flex-col items-start gap-4">
+		<div className="mx-auto max-w-7xl space-y-6 px-4 pb-20 sm:px-6 lg:px-8">
+			{/* Header section – matches admin layout */}
+			<div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
 				<div>
-					<h1 className="text-2xl font-bold text-textPrimary tracking-tight">Disputes</h1>
-					<p className="text-sm text-textSecondary mt-1">View your dispute history or raise a new issue for admin review.</p>
+					<h1 className="text-2xl font-bold text-textPrimary tracking-tight">
+						Disputes
+					</h1>
+					<p className="mt-1 text-sm text-textSecondary">
+						View your dispute history or raise a new issue for admin review.
+					</p>
 				</div>
-				<div className="flex items-center gap-2">
-					<Link href="/disputes/my" className="flex items-center gap-2 px-4 py-2 bg-surface border border-borderLight text-textPrimary rounded-xl font-semibold text-sm hover:bg-surfaceVariant transition">
-						<FileText className="w-4 h-4" /> My Disputes
+
+				<div className="flex flex-wrap gap-2">
+					<Link
+						href="/disputes/my"
+						className="inline-flex items-center gap-2 rounded-xl border border-outlineVariant bg-surface px-4 py-2 text-sm font-semibold text-textSecondary transition hover:bg-surfaceVariant">
+						<FileText className="h-4 w-4" /> My Disputes
 					</Link>
-					<Link href="/disputes/raise" className="flex items-center gap-2 px-4 py-2 bg-error text-white rounded-xl font-bold text-sm shadow-sm hover:bg-errorDark transition-colors">
-						<Scale className="w-4 h-4" /> Raise a Dispute
+					<Link
+						href="/disputes/raise"
+						className="inline-flex items-center gap-2 rounded-xl bg-error px-4 py-2 text-sm font-bold text-white shadow-sm transition hover:bg-errorDark">
+						<Scale className="h-4 w-4" /> Raise a Dispute
 					</Link>
 				</div>
 			</div>
 
+			{/* Error banner – consistent with admin error style */}
 			{error && (
-				<div className="flex items-start gap-3 rounded-xl border border-error bg-errorLight/20 p-4 text-sm text-errorDark">
-					<AlertTriangle className="w-5 h-5 shrink-0 mt-0.5" />
+				<div className="flex items-center gap-3 rounded-xl border border-error/40 bg-errorLight px-4 py-3 text-sm font-medium text-error">
+					<AlertTriangle className="h-4 w-4 shrink-0" />
 					<span>{error}</span>
 				</div>
 			)}
 
-			<div className="bg-surface border border-borderLight rounded-lg p-6">
+			{/* Disputes list card – matches pending approvals panel */}
+			<div className="overflow-hidden rounded-xl border border-borderLight bg-surface shadow-sm">
 				{disputes.length === 0 ? (
-					<div className="text-center py-12">
-						<CheckCircle2 className="w-12 h-12 text-success mx-auto mb-3" />
+					<div className="flex flex-col items-center justify-center gap-3 px-5 py-12 text-center">
+						<CheckCircle2 className="h-12 w-12 text-success" />
 						<p className="text-textSecondary">
 							You have no open or past disputes.
 						</p>
-						<p className="text-xs text-textTertiary mt-2">
+						<p className="text-xs text-textTertiary">
 							Open disputes: {openCount}
 						</p>
 					</div>
 				) : (
 					<div className="divide-y divide-borderLight">
 						{disputes.map((dispute) => (
-							<div key={dispute.disputeId} className="py-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-								<div>
+							<div
+								key={dispute.disputeId}
+								className="flex flex-col gap-3 px-5 py-4 transition-colors hover:bg-surfaceVariant/60 sm:flex-row sm:items-center sm:justify-between">
+								<div className="min-w-0 flex-1">
 									<div className="font-bold text-textPrimary">
 										{dispute.title ?? `Booking #${dispute.bookingId}`}
 									</div>
-									<div className="text-sm text-textSecondary">
+									<div className="mt-0.5 text-sm text-textSecondary">
 										DSP-{dispute.disputeId}
 										{dispute.reason ? ` • ${dispute.reason}` : ""}
 									</div>
-									<div className="text-xs text-textTertiary mt-1">
+									<div className="mt-1 text-xs text-textTertiary">
 										Created: {formatDate(dispute.createdAt)}
 									</div>
 								</div>
-								<span className="px-2.5 py-1 rounded-full text-xs font-bold bg-warningLight text-warningDark capitalize self-start sm:self-auto">
+								<span className="inline-flex w-fit shrink-0 items-center rounded-full bg-warningLight px-2.5 py-1 text-xs font-bold capitalize text-warning">
 									{dispute.status}
 								</span>
 							</div>

@@ -22,6 +22,7 @@ CREATE TABLE users (
     name          VARCHAR(100) NOT NULL,
     email         VARCHAR(100) NOT NULL UNIQUE,
     password_hash VARCHAR(255) NOT NULL,
+    avatar_url    VARCHAR(1000) DEFAULT NULL,
     status        ENUM('ACTIVE', 'SUSPENDED', 'BANNED') NOT NULL DEFAULT 'ACTIVE',
     created_at    TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at    TIMESTAMP NULL DEFAULT NULL ON UPDATE CURRENT_TIMESTAMP
@@ -396,7 +397,7 @@ CREATE INDEX idx_messages_created_at ON messages(created_at);
 
 CREATE TABLE files (
     file_id       BIGINT AUTO_INCREMENT PRIMARY KEY,
-    uploader_id   BIGINT NOT NULL,
+    uploader_id   BIGINT NULL,
     item_id       BIGINT NULL,
     original_name VARCHAR(255) NOT NULL,
     stored_name   VARCHAR(255) NOT NULL UNIQUE,

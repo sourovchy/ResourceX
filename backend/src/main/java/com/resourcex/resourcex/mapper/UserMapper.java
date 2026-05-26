@@ -49,6 +49,7 @@ public class UserMapper {
                         .university(studentProfile.getUniversity() != null ? studentProfile.getUniversity().getName()
                                 : null)
                         .department(studentProfile.getDepartment())
+                        .idCardDataUrl(studentProfile.getIdCardDataUrl())
                         .trustScore(studentProfile.getTrustScore())
                         .emailVerified(studentProfile.getEmailVerified())
                         .phoneVerified(studentProfile.getPhoneVerified())
@@ -62,6 +63,7 @@ public class UserMapper {
                 .studentProfile(profile)
                 .roles(roles)
                 .createdAt(user.getCreatedAt())
+                .avatarUrl(user.getAvatarUrl())
                 .build();
     }
 }

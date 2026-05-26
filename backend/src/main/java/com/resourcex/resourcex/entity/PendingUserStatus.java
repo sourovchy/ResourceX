@@ -1,7 +1,9 @@
 package com.resourcex.resourcex.entity;
 
 public enum PendingUserStatus {
-    PENDING,
+    REGISTERED,
+    EMAIL_VERIFIED,
+    PENDING_REVIEW,
     APPROVED,
     REJECTED
 }

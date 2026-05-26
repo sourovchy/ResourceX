@@ -230,6 +230,7 @@ export default function EditItemPage() {
 							className={`w-full rounded-xl border border-borderLight px-4 py-3 text-sm transition ${
 								fieldDisabled ? "cursor-not-allowed bg-surfaceVariant text-textSecondary" : "bg-surface text-textPrimary"
 							}`}
+							maxLength={100}
 						/>
 					</div>
 
@@ -274,6 +275,7 @@ export default function EditItemPage() {
 							className={`w-full resize-none rounded-xl border border-borderLight px-4 py-3 text-sm transition ${
 								fieldDisabled ? "cursor-not-allowed bg-surfaceVariant text-textSecondary" : "bg-surface text-textPrimary"
 							}`}
+							maxLength={1000}
 						/>
 					</div>
 				</div>
@@ -292,6 +294,7 @@ export default function EditItemPage() {
 								onChange={(e) => setPrice(e.target.value)}
 								type="number"
 								min="0"
+								max="100000"
 								disabled={fieldDisabled}
 								className={`w-full rounded-xl border px-4 py-3 text-sm transition ${
 									fieldDisabled ? "cursor-not-allowed bg-surfaceVariant text-textSecondary" : "border-borderLight bg-surface text-textPrimary"
@@ -308,6 +311,7 @@ export default function EditItemPage() {
 								onChange={(e) => setDeposit(e.target.value)}
 								type="number"
 								min="0"
+								max="100000"
 								disabled={fieldDisabled}
 								className={`w-full rounded-xl border px-4 py-3 text-sm transition ${
 									fieldDisabled ? "cursor-not-allowed bg-surfaceVariant text-textSecondary" : "border-borderLight bg-surface text-textPrimary"

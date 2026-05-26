@@ -11,6 +11,8 @@ import {
 	AlertCircle,
 	ArrowUp,
 	ArrowDown,
+	Eye,
+	EyeOff,
 } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import api from "@/lib/api";
@@ -31,6 +33,7 @@ type CreateStaffForm = {
 	name: string;
 	email: string;
 	password: string;
+	confirmPassword: string;
 	role: StaffRole;
 };
 
@@ -38,6 +41,7 @@ const initialForm: CreateStaffForm = {
 	name: "",
 	email: "",
 	password: "",
+	confirmPassword: "",
 	role: "ADMIN",
 };
 
@@ -66,6 +70,23 @@ export default function StaffManagementPage() {
 	const [pageIndex, setPageIndex] = useState(0);
 	const [totalPages, setTotalPages] = useState(0);
 	const [totalStaff, setTotalStaff] = useState(0);
+	const [showPassword, setShowPassword] = useState(false);
+	const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+
+	const passwordChecks = useMemo(
+		() => [
+			{ label: "At least 8 characters", valid: form.password.length >= 8 },
+			{
+				label: "Uppercase and lowercase letters",
+				valid: /[A-Z]/.test(form.password) && /[a-z]/.test(form.password),
+			},
+			{ label: "At least one number", valid: /\d/.test(form.password) },
+			{ label: "At least one symbol", valid: /[^A-Za-z0-9]/.test(form.password) },
+		],
+		[form.password],
+	);
+
+	const passwordIsStrong = passwordChecks.every((check) => check.valid);
 
 	const { user } = useAuth();
 	const currentUserId = user?.userId ? String(user.userId) : null;
@@ -137,6 +158,20 @@ export default function StaffManagementPage() {
 		event.preventDefault();
 		setError(null);
 		setSuccess(null);
+
+		if (!passwordIsStrong) {
+			setError(
+				"Use a stronger password with 8 characters, mixed letters, a number, and a symbol.",
+			);
+			return;
+		}
+
+		if (form.password.trim() !== form.confirmPassword.trim()) {
+			setError("Passwords do not match.");
+			setSuccess(null);
+			return;
+		}
+
 		setIsSubmitting(true);
 
 		try {
@@ -151,6 +186,8 @@ export default function StaffManagementPage() {
 
 			setSuccess(`${roleLabel[form.role]} account created successfully.`);
 			setForm(initialForm);
+			setShowPassword(false);
+			setShowConfirmPassword(false);
 			setPageIndex(0);
 			await loadStaff(0);
 		} catch (err) {
@@ -323,18 +360,73 @@ export default function StaffManagementPage() {
 								/>
 							</Field>
 
-							<Field label="Password" htmlFor="password" required>
-								<input
-									id="password"
-									type="password"
-									value={form.password}
-									onChange={(e) => handleChange("password", e.target.value)}
-									placeholder="Create a secure password"
-									className="h-11 w-full min-w-0 rounded-xl border border-borderLight bg-surface px-4 text-sm text-textPrimary outline-none transition focus:border-primary focus:ring-4 focus:ring-primary/10"
-									required
-									minLength={8}
-								/>
-							</Field>
+							<div>
+								<Field label="Password" htmlFor="password" required>
+									<div className="relative">
+										<input
+											id="password"
+											type={showPassword ? "text" : "password"}
+											value={form.password}
+											onChange={(e) => handleChange("password", e.target.value)}
+											placeholder="Create a secure password"
+											className="h-11 w-full min-w-0 rounded-xl border border-borderLight bg-surface px-4 pr-12 text-sm text-textPrimary outline-none transition focus:border-primary focus:ring-4 focus:ring-primary/10"
+											required
+											minLength={8}
+										/>
+										<button
+											type="button"
+											onClick={() => setShowPassword((v) => !v)}
+											tabIndex={-1}
+											className="absolute right-2 top-1/2 -translate-y-1/2 p-1 rounded focus:outline-none focus:ring-2 focus:ring-primary/30 text-textSecondary"
+											aria-label={showPassword ? "Hide password" : "Show password"}
+										>
+											{showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+										</button>
+									</div>
+								</Field>
+								<div className="space-y-2 rounded-2xl border border-borderLight bg-surfaceVariant px-4 py-4 text-sm">
+									<p className="font-medium text-textPrimary">Password requirements</p>
+									<ul className="space-y-1 text-textSecondary">
+										{passwordChecks.map((check) => (
+											<li key={check.label} className="flex items-center gap-2">
+												<span
+													className={`inline-flex h-5 w-5 items-center justify-center rounded-full text-[11px] font-bold ${
+														check.valid
+															? "bg-emerald-100 text-emerald-700"
+															: "bg-slate-100 text-slate-400"
+													}`}
+												aria-hidden="true">
+													{check.valid ? "✓" : "•"}
+												</span>
+												<span>{check.label}</span>
+											</li>
+										))}
+									</ul>
+								</div>
+								<Field label="Confirm Password" htmlFor="confirmPassword" required>
+									<div className="relative">
+										<input
+											id="confirmPassword"
+											type={showConfirmPassword ? "text" : "password"}
+											value={form.confirmPassword}
+											onChange={(e) => handleChange("confirmPassword", e.target.value)}
+											placeholder="Re-enter password"
+											className="h-11 w-full min-w-0 rounded-xl border border-borderLight bg-surface px-4 pr-12 text-sm text-textPrimary outline-none transition focus:border-primary focus:ring-4 focus:ring-primary/10"
+											required
+											minLength={8}
+										/>
+										<button
+											type="button"
+											onClick={() => setShowConfirmPassword((v) => !v)}
+											tabIndex={-1}
+											className="absolute right-2 top-1/2 -translate-y-1/2 p-1 rounded focus:outline-none focus:ring-2 focus:ring-primary/30 text-textSecondary"
+											aria-label={showConfirmPassword ? "Hide confirm password" : "Show confirm password"}
+										>
+											{showConfirmPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+										</button>
+									</div>
+								</Field>
+							</div>
 
 							<Field label="Role" htmlFor="role" required>
 								<select
@@ -429,22 +521,32 @@ export default function StaffManagementPage() {
 									},
 									{
 										header: "Actions",
-										cell: (member) => (
-											<div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
-												<button
-													type="button"
-													onClick={() => void handleRemoveStaff(member)}
-													disabled={removingId === member.id}
-													className="inline-flex items-center gap-2 rounded-xl border border-rose-200 bg-rose-50 px-4 py-2 text-sm font-medium text-rose-700 transition hover:bg-rose-100 disabled:cursor-not-allowed disabled:opacity-50">
-													{removingId === member.id ? (
-														<Loader2 className="h-4 w-4 animate-spin" />
+										cell: (member) => {
+											const isSelfSuperAdmin = member.id === currentUserId && member.role === "SUPER_ADMIN";
+											
+											return (
+												<div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
+													{isSelfSuperAdmin ? (
+														<span className="inline-flex items-center px-4 py-2 text-sm font-medium text-slate-400 bg-slate-50 border border-slate-200 rounded-xl cursor-not-allowed">
+															Cannot delete self
+														</span>
 													) : (
-														<Trash2 className="h-4 w-4" />
+														<button
+															type="button"
+															onClick={() => void handleRemoveStaff(member)}
+															disabled={removingId === member.id}
+															className="inline-flex items-center gap-2 rounded-xl border border-rose-200 bg-rose-50 px-4 py-2 text-sm font-medium text-rose-700 transition hover:bg-rose-100 disabled:cursor-not-allowed disabled:opacity-50">
+															{removingId === member.id ? (
+																<Loader2 className="h-4 w-4 animate-spin" />
+															) : (
+																<Trash2 className="h-4 w-4" />
+															)}
+															Delete
+														</button>
 													)}
-													Delete
-												</button>
-											</div>
-										)
+												</div>
+											);
+										}
 									}
 								]}
 								data={staff}

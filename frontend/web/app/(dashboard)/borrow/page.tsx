@@ -21,12 +21,12 @@ export default function BorrowPage() {
 		api
 			.get("/items")
 			.then((res) => {
-				if (res.data && Array.isArray(res.data)) {
-					const cats = Array.from(
-						new Set(res.data.map((i: any) => i.category).filter(Boolean)),
-					) as string[];
-					setCategories(["All", ...cats]);
-				}
+				const pageData = res.data?.content ?? res.data;
+				const itemsArray = Array.isArray(pageData) ? pageData : [];
+				const cats = Array.from(
+					new Set(itemsArray.map((i: any) => i.category ?? i.categoryName).filter(Boolean)),
+				) as string[];
+				setCategories(["All", ...cats]);
 			})
 			.catch(console.error);
 	}, []);
@@ -40,7 +40,9 @@ export default function BorrowPage() {
 				if (searchQuery) params.append("searchQuery", searchQuery);
 
 				const response = await api.get(`/items?${params.toString()}`);
-				setItems(response.data);
+				const pageData = response.data?.content ?? response.data;
+				const itemsArray = Array.isArray(pageData) ? pageData : [];
+				setItems(itemsArray);
 				setError(null);
 			} catch (err) {
 				console.error("Error fetching items:", err);

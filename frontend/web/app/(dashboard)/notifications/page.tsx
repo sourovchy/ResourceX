@@ -11,6 +11,7 @@ import {
 	Bell,
 	Check,
 } from "lucide-react";
+import api from "@/lib/api";
 
 type NotificationItem = {
 	id: number;
@@ -29,41 +30,7 @@ type NotificationApiResponse =
 	}
 	| unknown;
 
-const NOTIFICATION_ENDPOINTS = [
-	"/api/notifications",
-	"/api/notifications/me",
-	"/api/users/notifications",
-];
 
-function getAuthHeaders(): Record<string, string> {
-	if (typeof window === "undefined") return {};
-
-	const token =
-		localStorage.getItem("resourcex_token");
-
-	return token
-		? {
-			Authorization: `Bearer ${token}`,
-		}
-		: {};
-}
-
-async function fetchJson(url: string) {
-	const response = await fetch(url, {
-		method: "GET",
-		credentials: "include",
-		headers: {
-			"Content-Type": "application/json",
-			...getAuthHeaders(),
-		},
-	});
-
-	if (!response.ok) {
-		throw new Error(`Request failed with status ${response.status}`);
-	}
-
-	return (await response.json()) as NotificationApiResponse;
-}
 
 function formatRelativeTime(dateString?: string) {
 	if (!dateString) return "Recently";
@@ -168,18 +135,15 @@ export default function NotificationsPage() {
 			try {
 				let loadedNotifications: NotificationItem[] = [];
 
-				for (const endpoint of NOTIFICATION_ENDPOINTS) {
-					try {
-						const payload = await fetchJson(endpoint);
-						const normalized = extractNotifications(payload);
+				try {
+					const response = await api.get("/notifications/user/all");
+					const normalized = extractNotifications(response.data);
 
-						if (normalized.length > 0) {
-							loadedNotifications = normalized;
-							break;
-						}
-					} catch {
-						// Try next endpoint.
+					if (normalized.length > 0) {
+						loadedNotifications = normalized;
 					}
+				} catch {
+					// Handle error
 				}
 
 				if (!active) return;
@@ -217,14 +181,7 @@ export default function NotificationsPage() {
 		);
 
 		try {
-			await fetch("/api/notifications/read-all", {
-				method: "PUT",
-				credentials: "include",
-				headers: {
-					"Content-Type": "application/json",
-					...getAuthHeaders(),
-				},
-			});
+			await api.patch("/notifications/user/read-all");
 		} catch {
 			// Silent fail for optimistic UI.
 		}
@@ -238,14 +195,7 @@ export default function NotificationsPage() {
 		);
 
 		try {
-			await fetch(`/api/notifications/${id}/read`, {
-				method: "PUT",
-				credentials: "include",
-				headers: {
-					"Content-Type": "application/json",
-					...getAuthHeaders(),
-				},
-			});
+			await api.patch(`/notifications/${id}/read`);
 		} catch {
 			// Silent fail for optimistic UI.
 		}

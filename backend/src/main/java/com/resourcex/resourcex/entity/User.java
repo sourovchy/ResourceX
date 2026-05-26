@@ -42,6 +42,9 @@ public class User {
     @Column(nullable = false)
     private LocalDateTime updatedAt;
 
+    @Column(name = "avatar_url", length = 1000)
+    private String avatarUrl;
+
     @PrePersist
     public void onCreate() {
         LocalDateTime now = LocalDateTime.now();

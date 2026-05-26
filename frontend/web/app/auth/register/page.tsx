@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 import api from "@/lib/api";
 import { PENDING_EMAIL_KEY, setOtpLastSendTimestamp } from "@/lib/auth";
+import { validatePasswordChecks, isPasswordStrong, validateEmail, validatePhone, normalizePhone } from "@/lib/validation";
 
 type AuthResponse = {
 	message: string;
@@ -47,33 +48,27 @@ export default function RegisterPage() {
 	const [showPassword, setShowPassword] = useState(false);
 	const [idCardFileName, setIdCardFileName] = useState("");
 	const [idCardDataUrl, setIdCardDataUrl] = useState("");
+	const [idCardFile, setIdCardFile] = useState<File | null>(null);
 
-	const passwordChecks = useMemo(
-		() => [
-			{ label: "At least 8 characters", valid: form.password.length >= 8 },
-			{
-				label: "Uppercase and lowercase letters",
-				valid: /[A-Z]/.test(form.password) && /[a-z]/.test(form.password),
-			},
-			{ label: "At least one number", valid: /\d/.test(form.password) },
-			{ label: "At least one symbol", valid: /[^A-Za-z0-9]/.test(form.password) },
-		],
-		[form.password],
-	);
-
-	const passwordIsStrong = passwordChecks.every((check) => check.valid);
+	const passwordChecks = useMemo(() => validatePasswordChecks(form.password), [form.password]);
+	const passwordIsStrong = useMemo(() => isPasswordStrong(form.password), [form.password]);
 
 	const validate = () => {
 		if (!form.name.trim()) return "Full name is required";
+		if (form.name.length > 50) return "Full name must be under 50 characters";
 		if (!form.studentId.trim()) return "Student ID is required";
-		if (!/^\d{10}$/.test(form.phone))
-			return "Mobile number must be +880 followed by 10 digits";
+		if (form.studentId.length > 20) return "Student ID must be under 20 characters";
+		if (!validatePhone(form.phone))
+			return "Please enter a valid Bangladesh mobile number (e.g., 01XXXXXXXXX)";
 		if (!form.university.trim()) return "University is required";
+		if (form.university.length > 100) return "University name must be under 100 characters";
 		if (!form.department.trim()) return "Department is required";
+		if (form.department.length > 100) return "Department name must be under 100 characters";
 		if (!idCardDataUrl) return "Upload your student ID card";
-		if (!form.email.includes("@")) return "Invalid email address";
+		if (!validateEmail(form.email)) return "Invalid email address";
+		if (form.email.length > 100) return "Email must be under 100 characters";
 		if (!passwordIsStrong)
-			return "Use a stronger password with 8 characters, mixed letters, a number, and a symbol";
+			return "Please ensure your password meets all requirements";
 		return "";
 	};
 
@@ -96,6 +91,7 @@ export default function RegisterPage() {
 			setError("");
 			setIdCardFileName(file.name);
 			setIdCardDataUrl(String(reader.result));
+			setIdCardFile(file);
 		};
 		reader.readAsDataURL(file);
 	};
@@ -113,15 +109,34 @@ export default function RegisterPage() {
 		setLoading(true);
 
 		try {
+			let uploadedIdCardUrl = "";
+
+			if (idCardFile) {
+				const formData = new FormData();
+				formData.append("file", idCardFile);
+				
+				const uploadRes = await api.post("/files/upload?purpose=ID_CARD", formData, {
+					headers: { "Content-Type": "multipart/form-data" },
+				});
+				
+				if (uploadRes.data && uploadRes.data.fileUrl) {
+					uploadedIdCardUrl = uploadRes.data.fileUrl;
+				} else {
+					throw new Error("Failed to upload ID card. Please try again.");
+				}
+			} else {
+				throw new Error("Please select an ID card image");
+			}
+
 			await api.post<AuthResponse>("/auth/register", {
 				studentId: form.studentId.trim(),
 				name: form.name.trim(),
 				email: form.email.trim(),
 				password: form.password,
-				phone: `+880${form.phone}`,
+				phone: normalizePhone(form.phone),
 				university: form.university.trim(),
 				department: form.department.trim(),
-				idCardDataUrl,
+				idCardDataUrl: uploadedIdCardUrl,
 			});
 
 			localStorage.setItem(PENDING_EMAIL_KEY, form.email.trim());
@@ -236,6 +251,7 @@ export default function RegisterPage() {
 												}
 												className={`${inputBase} pl-10`}
 												placeholder="John Doe"
+												maxLength={50}
 												required
 											/>
 										</div>
@@ -254,6 +270,7 @@ export default function RegisterPage() {
 											}
 											className={inputBase}
 											placeholder="CSE2304082"
+											maxLength={20}
 											required
 										/>
 									</div>
@@ -262,23 +279,19 @@ export default function RegisterPage() {
 								<div className="grid grid-cols-1 gap-4 sm:gap-5 sm:grid-cols-2">
 									<div className="space-y-1.5">
 										<label className="block text-sm font-medium text-textPrimary">Mobile Number</label>
-										<div className="flex overflow-hidden rounded-xl border border-outlineVariant bg-surface transition focus-within:border-primary focus-within:ring-2 focus-within:ring-primary">
-											<div className="flex items-center border-r border-outlineVariant bg-surfaceVariant px-4 font-semibold text-textPrimary">
-												+880
-											</div>
+										<div className="relative">
 											<input
 												type="tel"
-												inputMode="numeric"
 												value={form.phone}
 												onChange={(e) =>
 													setForm({
 														...form,
-														phone: e.target.value.replace(/\D/g, "").slice(0, 10),
+														phone: e.target.value.replace(/[^\d+]/g, "").slice(0, 14),
 													})
 												}
-												className="w-full bg-transparent px-4 py-3 text-textPrimary outline-none"
-												placeholder="1XXXXXXXXX"
-												maxLength={10}
+												className={inputBase}
+												placeholder="+8801XXXXXXXXX"
+												maxLength={14}
 												required
 											/>
 										</div>
@@ -297,7 +310,8 @@ export default function RegisterPage() {
 												})
 											}
 											className={inputBase}
-											placeholder="Type your university"
+											placeholder="Chittagong University of Engineering and Technology"
+											maxLength={100}
 											required
 										/>
 
@@ -324,7 +338,8 @@ export default function RegisterPage() {
 												})
 											}
 											className={inputBase}
-											placeholder="Computer Science"
+											placeholder="Computer Science & Engineering"
+											maxLength={100}
 											required
 										/>
 
@@ -351,6 +366,7 @@ export default function RegisterPage() {
 												}
 												className={`${inputBase} pl-10`}
 												placeholder="yourname@university.edu"
+												maxLength={100}
 												required
 											/>
 										</div>
@@ -387,16 +403,24 @@ export default function RegisterPage() {
 										</button>
 									</div>
 
-									<div className="grid grid-cols-1 gap-1.5 pt-1 sm:grid-cols-2 sm:gap-2">
-										{passwordChecks.map((check) => (
-											<div
-												key={check.label}
-												className={`text-xs font-medium ${
-													check.valid ? "text-success" : "text-textTertiary"
-												}`}>
-												{check.valid ? "OK" : "-"} {check.label}
-											</div>
-										))}
+									<div className="space-y-2 rounded-2xl border border-borderLight bg-surfaceVariant px-4 py-4 text-sm">
+										<p className="font-medium text-textPrimary">Password requirements</p>
+										<ul className="space-y-1 text-textSecondary">
+											{passwordChecks.map((check) => (
+												<li key={check.label} className="flex items-center gap-2">
+													<span
+														className={`inline-flex h-5 w-5 items-center justify-center rounded-full text-[11px] font-bold ${
+															check.valid
+																? "bg-emerald-100 text-emerald-700"
+																: "bg-slate-100 text-slate-400"
+														}`}
+													aria-hidden="true">
+														{check.valid ? "✓" : "•"}
+													</span>
+													<span>{check.label}</span>
+												</li>
+											))}
+										</ul>
 									</div>
 								</div>
 

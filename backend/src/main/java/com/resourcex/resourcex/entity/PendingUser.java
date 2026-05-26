@@ -54,7 +54,7 @@ public class PendingUser {
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
     @Builder.Default
-    private PendingUserStatus status = PendingUserStatus.PENDING;
+    private PendingUserStatus status = PendingUserStatus.REGISTERED;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "reviewed_by_user_id")
@@ -65,6 +65,16 @@ public class PendingUser {
 
     @Column(name = "rejection_reason", columnDefinition = "TEXT")
     private String rejectionReason;
+
+    @Column(name = "email_verified", nullable = false)
+    @Builder.Default
+    private boolean emailVerified = false;
+
+    @Column(name = "verified_at")
+    private LocalDateTime verifiedAt;
+
+    @Column(name = "approved_at")
+    private LocalDateTime approvedAt;
 
     @Column(nullable = false, updatable = false)
     private LocalDateTime createdAt;

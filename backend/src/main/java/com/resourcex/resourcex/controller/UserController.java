@@ -48,6 +48,14 @@ public class UserController {
         return userService.updateCurrentUser(request);
     }
 
+    @PutMapping("/me/password")
+    public org.springframework.http.ResponseEntity<?> changePassword(
+            @Valid @RequestBody com.resourcex.resourcex.dto.request.ChangePasswordRequest request
+    ) {
+        userService.changePassword(request);
+        return org.springframework.http.ResponseEntity.ok(java.util.Map.of("message", "Password updated successfully"));
+    }
+
     @PutMapping("/{userId}")
     @PreAuthorize("hasAnyRole('ADMIN','MODERATOR','SUPER_ADMIN')")
     public UserResponse updateUser(

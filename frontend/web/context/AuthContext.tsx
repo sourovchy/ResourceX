@@ -30,6 +30,7 @@ type AuthContextValue = {
 	user: AuthUser | null;
 	roles: UserRole[];
 	loading: boolean;
+	error: string | null;
 	login: (
 		email: string,
 		password: string,
@@ -43,10 +44,17 @@ type AuthContextValue = {
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 
 function normalizeRoles(roles: UserRole[] = []): UserRole[] {
-	return roles.map((role) => String(role).toUpperCase() as UserRole);
+	return Array.from(
+		new Set(
+			roles
+				.filter(Boolean)
+				.map((role) => String(role).trim().toUpperCase() as UserRole),
+		),
+	);
 }
 
 function getHomeRoute(_roles: UserRole[]) {
+	// Replace this with role-specific routes if needed.
 	return "/dashboard";
 }
 
@@ -57,9 +65,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 	const [user, setUser] = useState<AuthUser | null>(null);
 	const [roles, setRoles] = useState<UserRole[]>([]);
 	const [loading, setLoading] = useState(true);
+	const [error, setError] = useState<string | null>(null);
 
 	const suppressLoginRedirectRef = useRef(false);
 	const isMountedRef = useRef(true);
+	const requestSeqRef = useRef(0);
+
+	const nextRequestSeq = useCallback(() => {
+		requestSeqRef.current += 1;
+		return requestSeqRef.current;
+	}, []);
 
 	const applySession = useCallback(
 		(token: string, nextUser: AuthUser, nextRoles: UserRole[]) => {
@@ -68,29 +83,34 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 			storeSession(token, nextUser, normalizedRoles);
 			setUser(nextUser);
 			setRoles(normalizedRoles);
+			setError(null);
 		},
 		[],
 	);
 
 	const logout = useCallback(() => {
+		nextRequestSeq(); // invalidate any in-flight refresh/login result
 		clearSession();
 		setUser(null);
 		setRoles([]);
+		setError(null);
 		suppressLoginRedirectRef.current = false;
 
 		if (pathname !== "/auth/login") {
 			router.replace("/auth/login");
 		}
-	}, [pathname, router]);
+	}, [nextRequestSeq, pathname, router]);
 
 	const refresh = useCallback(async () => {
+		const seq = nextRequestSeq();
 		const token = getStoredToken();
 
 		if (!token) {
 			clearSession();
-			if (isMountedRef.current) {
+			if (isMountedRef.current && seq === requestSeqRef.current) {
 				setUser(null);
 				setRoles([]);
+				setError(null);
 				setLoading(false);
 			}
 			return;
@@ -98,25 +118,28 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
 		try {
 			const { data } = await api.get<CurrentUserResponse>("/auth/me");
-			if (isMountedRef.current) {
+
+			if (isMountedRef.current && seq === requestSeqRef.current) {
 				applySession(token, data.user, data.roles ?? []);
 			}
-		} catch {
+		} catch (err) {
 			clearSession();
-			if (isMountedRef.current) {
+
+			if (isMountedRef.current && seq === requestSeqRef.current) {
 				setUser(null);
 				setRoles([]);
+				setError("Failed to restore session");
 			}
 		} finally {
-			if (isMountedRef.current) {
+			if (isMountedRef.current && seq === requestSeqRef.current) {
 				setLoading(false);
 			}
 		}
-	}, [applySession]);
+	}, [applySession, nextRequestSeq]);
 
 	useEffect(() => {
 		isMountedRef.current = true;
-		refresh();
+		void refresh();
 
 		return () => {
 			isMountedRef.current = false;
@@ -131,23 +154,37 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
 	const login = useCallback(
 		async (email: string, password: string, redirect = true) => {
-			const { data } = await api.post<AuthResponse>("/auth/login", {
-				email,
-				password,
-			});
+			const seq = nextRequestSeq();
 
-			const normalizedRoles = normalizeRoles(data.roles ?? []);
-			applySession(data.token, data.user, normalizedRoles);
+			try {
+				const { data } = await api.post<AuthResponse>("/auth/login", {
+					email,
+					password,
+				});
 
-			suppressLoginRedirectRef.current = !redirect;
+				if (!isMountedRef.current || seq !== requestSeqRef.current) {
+					return data;
+				}
 
-			if (redirect) {
-				router.replace(getHomeRoute(normalizedRoles));
+				const normalizedRoles = normalizeRoles(data.roles ?? []);
+				applySession(data.token, data.user, normalizedRoles);
+
+				suppressLoginRedirectRef.current = !redirect;
+				setError(null);
+
+				if (redirect) {
+					router.replace(getHomeRoute(normalizedRoles));
+				}
+
+				return data;
+			} catch (err) {
+				if (isMountedRef.current && seq === requestSeqRef.current) {
+					setError("Login failed");
+				}
+				throw err;
 			}
-
-			return data;
 		},
-		[applySession, router],
+		[applySession, nextRequestSeq, router],
 	);
 
 	const value = useMemo<AuthContextValue>(
@@ -155,12 +192,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 			user,
 			roles,
 			loading,
+			error,
 			login,
 			logout,
 			refresh,
 			canAccess: (role: AccessibleRole) => hasRole(roles, role),
 		}),
-		[user, roles, loading, login, logout, refresh],
+		[user, roles, loading, error, login, logout, refresh],
 	);
 
 	useEffect(() => {

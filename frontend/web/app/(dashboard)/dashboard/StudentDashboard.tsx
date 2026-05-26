@@ -14,20 +14,40 @@ import {
 	PackageOpen,
 	Bell,
 	Star,
-	HeartIcon,
 	HistoryIcon,
 	Loader2,
+	AlertCircle,
+	TrendingUp,
 } from "lucide-react";
 
-type Item = { itemId: number; title: string; dailyRate: number; status: string };
+type Item    = { itemId: number; title: string; dailyRate: number; status: string };
 type Booking = { bookingId: number; status: string; item?: Item };
 
+/* ── Status badge colours ──────────────────────────────────────── */
+const STATUS_STYLE: Record<string, string> = {
+	ACTIVE:   "bg-successLight text-successDark",
+	APPROVED: "bg-successLight text-successDark",
+	PENDING:  "bg-warningLight text-warningDark",
+	REJECTED: "bg-errorLight   text-errorDark",
+	RETURNED: "bg-surfaceVariant text-textSecondary",
+};
+
+function StatusBadge({ status }: { status: string }) {
+	const cls = STATUS_STYLE[status] ?? "bg-surfaceVariant text-textSecondary";
+	return (
+		<span className={`inline-flex items-center rounded-md px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wide ${cls}`}>
+			{status}
+		</span>
+	);
+}
+
+/* ── Main component ─────────────────────────────────────────────── */
 export default function StudentDashboard() {
 	const { user } = useAuth();
-	const [items, setItems] = useState<Item[]>([]);
+	const [items,    setItems]    = useState<Item[]>([]);
 	const [bookings, setBookings] = useState<Booking[]>([]);
-	const [loading, setLoading] = useState(true);
-	const [error, setError] = useState("");
+	const [loading,  setLoading]  = useState(true);
+	const [error,    setError]    = useState("");
 
 	useEffect(() => {
 		let active = true;
@@ -35,151 +55,270 @@ export default function StudentDashboard() {
 		async function loadDashboard() {
 			try {
 				const [itemsRes, bookingsRes] = await Promise.all([
-					api.get<Item[]>('/items/me'),
-					api.get<Booking[]>('/bookings/me'),
+					api.get<Item[]>("/items/me"),
+					api.get<Booking[]>("/bookings/me"),
 				]);
-
 				if (!active) return;
 				setItems(itemsRes.data ?? []);
 				setBookings(bookingsRes.data ?? []);
 			} catch {
-				if (active) setError('Could not load your dashboard data.');
+				if (active) setError("Could not load your dashboard data.");
 			} finally {
 				if (active) setLoading(false);
 			}
 		}
 
 		void loadDashboard();
-		return () => {
-			active = false;
-		};
+		return () => { active = false; };
 	}, []);
 
 	const activeRentals = useMemo(
-		() => bookings.filter((booking) => ["APPROVED", "ACTIVE"].includes(booking.status)).length,
+		() => bookings.filter((b) => ["APPROVED", "ACTIVE"].includes(b.status)).length,
 		[bookings],
 	);
 	const pendingRequests = useMemo(
-		() => bookings.filter((booking) => booking.status === "PENDING").length,
+		() => bookings.filter((b) => b.status === "PENDING").length,
 		[bookings],
 	);
 
+	/* ── Loading ──────────────────────────────────────────────── */
 	if (loading) {
 		return (
-			<div className="flex min-h-[60vh] items-center justify-center gap-3 px-4 text-center text-textSecondary">
-				<Loader2 className="h-5 w-5 animate-spin" />
-				<span className="text-sm font-medium sm:text-base">Loading dashboard...</span>
+			<div className="flex min-h-[60vh] flex-col items-center justify-center gap-3 text-textSecondary">
+				<Loader2 className="h-6 w-6 animate-spin text-primary" />
+				<span className="text-sm font-medium">Loading your dashboard…</span>
 			</div>
 		);
 	}
 
+	/* ── Dashboard ────────────────────────────────────────────── */
 	return (
-		<div className="space-y-5 px-3 pb-20 sm:space-y-8 sm:px-0 sm:pb-0">
+		<div className="page-enter space-y-6 pb-20 sm:pb-0">
+
+			{/* Error banner */}
 			{error && (
-				<div className="rounded-xl border border-error/50 bg-errorLight px-5 py-4 text-sm font-semibold text-error">
+				<div className="flex items-center gap-3 rounded-xl border border-error/40 bg-errorLight px-4 py-3 text-sm font-medium text-error animate-slide-down">
+					<AlertCircle className="h-4 w-4 shrink-0" />
 					{error}
 				</div>
 			)}
 
-			<div className="flex flex-col gap-4 rounded-lg border border-borderLight bg-surface p-4 shadow-sm sm:p-6 md:flex-row md:items-center md:justify-between md:gap-6">
+			{/* ── Welcome strip ─────────────────────────────────── */}
+			<div className="flex flex-col gap-4 rounded-xl border border-borderLight bg-surface p-5 shadow-sm sm:flex-row sm:items-center sm:justify-between sm:p-6">
 				<div className="min-w-0">
-					<h1 className="break-words text-xl font-bold tracking-tight text-textPrimary sm:text-2xl">
+					<p className="text-xs font-semibold uppercase tracking-widest text-textTertiary">
+						Student Dashboard
+					</p>
+					<h1 className="mt-1 truncate text-xl font-bold tracking-tight text-textPrimary sm:text-2xl">
 						Welcome back, {user?.name ?? "student"}.
 					</h1>
-					<p className="mt-1 text-sm text-textSecondary sm:text-base">
-						Your dashboard is synced with your authenticated ResourceX account.
+					<p className="mt-1 text-sm text-textSecondary">
+						Your dashboard is synced with your ResourceX account.
 					</p>
 				</div>
 
-				<div className="flex w-full items-center gap-3 rounded-lg border border-borderLight bg-surfaceVariant p-3 sm:w-auto">
-					<div className="shrink-0 rounded-full bg-successLight p-2">
-						<ShieldCheck className="h-6 w-6 text-success" />
+				<div className="flex w-full shrink-0 items-center gap-3 rounded-lg border border-borderLight bg-surfaceVariant px-4 py-3 sm:w-auto">
+					<div className="rounded-full bg-successLight p-1.5">
+						<ShieldCheck className="h-5 w-5 text-success" />
 					</div>
-
-					<div className="min-w-0">
-						<div className="text-xs font-semibold uppercase text-textSecondary">
-							Account Status
+					<div>
+						<div className="text-[11px] font-semibold uppercase tracking-wider text-textTertiary">
+							Account status
 						</div>
-						<div className="mt-0.5 text-sm font-bold text-success">
+						<div className="text-sm font-bold text-success">
 							{user?.status ?? "ACTIVE"}
 						</div>
 					</div>
 				</div>
 			</div>
 
-			<div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4 sm:gap-5">
-				<StatCard icon={<PackageOpen className="h-5 w-5 text-dashboardBlue" />} title="Active Rentals" value={String(activeRentals)} tint="bg-dashboardBlueTint" />
-				<StatCard icon={<PlusCircle className="h-5 w-5 text-dashboardPurple" />} title="Items Listed" value={String(items.length)} tint="bg-dashboardPurpleTint" />
-				<StatCard icon={<Bell className="h-5 w-5 text-dashboardYellow" />} title="Pending Requests" value={String(pendingRequests)} tint="bg-dashboardYellowTint" />
-				<StatCard icon={<Star className="h-5 w-5 text-dashboardGreen" />} title="Trust Score" value={String(user?.studentProfile?.trustScore ?? 0)} tint="bg-dashboardGreenTint" />
+			{/* ── Stat cards ────────────────────────────────────── */}
+			<div className="grid grid-cols-2 gap-4 xl:grid-cols-4 stagger-children">
+				<StatCard
+					icon={<PackageOpen className="h-5 w-5 text-dashboardBlue" />}
+					title="Active Rentals"
+					value={String(activeRentals)}
+					tint="bg-dashboardBlueTint"
+				/>
+				<StatCard
+					icon={<PlusCircle className="h-5 w-5 text-dashboardPurple" />}
+					title="Items Listed"
+					value={String(items.length)}
+					tint="bg-dashboardPurpleTint"
+				/>
+				<StatCard
+					icon={<Bell className="h-5 w-5 text-dashboardYellow" />}
+					title="Pending Requests"
+					value={String(pendingRequests)}
+					tint="bg-dashboardYellowTint"
+				/>
+				<StatCard
+					icon={<Star className="h-5 w-5 text-dashboardGreen" />}
+					title="Trust Score"
+					value={String(user?.studentProfile?.trustScore ?? 0)}
+					tint="bg-dashboardGreenTint"
+				/>
 			</div>
 
+			{/* ── Quick actions ─────────────────────────────────── */}
 			<div>
-				<h2 className="mb-4 text-lg font-bold text-textPrimary sm:mb-5">Quick Actions</h2>
-				<div className="grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-3 xl:grid-cols-4">
-					<ActionCard href="/borrow" icon={<PackageSearch className="h-6 w-6 text-primary" />} bgIcon="bg-primaryLight" title="Browse Items" description="Find items to rent" />
-					<ActionCard href="/my-posts/add" icon={<PlusCircle className="h-6 w-6 text-accent" />} bgIcon="bg-accentLight" title="List an Item" description="Rent out your gear" />
-					<ActionCard href="/bookings" icon={<Bookmark className="h-6 w-6 text-dashboardBlue" />} bgIcon="bg-dashboardBlueTint" title="My Bookings" description="Track your rentals" />
-					<ActionCard href="/my-posts" icon={<PackageOpen className="h-6 w-6 text-dashboardYellow" />} bgIcon="bg-dashboardYellowTint" title="My Posts" description="Manage listings" />
-					<ActionCard href="/borrow/wishlist" icon={<HeartIcon className="h-6 w-6 text-dashboardYellow" />} bgIcon="bg-dashboardYellowTint" title="Wishlist" description="Favorite listings" />
-					<ActionCard href="/history" icon={<HistoryIcon className="h-6 w-6 text-dashboardYellow" />} bgIcon="bg-dashboard" title="History" description="History" />
+				<h2 className="mb-3 text-sm font-semibold uppercase tracking-widest text-textTertiary">
+					Quick actions
+				</h2>
+				<div className="grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-3 xl:grid-cols-5 stagger-children">
+					<ActionCard
+						href="/borrow"
+						icon={<PackageSearch className="h-6 w-6 text-primary" />}
+						bgIcon="bg-primaryLight"
+						title="Browse Items"
+						description="Find items to rent"
+					/>
+					<ActionCard
+						href="/my-posts/add"
+						icon={<PlusCircle className="h-6 w-6 text-accent" />}
+						bgIcon="bg-accentLight"
+						title="List an Item"
+						description="Rent out your gear"
+					/>
+					<ActionCard
+						href="/bookings"
+						icon={<Bookmark className="h-6 w-6 text-dashboardBlue" />}
+						bgIcon="bg-dashboardBlueTint"
+						title="My Bookings"
+						description="Track your rentals"
+					/>
+					<ActionCard
+						href="/my-posts"
+						icon={<PackageOpen className="h-6 w-6 text-dashboardYellow" />}
+						bgIcon="bg-dashboardYellowTint"
+						title="My Posts"
+						description="Manage listings"
+					/>
+					<ActionCard
+						href="/history"
+						icon={<HistoryIcon className="h-6 w-6 text-dashboardPurple" />}
+						bgIcon="bg-dashboardPurpleTint"
+						title="History"
+						description="Past transactions"
+					/>
 				</div>
 			</div>
 
-			<div className="grid grid-cols-1 gap-5 lg:grid-cols-2 lg:gap-6">
-				<EmptyAwarePanel
+			{/* ── Listings + Bookings panels ────────────────────── */}
+			<div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
+				{/* Your Listings */}
+				<Panel
 					title="Your Listings"
-					empty="No listings found. Create your first listing."
-					action={<Link href="/my-posts/add" className="text-sm font-bold text-primary hover:underline">Create listing</Link>}>
+					action={
+						<Link
+							href="/my-posts/add"
+							className="text-xs font-semibold text-primary hover:underline">
+							+ New listing
+						</Link>
+					}
+					empty="No listings yet. Create your first listing."
+					isEmpty={items.length === 0}
+				>
 					{items.slice(0, 4).map((item) => (
-						<Row key={item.itemId} title={item.title} meta={`${item.status} · ৳${item.dailyRate}/day`} />
+						<ListingRow key={item.itemId} item={item} />
 					))}
-				</EmptyAwarePanel>
+					{items.length > 4 && (
+						<ViewAll href="/my-posts" label={`View all ${items.length} listings`} />
+					)}
+				</Panel>
 
-				<EmptyAwarePanel
+				{/* Your Bookings */}
+				<Panel
 					title="Your Bookings"
-					empty="No bookings available."
-					action={<Link href="/borrow" className="text-sm font-bold text-primary hover:underline">Browse items</Link>}>
+					action={
+						<Link
+							href="/borrow"
+							className="text-xs font-semibold text-primary hover:underline">
+							Browse items
+						</Link>
+					}
+					empty="No bookings yet. Browse items to get started."
+					isEmpty={bookings.length === 0}
+				>
 					{bookings.slice(0, 4).map((booking) => (
-						<Row key={booking.bookingId} title={booking.item?.title ?? `Booking #${booking.bookingId}`} meta={booking.status} />
+						<BookingRow key={booking.bookingId} booking={booking} />
 					))}
-				</EmptyAwarePanel>
+					{bookings.length > 4 && (
+						<ViewAll href="/bookings" label={`View all ${bookings.length} bookings`} />
+					)}
+				</Panel>
 			</div>
 		</div>
 	);
 }
 
-function EmptyAwarePanel({
+/* ── Panel wrapper ──────────────────────────────────────────────── */
+function Panel({
 	title,
-	empty,
 	action,
+	empty,
+	isEmpty,
 	children,
 }: {
 	title: string;
-	empty: string;
 	action: React.ReactNode;
-	children: React.ReactNode[];
+	empty: string;
+	isEmpty: boolean;
+	children: React.ReactNode;
 }) {
-	const hasRows = React.Children.count(children) > 0;
-
 	return (
-		<section className="min-w-0 overflow-hidden rounded-lg border border-borderLight bg-surface shadow-sm">
-			<div className="flex flex-col gap-2 border-b border-borderLight px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-5">
-				<h2 className="font-bold text-textPrimary">{title}</h2>
+		<section className="overflow-hidden rounded-xl border border-borderLight bg-surface shadow-sm">
+			{/* Header */}
+			<div className="flex items-center justify-between border-b border-borderLight px-5 py-4">
+				<h2 className="text-sm font-bold text-textPrimary">{title}</h2>
 				{action}
 			</div>
-			<div className="divide-y divide-borderLight">
-				{hasRows ? children : <div className="px-4 py-6 text-sm text-textSecondary sm:px-5">{empty}</div>}
-			</div>
+
+			{/* Body */}
+			{isEmpty ? (
+				<div className="flex flex-col items-center justify-center gap-2 px-5 py-10 text-center">
+					<TrendingUp className="h-8 w-8 text-borderLight" />
+					<p className="text-sm text-textSecondary">{empty}</p>
+				</div>
+			) : (
+				<div className="divide-y divide-borderLight">{children}</div>
+			)}
 		</section>
 	);
 }
 
-function Row({ title, meta }: { title: string; meta: string }) {
+/* ── Listing row ────────────────────────────────────────────────── */
+function ListingRow({ item }: { item: Item }) {
 	return (
-		<div className="flex flex-col gap-1 px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:gap-4 sm:px-5">
-			<div className="min-w-0 break-words font-semibold text-textPrimary">{title}</div>
-			<div className="shrink-0 text-sm text-textSecondary">{meta}</div>
+		<div className="flex items-center justify-between gap-4 px-5 py-3.5 transition-colors hover:bg-surfaceVariant/60">
+			<div className="min-w-0">
+				<p className="truncate text-sm font-semibold text-textPrimary">{item.title}</p>
+				<p className="text-xs text-textTertiary">৳{item.dailyRate}/day</p>
+			</div>
+			<StatusBadge status={item.status} />
 		</div>
+	);
+}
+
+/* ── Booking row ────────────────────────────────────────────────── */
+function BookingRow({ booking }: { booking: Booking }) {
+	return (
+		<div className="flex items-center justify-between gap-4 px-5 py-3.5 transition-colors hover:bg-surfaceVariant/60">
+			<p className="min-w-0 truncate text-sm font-semibold text-textPrimary">
+				{booking.item?.title ?? `Booking #${booking.bookingId}`}
+			</p>
+			<StatusBadge status={booking.status} />
+		</div>
+	);
+}
+
+/* ── View all link ──────────────────────────────────────────────── */
+function ViewAll({ href, label }: { href: string; label: string }) {
+	return (
+		<Link
+			href={href}
+			className="flex items-center justify-center px-5 py-3 text-xs font-semibold text-textSecondary transition-colors hover:bg-surfaceVariant/60 hover:text-primary">
+			{label} →
+		</Link>
 	);
 }
