@@ -34,12 +34,16 @@ application-prod.properties
 backup.sql
 dump.sql
 
-/uploads/
-/storage/
+uploads/
+storage/
 
 temp/
 tmp/
 .cache/
+
+# Maven / Spring Boot generated files
+cp.txt
+HELP.md
 
 *.iml
 Thumbs.db

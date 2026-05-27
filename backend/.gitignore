@@ -1,0 +1,41 @@
+# Maven build output
+target/
+*.class
+*.jar
+*.war
+*.ear
+
+# Maven wrapper (only ignore the jar, keep the properties file)
+.mvn/wrapper/maven-wrapper.jar
+
+# Spring Boot generated / boilerplate
+HELP.md
+cp.txt
+
+# Logs
+*.log
+logs/
+
+# Uploaded files (runtime content — never commit)
+uploads/
+storage/
+
+# Application config with secrets
+src/main/resources/application.properties
+src/main/resources/application-local.properties
+src/main/resources/application-test.properties
+src/main/resources/application-prod.properties
+
+# Environment files
+.env
+.env.*
+*.env
+
+# IDE
+.idea/
+*.iml
+.vscode/
+
+# OS
+.DS_Store
+Thumbs.db

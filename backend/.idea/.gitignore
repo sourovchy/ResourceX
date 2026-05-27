@@ -78,3 +78,5 @@ application.properties
 .vscode/
 .DS_Store
 Thumbs.db
+uploads/
+
