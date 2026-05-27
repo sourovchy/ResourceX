@@ -3,7 +3,8 @@ import Link from "next/link";
 
 interface StatCardProps {
 	title: string;
-	value: string;
+	value: React.ReactNode;
+	loading?: boolean;
 	icon?: React.ReactNode;
 	tint?: string;
 	iconColor?: string;
@@ -18,6 +19,7 @@ const StatCard = ({
 	icon,
 	title,
 	value,
+	loading = false,
 	sub,
 	subtitle,
 	tint = "bg-blue-100",
@@ -45,15 +47,19 @@ const StatCard = ({
 			)}
 			<div className="min-w-0 flex-1 overflow-hidden">
 				<div className="break-words text-xs font-medium text-textSecondary sm:text-sm">{title}</div>
-				<div className="mt-1 break-words text-2xl font-extrabold leading-tight text-textPrimary sm:text-3xl">
-					{value}
-				</div>
-				{displaySubtitle && (
+				{loading ? (
+					<div className="mt-1 h-8 w-16 animate-pulse rounded bg-surfaceVariant sm:h-9" />
+				) : (
+					<div className="mt-1 break-words text-2xl font-extrabold leading-tight text-textPrimary sm:text-3xl">
+						{value}
+					</div>
+				)}
+				{displaySubtitle && !loading && (
 					<div className={`mt-1 break-words text-[11px] font-semibold sm:text-xs ${iconColor}`}>
 						{displaySubtitle}
 					</div>
 				)}
-				{trend && !displaySubtitle && (
+				{trend && !displaySubtitle && !loading && (
 					<div className="mt-1 break-words text-[11px] font-semibold text-green-600 sm:text-xs">
 						{trend}
 					</div>

@@ -63,8 +63,8 @@ export default function StudentDashboard() {
     async function loadDashboard() {
       try {
         const [itemsRes, bookingsRes] = await Promise.all([
-          api.get<Item[]>("/items/me"),
-          api.get<Booking[]>("/bookings/me"),
+          api.get<Item[]>("/items/me").catch(() => ({ data: [] as Item[] })),
+          api.get<Booking[]>("/bookings/me").catch(() => ({ data: [] as Booking[] })),
         ]);
         if (!active) return;
         setItems(itemsRes.data ?? []);
@@ -93,14 +93,7 @@ export default function StudentDashboard() {
   );
 
   /* ── Loading ─────── */
-  if (loading) {
-    return (
-      <div className="flex min-h-[60vh] flex-col items-center justify-center gap-3 text-textSecondary">
-        <Loader2 className="h-6 w-6 animate-spin text-primary" />
-        <span className="text-sm font-medium">Loading your dashboard…</span>
-      </div>
-    );
-  }
+  // Removed full page loader in favor of skeleton state
 
   /* ── Dashboard ───── */
   return (
@@ -145,24 +138,28 @@ export default function StudentDashboard() {
       {/* ── Stat cards ────────────────────────────────────── */}
       <div className="grid grid-cols-2 gap-4 xl:grid-cols-4 stagger-children">
         <StatCard
+          loading={loading}
           icon={<PackageOpen className="h-5 w-5 text-dashboardBlue" />}
           title="Active Rentals"
           value={String(activeRentals)}
           tint="bg-dashboardBlueTint"
         />
         <StatCard
+          loading={loading}
           icon={<PlusCircle className="h-5 w-5 text-dashboardPurple" />}
           title="Items Listed"
           value={String(items.length)}
           tint="bg-dashboardPurpleTint"
         />
         <StatCard
+          loading={loading}
           icon={<Bell className="h-5 w-5 text-dashboardYellow" />}
           title="Pending Requests"
           value={String(pendingRequests)}
           tint="bg-dashboardYellowTint"
         />
         <StatCard
+          loading={loading}
           icon={<Star className="h-5 w-5 text-dashboardGreen" />}
           title="Trust Score"
           value={String(user?.studentProfile?.trustScore ?? 0)}
@@ -229,16 +226,22 @@ export default function StudentDashboard() {
             </Link>
           }
           empty="No listings yet. Create your first listing."
-          isEmpty={items.length === 0}
+          isEmpty={!loading && items.length === 0}
         >
-          {items.slice(0, 4).map((item) => (
-            <ListingRow key={item.itemId} item={item} />
-          ))}
-          {items.length > 4 && (
-            <ViewAll
-              href="/my-posts"
-              label={`View all ${items.length} listings`}
-            />
+          {loading ? (
+            <div className="flex justify-center py-8"><Loader2 className="h-6 w-6 animate-spin text-textSecondary" /></div>
+          ) : (
+            <>
+              {items.slice(0, 4).map((item) => (
+                <ListingRow key={item.itemId} item={item} />
+              ))}
+              {items.length > 4 && (
+                <ViewAll
+                  href="/my-posts"
+                  label={`View all ${items.length} listings`}
+                />
+              )}
+            </>
           )}
         </Panel>
 
@@ -254,16 +257,22 @@ export default function StudentDashboard() {
             </Link>
           }
           empty="No bookings yet. Browse items to get started."
-          isEmpty={bookings.length === 0}
+          isEmpty={!loading && bookings.length === 0}
         >
-          {bookings.slice(0, 4).map((booking) => (
-            <BookingRow key={booking.bookingId} booking={booking} />
-          ))}
-          {bookings.length > 4 && (
-            <ViewAll
-              href="/bookings"
-              label={`View all ${bookings.length} bookings`}
-            />
+          {loading ? (
+            <div className="flex justify-center py-8"><Loader2 className="h-6 w-6 animate-spin text-textSecondary" /></div>
+          ) : (
+            <>
+              {bookings.slice(0, 4).map((booking) => (
+                <BookingRow key={booking.bookingId} booking={booking} />
+              ))}
+              {bookings.length > 4 && (
+                <ViewAll
+                  href="/bookings"
+                  label={`View all ${bookings.length} bookings`}
+                />
+              )}
+            </>
           )}
         </Panel>
       </div>

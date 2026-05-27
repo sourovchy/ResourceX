@@ -47,8 +47,8 @@ export default function AdminHomePage() {
 				setError("");
 
 				const [statsRes, pendingRes] = await Promise.all([
-					api.get<DashboardStats>("/admin/dashboard"),
-					api.get<{ content?: PendingUser[] }>("/admin/pending-users"),
+					api.get<DashboardStats>("/admin/dashboard").catch(() => ({ data: { totalUsers: 0, activeBookings: 0, revenue: 0, pendingApprovals: 0 } as DashboardStats })),
+					api.get<{ content?: PendingUser[] }>("/admin/pending-users").catch(() => ({ data: { content: [] as PendingUser[] } })),
 				]);
 
 				if (!active) return;
@@ -74,14 +74,7 @@ export default function AdminHomePage() {
 		};
 	}, []);
 
-	if (loading) {
-		return (
-			<div className="flex min-h-[60vh] flex-col items-center justify-center gap-3 text-textSecondary">
-				<Loader2 className="h-6 w-6 animate-spin text-primary" />
-				<span className="text-sm font-medium">Loading admin dashboard…</span>
-			</div>
-		);
-	}
+	// Removed full page loader in favor of skeleton state
 
 	return (
 		<div className="page-enter space-y-6 pb-20 sm:pb-0">
@@ -111,24 +104,28 @@ export default function AdminHomePage() {
 			{/* Stat cards */}
 			<div className="grid grid-cols-2 gap-4 xl:grid-cols-4 stagger-children">
 				<StatCard
+					loading={loading}
 					icon={<Users className="h-5 w-5 text-dashboardBlue" />}
 					title="Total Users"
 					value={String(stats?.totalUsers ?? 0)}
 					tint="bg-dashboardBlueTint"
 				/>
 				<StatCard
+					loading={loading}
 					icon={<PackageOpen className="h-5 w-5 text-primary" />}
 					title="Active Rentals"
 					value={String(stats?.activeBookings ?? 0)}
 					tint="bg-primaryLight"
 				/>
 				<StatCard
+					loading={loading}
 					icon={<DollarSign className="h-5 w-5 text-success" />}
 					title="Revenue"
 					value={`৳${Number(stats?.revenue ?? 0).toLocaleString()}`}
 					tint="bg-successLight"
 				/>
 				<StatCard
+					loading={loading}
 					icon={<UserPlus className="h-5 w-5 text-warning" />}
 					title="Pending Approvals"
 					value={String(stats?.pendingApprovals ?? pendingUsers.length)}
@@ -151,7 +148,9 @@ export default function AdminHomePage() {
 				</div>
 
 				<div className="divide-y divide-borderLight">
-					{pendingUsers.length === 0 ? (
+					{loading ? (
+						<div className="flex justify-center py-8"><Loader2 className="h-6 w-6 animate-spin text-textSecondary" /></div>
+					) : pendingUsers.length === 0 ? (
 						<div className="flex flex-col items-center justify-center gap-2 px-5 py-10 text-center">
 							<Clock className="h-8 w-8 text-borderLight" />
 							<p className="text-sm text-textSecondary">No pending approvals.</p>
