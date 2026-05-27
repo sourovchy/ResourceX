@@ -99,5 +99,8 @@ application.properties
 # IDE, OS and build folders
 .idea/
 .vscode/
+.markdown/
+markdown/
 .DS_Store
 Thumbs.db
+
