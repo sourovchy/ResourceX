@@ -4,7 +4,6 @@ import React, { useState } from "react";
 import Link from "next/link";
 import { useParams, useSearchParams } from "next/navigation";
 import {
-	ArrowLeft,
 	CheckCircle2,
 	UploadCloud,
 	ClipboardCheck,
@@ -65,11 +64,7 @@ export default function ConditionReportPage() {
 
 	return (
 		<div className="mx-auto max-w-2xl space-y-5 px-3 pb-16 sm:px-4 sm:pb-20 lg:px-0">
-			<Link
-				href="/my-posts/active-rentals"
-				className="inline-flex items-center gap-2 text-sm font-semibold text-textSecondary transition-colors hover:text-primary">
-				<ArrowLeft className="h-4 w-4" /> Back to Rentals
-			</Link>
+			
 
 			<div>
 				<h1 className="flex items-center gap-2 text-xl font-bold tracking-tight text-textPrimary sm:text-2xl">

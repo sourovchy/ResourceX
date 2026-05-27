@@ -11,6 +11,7 @@ export interface StudentProfileResponse {
 }
 
 export interface UserResponse {
+  phone: string;
   userId: number;
   name: string;
   email: string;

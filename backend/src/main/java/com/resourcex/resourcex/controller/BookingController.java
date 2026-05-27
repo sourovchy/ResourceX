@@ -50,6 +50,12 @@ public class BookingController {
         return bookingService.getRequestsForMyListings();
     }
 
+    @GetMapping("/deposits")
+    @PreAuthorize("isAuthenticated()")
+    public List<BookingResponse> getDepositTracker() {
+        return bookingService.getDepositTracker();
+    }
+
     @GetMapping("/{bookingId}")
     @PreAuthorize("isAuthenticated()")
     public BookingResponse getBookingById(

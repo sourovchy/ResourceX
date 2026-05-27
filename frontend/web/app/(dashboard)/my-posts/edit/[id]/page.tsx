@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
-import { ArrowLeft, UploadCloud, CheckCircle2, Loader2, X } from "lucide-react";
+import { UploadCloud, CheckCircle2, Loader2, X } from "lucide-react";
 import api from "@/lib/api";
 import type { ItemResponse } from "@/types/item";
 import { useImageUpload } from "@/hooks/useImageUpload";
@@ -25,6 +25,10 @@ export default function EditItemPage() {
 	const [deposit, setDeposit] = useState("");
 	const [isActive, setIsActive] = useState(true);
 
+	const [categories, setCategories] = useState<{ id: string | number; name: string }[]>([]);
+	const [isCategoriesLoading, setIsCategoriesLoading] = useState(true);
+	const [categoriesError, setCategoriesError] = useState("");
+
 	const {
 		previews,
 		setPreviews,
@@ -36,6 +40,39 @@ export default function EditItemPage() {
 	} = useImageUpload({ purpose: "ITEM_IMAGE", maxFiles: 5, maxSizeMB: 5 });
 
 	useEffect(() => {
+		let active = true;
+
+		const fetchCategories = async () => {
+			try {
+				const res = await api.get("/categories");
+				if (!active) return;
+				
+				const raw = res.data;
+				const list = Array.isArray(raw)
+					? raw
+					: Array.isArray(raw?.data)
+						? raw.data
+						: Array.isArray(raw?.content)
+							? raw.content
+							: [];
+				
+				const normalizedCategories = list.map((c: any) => ({
+					id: c.id ?? c.categoryId ?? c.name,
+					name: c.name ?? "",
+				}));
+				setCategories(normalizedCategories);
+			} catch (err) {
+				if (active) {
+					console.error("Failed to fetch categories:", err);
+					setCategoriesError("Failed to load categories.");
+				}
+			} finally {
+				if (active) setIsCategoriesLoading(false);
+			}
+		};
+
+		fetchCategories();
+
 		const loadItem = async () => {
 			if (!id) return;
 
@@ -51,7 +88,7 @@ export default function EditItemPage() {
 				setCondition(item.itemCondition ?? "");
 				setDesc(item.description ?? "");
 				setPrice(item.dailyRate != null ? String(item.dailyRate) : "");
-				setDeposit("");
+				setDeposit(item.deposit != null ? String(item.deposit) : "");
 				setIsActive(item.status === "AVAILABLE");
 
 				if (item.imageUrls?.length) {
@@ -68,11 +105,12 @@ export default function EditItemPage() {
 					err?.response?.data?.message || err.message || "Failed to load item",
 				);
 			} finally {
-				setIsFetching(false);
+				if (active) setIsFetching(false);
 			}
 		};
 
 		loadItem();
+		return () => { active = false; };
 	}, [id, setPreviews]);
 
 	const handleSubmit = async (e: React.FormEvent) => {
@@ -89,8 +127,7 @@ export default function EditItemPage() {
 				itemCondition: condition,
 				description: desc,
 				dailyRate: Number.parseFloat(price),
-				securityDeposit: deposit ? Number.parseFloat(deposit) : 0,
-				isActive,
+				deposit: deposit ? Number.parseFloat(deposit) : null,
 				imageUrls,
 			};
 
@@ -142,11 +179,7 @@ export default function EditItemPage() {
 
 	return (
 		<div className="mx-auto max-w-3xl space-y-5 px-3 pb-16 sm:px-4 sm:pb-20 lg:px-0">
-			<Link
-				href="/my-posts"
-				className="inline-flex items-center gap-2 text-sm font-semibold text-textSecondary transition-colors hover:text-primary">
-				<ArrowLeft className="h-4 w-4" /> Back to My Posts
-			</Link>
+			
 
 			<div className="flex flex-col items-start justify-between gap-3 sm:flex-row sm:items-center sm:gap-4">
 				<h1 className="text-xl font-bold tracking-tight text-textPrimary sm:text-2xl">
@@ -212,15 +245,28 @@ export default function EditItemPage() {
 							<select
 								value={category}
 								onChange={(e) => setCategory(e.target.value)}
-								disabled={fieldDisabled}
+								disabled={fieldDisabled || isCategoriesLoading || !!categoriesError}
 								className={`w-full rounded-xl border border-borderLight px-4 py-3 text-sm transition ${
-									fieldDisabled
+									fieldDisabled || isCategoriesLoading || !!categoriesError
 										? "cursor-not-allowed bg-surfaceVariant text-textSecondary"
 										: "bg-surface text-textPrimary"
 								}`}>
-								<option value="Electronics">Electronics</option>
-								<option value="Academic">Academic</option>
+								<option value="">
+									{isCategoriesLoading
+										? "Loading categories..."
+										: categoriesError
+											? "Error loading categories"
+											: "Select Category"}
+								</option>
+								{categories.map((c) => (
+									<option key={c.id} value={c.name}>
+										{c.name}
+									</option>
+								))}
 							</select>
+							{categoriesError && (
+								<p className="mt-1 text-xs text-error">{categoriesError}</p>
+							)}
 						</div>
 
 						<div className="space-y-2">

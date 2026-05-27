@@ -24,7 +24,8 @@ public final class ItemMapper {
         // Category is mapped in ItemServiceImpl
         if (request.getItemCondition() != null) item.setItemCondition(request.getItemCondition());
         if (request.getDailyRate() != null) item.setDailyRate(request.getDailyRate());
-        
+        if (request.getDeposit() != null) item.setDeposit(request.getDeposit());
+
         // Image mapping is handled in ItemServiceImpl
     }
 
@@ -40,6 +41,7 @@ public final class ItemMapper {
                 .category(item.getCategory() != null ? item.getCategory().getName() : null)
                 .itemCondition(item.getItemCondition())
                 .dailyRate(item.getDailyRate())
+                .deposit(item.getDeposit())
                 .status(item.getStatus() != null ? item.getStatus().name() : null)
                 .owner(UserMapper.toResponse(item.getOwner()))
                 .imageUrls(item.getImages() != null

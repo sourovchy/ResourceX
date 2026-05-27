@@ -256,24 +256,24 @@ export default function AdminBookingsPage() {
 				</div>
 			)}
 
-			<div className="flex flex-col gap-3 sm:flex-row sm:items-start">
-				<div className="relative min-w-0 flex-1">
+			<div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+				<div className="relative w-full shrink-0 lg:max-w-md">
 					<Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-textTertiary" />
 					<input
 						type="text"
 						value={search}
 						onChange={(e) => setSearch(e.target.value)}
-						placeholder="Search by booking ID, item, renter, or owner..."
+						placeholder="Search by ID, item, renter, or owner..."
 						className="w-full rounded-xl border border-outlineVariant bg-surface py-2.5 pl-9 pr-4 text-sm text-textPrimary outline-none transition focus:border-primary focus:ring-2 focus:ring-primary"
 					/>
 				</div>
 
-				<div className="flex flex-wrap gap-2 sm:justify-end">
+				<div className="flex flex-wrap items-center gap-2 lg:justify-end">
 					{FILTERS.map((f) => (
 						<button
 							key={f}
 							onClick={() => setFilter(f)}
-							className={`rounded-xl border px-3 py-2 text-xs font-semibold transition ${
+							className={`rounded-xl border px-3 py-2 text-xs font-semibold whitespace-nowrap transition ${
 								filter === f
 									? f === "OVERDUE"
 										? "border-warning bg-warning text-white shadow"

@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from "react";
 import Link from "next/link";
-import { ArrowLeft, Star, MessageSquare, CheckCircle2, Loader2, AlertTriangle } from "lucide-react";
+import { Star, MessageSquare, CheckCircle2, Loader2, AlertTriangle } from "lucide-react";
 
 
 type BookingSummary = {
@@ -287,11 +287,7 @@ export default function ReviewPage({
 
 	return (
 		<div className="mx-auto max-w-2xl space-y-6 px-3 pb-20 sm:space-y-8 sm:px-0">
-			<Link
-				href="/my-bookings"
-				className="inline-flex items-center gap-2 text-sm font-semibold text-textSecondary transition-colors hover:text-primary">
-				<ArrowLeft className="w-4 h-4" /> Back to My Bookings
-			</Link>
+			
 
 			<div className="text-center">
 				<h1 className="text-xl font-extrabold tracking-tight text-textPrimary sm:text-2xl">

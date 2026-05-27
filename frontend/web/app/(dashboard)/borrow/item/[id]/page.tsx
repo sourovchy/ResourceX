@@ -9,7 +9,6 @@ import {
 	Shield,
 	CheckCircle2,
 	AlertTriangle,
-	ArrowLeft,
 	Heart,
 	Loader2,
 } from "lucide-react";
@@ -18,6 +17,8 @@ export default function ItemDetailPage({ params }: { params: { id: string } }) {
 	const [item, setItem] = useState<ItemResponse | null>(null);
 	const [loading, setLoading] = useState(true);
 	const [error, setError] = useState<string | null>(null);
+	const [isWishlisted, setIsWishlisted] = useState(false);
+	const [wishlistLoading, setWishlistLoading] = useState(false);
 
 	useEffect(() => {
 		let active = true;
@@ -44,6 +45,33 @@ export default function ItemDetailPage({ params }: { params: { id: string } }) {
 			active = false;
 		};
 	}, [params.id]);
+
+	useEffect(() => {
+		if (!item) return;
+		api.get<{ wishlistId: number; item: { itemId: number } }[]>("/wishlist")
+			.then((res) => {
+				setIsWishlisted(res.data?.some((w) => w.item.itemId === item.itemId) ?? false);
+			})
+			.catch(() => {});
+	}, [item]);
+
+	const toggleWishlist = async () => {
+		if (!item || wishlistLoading) return;
+		setWishlistLoading(true);
+		try {
+			if (isWishlisted) {
+				await api.delete(`/wishlist/${item.itemId}`);
+				setIsWishlisted(false);
+			} else {
+				await api.post(`/wishlist/${item.itemId}`);
+				setIsWishlisted(true);
+			}
+		} catch {
+			// Silently ignore errors
+		} finally {
+			setWishlistLoading(false);
+		}
+	};
 
 	const ownerTrustScore = useMemo(
 		() => item?.owner?.studentProfile?.trustScore ?? 0,
@@ -85,11 +113,7 @@ export default function ItemDetailPage({ params }: { params: { id: string } }) {
 	return (
 		<div className="mx-auto max-w-4xl space-y-5 px-3 pb-20 sm:space-y-6 sm:px-0">
 			{/* Back button */}
-			<Link
-				href="/borrow"
-				className="inline-flex items-center gap-2 text-sm font-semibold text-textSecondary transition-colors hover:text-primary">
-				<ArrowLeft className="w-4 h-4" /> Back to Browse
-			</Link>
+			
 
 			<div className="grid grid-cols-1 gap-6 md:grid-cols-2 md:gap-8">
 				{/* Images Area */}
@@ -100,8 +124,16 @@ export default function ItemDetailPage({ params }: { params: { id: string } }) {
 							alt={item.title}
 							className="h-full w-full object-cover"
 						/>
-						<button className="absolute right-3 top-3 rounded-full bg-surface/80 p-2 text-textSecondary backdrop-blur-sm transition-all hover:bg-errorLight hover:text-error sm:right-4 sm:top-4">
-							<Heart className="w-5 h-5" />
+						<button
+							onClick={toggleWishlist}
+							disabled={wishlistLoading}
+							className={`absolute right-3 top-3 rounded-full p-2 backdrop-blur-sm transition-all sm:right-4 sm:top-4 ${
+								isWishlisted
+									? "bg-errorLight text-error"
+									: "bg-surface/80 text-textSecondary hover:bg-errorLight hover:text-error"
+							}`}
+							aria-label={isWishlisted ? "Remove from wishlist" : "Save to wishlist"}>
+							<Heart className={`w-5 h-5 ${isWishlisted ? "fill-error" : ""}`} />
 						</button>
 					</div>
 					<div className="flex gap-3 overflow-x-auto pb-2 scrollbar-none sm:gap-4">
@@ -153,6 +185,11 @@ export default function ItemDetailPage({ params }: { params: { id: string } }) {
 										/ day
 									</span>
 								</div>
+								{item.deposit != null && Number(item.deposit) > 0 && (
+									<p className="mt-1 text-sm text-textSecondary">
+										+ ৳{Number(item.deposit).toLocaleString()} security deposit
+									</p>
+								)}
 							</div>
 						</div>
 						<Link

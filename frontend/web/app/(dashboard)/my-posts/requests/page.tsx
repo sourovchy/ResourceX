@@ -5,7 +5,6 @@ import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import {
 	AlertCircle,
-	ArrowLeft,
 	Check,
 	CheckCircle2,
 	Clock,
@@ -244,11 +243,7 @@ export default function RequestsPage() {
 
 	return (
 		<div className="mx-auto max-w-4xl space-y-5 px-3 pb-16 sm:px-4 sm:pb-20 lg:px-0">
-			<Link
-				href="/my-posts"
-				className="inline-flex items-center gap-2 text-sm font-semibold text-textSecondary transition-colors hover:text-primary">
-				<ArrowLeft className="h-4 w-4" /> Back to My Posts
-			</Link>
+			
 
 			<div className="space-y-1">
 				<h1 className="text-xl font-bold tracking-tight text-textPrimary sm:text-2xl">

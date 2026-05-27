@@ -19,6 +19,8 @@ public interface BookingService {
 
     List<BookingResponse> getRequestsForMyListings();
 
+    List<BookingResponse> getDepositTracker();
+
     BookingResponse approveBooking(Long bookingId);
 
     BookingResponse rejectBooking(Long bookingId, String reason);

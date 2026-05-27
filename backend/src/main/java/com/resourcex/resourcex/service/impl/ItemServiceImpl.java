@@ -61,6 +61,7 @@ public class ItemServiceImpl implements ItemService {
                 .category(categoryObj)
                 .itemCondition(request.getItemCondition())
                 .dailyRate(request.getDailyRate())
+                .deposit(request.getDeposit())
                 .status(Item.ItemStatus.AVAILABLE)
                 .owner(owner)
                 .build();

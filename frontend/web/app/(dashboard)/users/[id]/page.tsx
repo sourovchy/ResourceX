@@ -4,7 +4,6 @@ import React, { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useParams, useSearchParams } from "next/navigation";
 import {
-	ArrowLeft,
 	Star,
 	Shield,
 	Bookmark,
@@ -297,10 +296,7 @@ export default function AdminUserDetailPage() {
 					<p className="mt-2 text-sm text-textSecondary">
 						{error ?? "We could not load this user right now."}
 					</p>
-					<Link href="/users" className="mt-4 inline-flex items-center gap-2 rounded-xl bg-primary px-4 py-2 text-sm font-bold text-white">
-						<ArrowLeft className="h-4 w-4" />
-						Back to Users
-					</Link>
+					
 				</div>
 			</div>
 		);
@@ -309,12 +305,7 @@ export default function AdminUserDetailPage() {
 	return (
 		<div className="mx-auto max-w-5xl space-y-5 px-4 sm:space-y-6 sm:px-6 lg:px-0">
 			<div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-3">
-				<Link
-					href="/users"
-					className="flex items-center gap-1.5 text-sm text-textSecondary hover:text-textPrimary transition font-medium">
-					<ArrowLeft className="w-4 h-4" />
-					Back to Users
-				</Link>
+				
 
 				<div className="text-xs text-textTertiary">User ID: {userId}</div>
 			</div>

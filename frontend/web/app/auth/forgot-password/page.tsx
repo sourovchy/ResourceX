@@ -2,7 +2,7 @@
 
 import React, { useState } from "react";
 import Link from "next/link";
-import { Mail, ArrowLeft, Loader2 } from "lucide-react";
+import { Mail, Loader2 } from "lucide-react";
 import api from "@/lib/api";
 
 export default function ForgotPasswordPage() {
@@ -105,12 +105,7 @@ export default function ForgotPasswordPage() {
 					</form>
 
 					<div className="mt-6 text-center sm:mt-8">
-						<Link
-							href="/auth/login"
-							className="inline-flex items-center gap-2 text-sm font-semibold text-primary transition-colors hover:text-primaryDark">
-							<ArrowLeft className="h-4 w-4" />
-							Back to Sign In
-						</Link>
+						
 					</div>
 				</div>
 			</div>

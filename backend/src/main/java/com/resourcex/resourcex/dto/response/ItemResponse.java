@@ -27,6 +27,8 @@ public class ItemResponse {
 
     private BigDecimal dailyRate;
 
+    private BigDecimal deposit;
+
     private String status;
 
     private List<String> imageUrls;

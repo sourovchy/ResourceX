@@ -10,76 +10,7 @@ import {
 	XCircle,
 } from "lucide-react";
 import api from "@/lib/api";
-
-type HistoryItem = {
-	id: string;
-	itemName: string;
-	ownerName: string;
-	totalPrice: number;
-	status: string;
-	startDate?: string;
-	endDate?: string;
-};
-
-type BookingApiResponse =
-	| {
-		bookings?: unknown;
-		data?: unknown;
-		content?: unknown;
-	}
-	| unknown;
-
-const HISTORY_ENDPOINTS = [
-	"/bookings/my",
-	"/bookings/history",
-	"/api/bookings/my",
-	"/api/bookings/history",
-];
-
-function normalizeBooking(raw: any): HistoryItem {
-	return {
-		id: String(raw?.bookingId ?? raw?.id ?? crypto.randomUUID()),
-		itemName:
-			raw?.item?.title ??
-			raw?.itemName ??
-			raw?.itemTitle ??
-			"Untitled Item",
-		ownerName:
-			raw?.owner?.name ??
-			raw?.ownerName ??
-			raw?.lenderName ??
-			"Unknown Owner",
-		totalPrice: Number(
-			raw?.totalPrice ?? raw?.amount ?? raw?.bookingAmount ?? 0,
-		),
-		status: String(raw?.status ?? "UNKNOWN"),
-		startDate:
-			raw?.startDate ?? raw?.bookingStartDate ?? raw?.fromDate,
-		endDate:
-			raw?.endDate ?? raw?.bookingEndDate ?? raw?.toDate,
-	};
-}
-
-function extractBookings(payload: BookingApiResponse) {
-	const root: any = payload && typeof payload === "object" ? payload : {};
-
-	const source =
-		root.bookings ??
-		root.data ??
-		root.content ??
-		payload;
-
-	if (!Array.isArray(source)) {
-		return [] as HistoryItem[];
-	}
-
-	return source.map((item: any) => normalizeBooking(item));
-}
-
-async function fetchBookingsFromEndpoint(endpoint: string) {
-	const response = await api.get<BookingApiResponse>(endpoint);
-	return extractBookings(response.data);
-}
+import type { BookingResponse } from "@/types/booking";
 
 function formatDate(date?: string) {
 	if (!date) return "—";
@@ -88,7 +19,7 @@ function formatDate(date?: string) {
 
 export default function HistoryPage() {
 	const [sortBy, setSortBy] = useState<"recent" | "oldest">("recent");
-	const [history, setHistory] = useState<HistoryItem[]>([]);
+	const [history, setHistory] = useState<BookingResponse[]>([]);
 	const [loading, setLoading] = useState(true);
 	const [error, setError] = useState<string | null>(null);
 
@@ -100,65 +31,40 @@ export default function HistoryPage() {
 			setError(null);
 
 			try {
-				let loadedBookings: HistoryItem[] = [];
-
-				for (const endpoint of HISTORY_ENDPOINTS) {
-					try {
-						const normalized = await fetchBookingsFromEndpoint(endpoint);
-
-						if (normalized.length > 0) {
-							loadedBookings = normalized;
-							break;
-						}
-					} catch {
-						// try next endpoint
-					}
-				}
-
-				const completedBookings = loadedBookings.filter((booking) => {
-					const status = booking.status.toUpperCase();
-
-					return (
-						status === "COMPLETED" ||
-						status === "CANCELLED" ||
-						status === "REJECTED"
-					);
+				const res = await api.get<BookingResponse[]>("/bookings/me");
+				const all = Array.isArray(res.data) ? res.data : [];
+				const terminated = all.filter((b) => {
+					const s = b.status.toUpperCase();
+					return s === "COMPLETED" || s === "CANCELLED" || s === "REJECTED";
 				});
 
 				if (!active) return;
-
-				setHistory(completedBookings);
+				setHistory(terminated);
 			} catch (err) {
-				console.error(err);
-
 				if (!active) return;
-
 				setError(
-					err instanceof Error
-						? err.message
-						: "Failed to load rental history.",
+					err instanceof Error ? err.message : "Failed to load rental history.",
 				);
 			} finally {
-				if (active) {
-					setLoading(false);
-				}
+				if (active) setLoading(false);
 			}
 		};
 
 		void fetchHistory();
-
-		return () => {
-			active = false;
-		};
+		return () => { active = false; };
 	}, []);
 
-	const sortedHistory = useMemo(() => [...history].sort((a, b) => {
-		const dateA = new Date(a.endDate || a.startDate || 0);
-		const dateB = new Date(b.endDate || b.startDate || 0);
-		return sortBy === "recent"
-			? dateB.getTime() - dateA.getTime()
-			: dateA.getTime() - dateB.getTime();
-	}), [history, sortBy]);
+	const sortedHistory = useMemo(
+		() =>
+			[...history].sort((a, b) => {
+				const dateA = new Date(a.endDate || a.startDate || 0);
+				const dateB = new Date(b.endDate || b.startDate || 0);
+				return sortBy === "recent"
+					? dateB.getTime() - dateA.getTime()
+					: dateA.getTime() - dateB.getTime();
+			}),
+		[history, sortBy],
+	);
 
 	if (loading) {
 		return (
@@ -175,13 +81,10 @@ export default function HistoryPage() {
 				<div className="mb-4 flex h-20 w-20 items-center justify-center rounded-full bg-errorLight text-error">
 					<AlertTriangle className="h-10 w-10" />
 				</div>
-
-				<div>
-					<h1 className="text-2xl font-bold text-textPrimary sm:text-3xl">
-						Unable to Load History
-					</h1>
-					<p className="mt-2 text-sm text-textSecondary sm:text-base">{error}</p>
-				</div>
+				<h1 className="text-2xl font-bold text-textPrimary sm:text-3xl">
+					Unable to Load History
+				</h1>
+				<p className="mt-2 text-sm text-textSecondary sm:text-base">{error}</p>
 			</div>
 		);
 	}
@@ -194,7 +97,7 @@ export default function HistoryPage() {
 						Rental History
 					</h1>
 					<p className="mt-1 text-sm text-textSecondary">
-						{history.length} completed rentals
+						{history.length} completed rental{history.length !== 1 ? "s" : ""}
 					</p>
 				</div>
 				<select
@@ -210,27 +113,25 @@ export default function HistoryPage() {
 				{sortedHistory.length > 0 ? (
 					sortedHistory.map((rental) => {
 						const normalizedStatus = rental.status.toUpperCase();
-
 						return (
 							<div
-								key={rental.id}
+								key={rental.bookingId}
 								className="rounded-xl border border-borderLight bg-surface p-4 transition-shadow hover:shadow-md sm:p-5">
 								<div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between sm:gap-5">
 									<div className="min-w-0 flex-1">
 										<div className="mb-2 flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
 											<div className="min-w-0">
 												<h3 className="break-words font-semibold text-textPrimary">
-													{rental.itemName}
+													{rental.item?.title ?? "Untitled Item"}
 												</h3>
 												<p className="break-words text-sm text-textSecondary">
-													from {rental.ownerName}
+													from {rental.item?.owner?.name ?? "Unknown Owner"}
 												</p>
 											</div>
 											<div className="flex flex-col items-start gap-1 text-left sm:items-end sm:text-right">
 												<p className="font-bold text-primary">
-													৳{rental.totalPrice.toLocaleString()}
+													৳{Number(rental.totalPrice).toLocaleString()}
 												</p>
-
 												<div
 													className={`inline-flex items-center gap-1 rounded-full px-2 py-1 text-[10px] font-bold ${
 														normalizedStatus === "COMPLETED"
@@ -248,18 +149,22 @@ export default function HistoryPage() {
 												</div>
 											</div>
 										</div>
-
 										<div className="mt-3 flex flex-col gap-2 text-sm text-textTertiary sm:flex-row sm:items-center sm:gap-4">
-											<span className="flex items-start gap-1">
+											<span className="flex items-center gap-1">
 												<Calendar className="w-4 h-4" />
-												{formatDate(rental.startDate)} to {formatDate(rental.endDate)}
+												{formatDate(rental.startDate)} — {formatDate(rental.endDate)}
 											</span>
 										</div>
+										{rental.rejectionReason && (
+											<p className="mt-2 text-xs text-error">
+												Reason: {rental.rejectionReason}
+											</p>
+										)}
 									</div>
 									<Link
-										href="/my-bookings"
+										href={`/borrow/item/${rental.item?.itemId}`}
 										className="inline-flex w-full items-center justify-center rounded-lg bg-primaryLight px-3 py-2 text-sm font-semibold text-primary transition hover:bg-primary hover:text-onPrimary sm:w-auto">
-										Details
+										View Item
 									</Link>
 								</div>
 							</div>
@@ -270,11 +175,9 @@ export default function HistoryPage() {
 						<div className="mx-auto mb-5 flex h-20 w-20 items-center justify-center rounded-full bg-successLight">
 							<CheckCircle2 className="w-10 h-10 text-success" />
 						</div>
-
 						<h3 className="text-xl font-bold text-textPrimary sm:text-2xl">
 							No rental history yet
 						</h3>
-
 						<p className="mx-auto mt-2 max-w-md px-2 text-sm text-textSecondary sm:text-base">
 							Completed, cancelled, or rejected rentals will appear here.
 						</p>

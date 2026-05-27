@@ -60,4 +60,16 @@ public class AdminController {
         adminService.blockItem(id, reason);
         return ResponseEntity.ok().build();
     }
+
+    @PostMapping("/block/{id}")
+    public ResponseEntity<Void> blockUser(@PathVariable Long id) {
+        adminService.blockUser(id);
+        return ResponseEntity.ok().build();
+    }
+
+    @PostMapping("/unblock/{id}")
+    public ResponseEntity<Void> unblockUser(@PathVariable Long id) {
+        adminService.unblockUser(id);
+        return ResponseEntity.ok().build();
+    }
 }

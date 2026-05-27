@@ -8,6 +8,7 @@ import {
 	Search,
 	Loader2,
 	Heart,
+	Shield,
 } from "lucide-react";
 
 export default function BorrowPage() {
@@ -103,6 +104,12 @@ if (error) {
 				</div>
 
 				<div className="flex w-full items-center gap-3 md:w-auto">
+					<Link
+						href="/borrow/deposit-tracker"
+						className="inline-flex shrink-0 items-center gap-2 rounded-xl border border-borderLight bg-surfaceVariant px-4 py-2 text-sm font-semibold text-textSecondary transition-colors hover:border-primary/40 hover:text-primary">
+						<Shield className="w-4 h-4" />
+						<span className="hidden sm:inline">Deposits</span>
+					</Link>
 					<Link
 						href="/borrow/wishlist"
 						className="inline-flex shrink-0 items-center gap-2 rounded-xl border border-borderLight bg-surfaceVariant px-4 py-2 text-sm font-semibold text-textSecondary transition-colors hover:border-primary/40 hover:text-primary">

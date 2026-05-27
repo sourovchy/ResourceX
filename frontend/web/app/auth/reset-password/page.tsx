@@ -3,7 +3,7 @@
 import React, { useState, Suspense, useMemo } from "react";
 import Link from "next/link";
 import { useSearchParams, useRouter } from "next/navigation";
-import { Lock, ArrowLeft, Loader2, Eye, EyeOff } from "lucide-react";
+import { Lock, Loader2, Eye, EyeOff } from "lucide-react";
 import api from "@/lib/api";
 import { validatePasswordChecks, isPasswordStrong } from "@/lib/validation";
 
@@ -170,12 +170,7 @@ export default function ResetPasswordPage() {
 					</Suspense>
 
 					<div className="mt-6 text-center sm:mt-8">
-						<Link
-							href="/auth/login"
-							className="inline-flex items-center gap-2 text-sm font-semibold text-primary transition-colors hover:text-primaryDark">
-							<ArrowLeft className="h-4 w-4" />
-							Back to Sign In
-						</Link>
+						
 					</div>
 				</div>
 			</div>

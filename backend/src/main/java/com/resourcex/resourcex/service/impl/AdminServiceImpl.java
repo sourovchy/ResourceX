@@ -179,6 +179,44 @@ public class AdminServiceImpl implements AdminService {
                 );
         }
 
+        @Override
+        @Transactional
+        public void blockUser(Long userId) {
+                User user = userRepository.findById(userId)
+                                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+                user.setStatus(UserStatus.SUSPENDED);
+                userRepository.save(user);
+
+                auditLogService.logAction(
+                                AuditLog.ActorType.SYSTEM,
+                                null,
+                                "USER_BLOCKED",
+                                "USER",
+                                userId,
+                                AuditLog.AuditOutcome.SUCCESS,
+                                "Blocked user " + user.getEmail()
+                );
+        }
+
+        @Override
+        @Transactional
+        public void unblockUser(Long userId) {
+                User user = userRepository.findById(userId)
+                                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+                user.setStatus(UserStatus.ACTIVE);
+                userRepository.save(user);
+
+                auditLogService.logAction(
+                                AuditLog.ActorType.SYSTEM,
+                                null,
+                                "USER_UNBLOCKED",
+                                "USER",
+                                userId,
+                                AuditLog.AuditOutcome.SUCCESS,
+                                "Unblocked user " + user.getEmail()
+                );
+        }
+
         private PendingUserResponse mapToResponse(PendingUser pending) {
                 return PendingUserResponse.builder()
                                 .id(pending.getPendingUserId())

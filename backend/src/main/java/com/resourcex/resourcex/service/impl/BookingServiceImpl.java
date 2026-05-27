@@ -141,8 +141,16 @@ public class BookingServiceImpl implements BookingService {
     @Override
     @Transactional(readOnly = true)
     public List<BookingResponse> getRequestsForMyListings() {
-        // TODO: add support for status filtering, pagination, sorting
         return bookingRepository.findByItem_Owner(resolveCurrentUser()).stream()
+                .map(BookingMapper::toResponse)
+                .toList();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<BookingResponse> getDepositTracker() {
+        return bookingRepository.findByItem_Owner(resolveCurrentUser()).stream()
+                .filter(b -> b.getStatus() == Booking.BookingStatus.APPROVED)
                 .map(BookingMapper::toResponse)
                 .toList();
     }

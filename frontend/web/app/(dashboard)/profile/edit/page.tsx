@@ -4,7 +4,6 @@ import React, { useEffect, useState, useMemo, useCallback } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
-	ArrowLeft,
 	Save,
 	Lock,
 	UploadCloud,
@@ -343,11 +342,7 @@ export default function EditProfilePage() {
 	return (
 		<div className="mx-auto max-w-3xl space-y-8 px-4 pb-20 sm:px-6 lg:px-8">
 			<div className="space-y-2">
-				<Link
-					href="/profile"
-					className="inline-flex items-center gap-2 text-sm font-semibold text-textSecondary transition-colors hover:text-primary">
-					<ArrowLeft className="h-4 w-4" /> Back to Profile
-				</Link>
+				
 				<h1 className="text-2xl font-bold tracking-tight text-textPrimary sm:text-3xl">
 					Account Settings
 				</h1>

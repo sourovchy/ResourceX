@@ -2,7 +2,7 @@
 
 import React, { useState } from "react";
 import Link from "next/link";
-import { ArrowLeft, UploadCloud, CheckCircle2, X } from "lucide-react";
+import { UploadCloud, CheckCircle2, X } from "lucide-react";
 import api from "@/lib/api";
 import { useImageUpload } from "@/hooks/useImageUpload";
 
@@ -29,16 +29,47 @@ export default function AddItemPage() {
 		deposit: "",
 		availability: "",
 	});
-	const [categories, setCategories] = useState<any[]>([]);
+	const [categories, setCategories] = useState<{ id: string | number; name: string }[]>([]);
+	const [isCategoriesLoading, setIsCategoriesLoading] = useState(true);
+	const [categoriesError, setCategoriesError] = useState("");
 
 	const { previews, addFiles, removeFile, uploadAll, uploading, error: uploadError } =
 		useImageUpload({ purpose: "ITEM_IMAGE", maxFiles: 5, maxSizeMB: 5 });
 
 	React.useEffect(() => {
-		api
-			.get("/categories")
-			.then((res) => setCategories(res.data?.content ?? res.data ?? []))
-			.catch(console.error);
+		let active = true;
+
+		const fetchCategories = async () => {
+			try {
+				const res = await api.get("/categories");
+				if (!active) return;
+				
+				const raw = res.data;
+				const list = Array.isArray(raw)
+					? raw
+					: Array.isArray(raw?.data)
+						? raw.data
+						: Array.isArray(raw?.content)
+							? raw.content
+							: [];
+				
+				const normalizedCategories = list.map((c: any) => ({
+					id: c.id ?? c.categoryId ?? c.name,
+					name: c.name ?? "",
+				}));
+				setCategories(normalizedCategories);
+			} catch (err) {
+				if (active) {
+					console.error("Failed to fetch categories:", err);
+					setCategoriesError("Failed to load categories.");
+				}
+			} finally {
+				if (active) setIsCategoriesLoading(false);
+			}
+		};
+
+		fetchCategories();
+		return () => { active = false; };
 	}, []);
 
 	const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -55,6 +86,7 @@ export default function AddItemPage() {
 				itemCondition: form.condition,
 				description: form.description,
 				dailyRate: parseFloat(form.price),
+				deposit: form.deposit ? parseFloat(form.deposit) : null,
 				imageUrls: uploadedImageUrls,
 			};
 
@@ -103,11 +135,7 @@ export default function AddItemPage() {
 
 	return (
 		<div className="mx-auto max-w-3xl space-y-5 px-3 pb-16 sm:px-4 sm:pb-20 lg:px-0">
-			<Link
-				href="/my-posts"
-				className="inline-flex items-center gap-2 text-sm font-semibold text-textSecondary transition-colors hover:text-primary">
-				<ArrowLeft className="h-4 w-4" /> Back to My Posts
-			</Link>
+			
 
 			<h1 className="text-xl font-bold tracking-tight text-textPrimary sm:text-2xl">
 				Add New Item
@@ -152,14 +180,24 @@ export default function AddItemPage() {
 								value={form.category}
 								onChange={handleChange}
 								className="w-full rounded-xl border border-borderLight bg-surface px-4 py-3 text-sm text-textPrimary transition focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
-								required>
-								<option value="">Select Category</option>
+								required
+								disabled={isCategoriesLoading || !!categoriesError}>
+								<option value="">
+									{isCategoriesLoading
+										? "Loading categories..."
+										: categoriesError
+											? "Error loading categories"
+											: "Select Category"}
+								</option>
 								{categories.map((c) => (
-									<option key={c.id || c.name} value={c.name}>
+									<option key={c.id} value={c.name}>
 										{c.name}
 									</option>
 								))}
 							</select>
+							{categoriesError && (
+								<p className="mt-1 text-xs text-error">{categoriesError}</p>
+							)}
 						</div>
 
 						<div className="space-y-2">

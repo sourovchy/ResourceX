@@ -3,7 +3,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import {
-	ArrowLeft,
 	Shield,
 	Info,
 	Loader2,
@@ -164,11 +163,7 @@ export default function BookItemPage({ params }: { params: { id: string } }) {
 
 	return (
 		<div className="mx-auto max-w-2xl space-y-5 px-3 pb-20 sm:space-y-6 sm:px-0">
-			<Link
-				href={`/borrow/item/${params.id}`}
-				className="inline-flex items-center gap-2 text-sm font-semibold text-textSecondary transition-colors hover:text-primary">
-				<ArrowLeft className="w-4 h-4" /> Back to Item
-			</Link>
+			
 
 			<div className="rounded-2xl border border-borderLight bg-surface p-4 shadow-sm sm:p-6 md:p-8">
 				<div className="mb-6 text-center sm:mb-8">

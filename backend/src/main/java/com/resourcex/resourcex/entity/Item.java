@@ -49,6 +49,9 @@ public class Item {
     @Column(nullable = false, precision = 10, scale = 2)
     private BigDecimal dailyRate;
 
+    @Column(precision = 10, scale = 2)
+    private BigDecimal deposit;
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 40)
     @Builder.Default

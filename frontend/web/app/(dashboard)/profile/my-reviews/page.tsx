@@ -2,7 +2,7 @@
 
 import React, { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { ArrowLeft, MessageSquare, Star } from "lucide-react";
+import { MessageSquare, Star } from "lucide-react";
 import api from "@/lib/api";
 import { useAuth } from "@/context/AuthContext";
 import type { ReviewResponse } from "@/types/review";
@@ -57,11 +57,7 @@ export default function MyReviewsPage() {
 
 	return (
 		<div className="mx-auto max-w-4xl space-y-6 px-4 pb-20 sm:px-6 lg:px-8">
-			<Link
-				href="/profile"
-				className="inline-flex items-center gap-2 text-sm font-semibold text-textSecondary hover:text-primary transition-colors">
-				<ArrowLeft className="w-4 h-4" /> Back to Profile
-			</Link>
+			
 
 			<h1 className="text-xl font-bold tracking-tight text-textPrimary sm:text-2xl">
 				My Reviews

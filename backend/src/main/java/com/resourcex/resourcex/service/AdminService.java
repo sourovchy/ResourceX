@@ -13,4 +13,6 @@ public interface AdminService {
     void approveUser(Long pendingId);
     void rejectUser(Long pendingId, String reason);
     void blockItem(Long itemId, String reason);
+    void blockUser(Long userId);
+    void unblockUser(Long userId);
 }

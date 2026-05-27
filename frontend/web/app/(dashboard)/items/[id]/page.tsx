@@ -5,7 +5,6 @@ import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 
 import {
-	ArrowLeft,
 	Tag,
 	User,
 	DollarSign,
@@ -209,12 +208,7 @@ export default function AdminItemDetailPage() {
 	if (!item) {
 		return (
 			<div className="mx-auto max-w-4xl space-y-5 px-3 pb-20 sm:space-y-6 sm:px-0">
-				<Link
-					href="/items"
-					className="inline-flex items-center gap-1.5 text-sm font-medium text-textSecondary transition hover:text-textPrimary">
-					<ArrowLeft className="h-4 w-4" />
-					Back to Items
-				</Link>
+				
 
 				<div className="rounded-2xl border border-borderLight bg-surface p-6 text-center shadow-sm sm:p-8">
 					<Package className="mx-auto mb-3 h-10 w-10 text-textTertiary opacity-40" />
@@ -231,12 +225,7 @@ export default function AdminItemDetailPage() {
 
 	return (
 		<div className="mx-auto max-w-4xl space-y-5 px-3 pb-20 sm:space-y-6 sm:px-0">
-			<Link
-				href="/items"
-				className="inline-flex items-center gap-1.5 text-sm font-medium text-textSecondary transition hover:text-textPrimary">
-				<ArrowLeft className="h-4 w-4" />
-				Back to Items
-			</Link>
+			
 
 			{error && (
 				<div className="rounded-xl border border-error/40 bg-errorLight px-4 py-3 text-sm font-medium text-error">

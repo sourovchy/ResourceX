@@ -24,7 +24,7 @@ public class CategoryController {
     private final ItemRepository itemRepository;
 
     @GetMapping("")
-    @PreAuthorize("hasAnyRole('ADMIN','MODERATOR','SUPER_ADMIN')")
+    @PreAuthorize("isAuthenticated()")
     public ResponseEntity<List<CategoryResponse>> listCategories() {
         List<Category> cats = categoryRepository.findAll();
 
