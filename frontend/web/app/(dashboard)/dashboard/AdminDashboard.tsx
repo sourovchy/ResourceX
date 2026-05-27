@@ -121,7 +121,7 @@ export default function AdminHomePage() {
 				</div>
 			)}
 
-			{/* Stat cards – 2x2 on mobile, 4 across on large screens */}
+			{/* Stat cards */}
 			<div className="grid grid-cols-2 gap-4 xl:grid-cols-4 stagger-children">
 				<StatCard
 					icon={<Users className="h-5 w-5 text-dashboardBlue" />}

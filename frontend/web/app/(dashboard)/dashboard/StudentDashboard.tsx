@@ -23,7 +23,7 @@ import {
 type Item    = { itemId: number; title: string; dailyRate: number; status: string };
 type Booking = { bookingId: number; status: string; item?: Item };
 
-/* ── Status badge colours ──────────────────────────────────────── */
+/* ── Status badge colours */
 const STATUS_STYLE: Record<string, string> = {
 	ACTIVE:   "bg-successLight text-successDark",
 	APPROVED: "bg-successLight text-successDark",
@@ -41,7 +41,7 @@ function StatusBadge({ status }: { status: string }) {
 	);
 }
 
-/* ── Main component ─────────────────────────────────────────────── */
+/* ── Main component  */
 export default function StudentDashboard() {
 	const { user } = useAuth();
 	const [items,    setItems]    = useState<Item[]>([]);
@@ -81,7 +81,7 @@ export default function StudentDashboard() {
 		[bookings],
 	);
 
-	/* ── Loading ──────────────────────────────────────────────── */
+	/* ── Loading ─────── */
 	if (loading) {
 		return (
 			<div className="flex min-h-[60vh] flex-col items-center justify-center gap-3 text-textSecondary">
@@ -91,7 +91,7 @@ export default function StudentDashboard() {
 		);
 	}
 
-	/* ── Dashboard ────────────────────────────────────────────── */
+	/* ── Dashboard ───── */
 	return (
 		<div className="page-enter space-y-6 pb-20 sm:pb-0">
 
@@ -160,7 +160,7 @@ export default function StudentDashboard() {
 				/>
 			</div>
 
-			{/* ── Quick actions ─────────────────────────────────── */}
+			{/* ── Quick actions */}
 			<div>
 				<h2 className="mb-3 text-sm font-semibold uppercase tracking-widest text-textTertiary">
 					Quick actions
@@ -181,18 +181,18 @@ export default function StudentDashboard() {
 						description="Rent out your gear"
 					/>
 					<ActionCard
-						href="/bookings"
+						href="/my-posts/active-rentals"
 						icon={<Bookmark className="h-6 w-6 text-dashboardBlue" />}
 						bgIcon="bg-dashboardBlueTint"
-						title="My Bookings"
-						description="Track your rentals"
+						title="Active rentals"
+						description="Manage your active rentals"
 					/>
 					<ActionCard
-						href="/my-posts"
+						href="/my-posts/earnings"
 						icon={<PackageOpen className="h-6 w-6 text-dashboardYellow" />}
 						bgIcon="bg-dashboardYellowTint"
-						title="My Posts"
-						description="Manage listings"
+						title="My Earnings"
+						description="See your earnings"
 					/>
 					<ActionCard
 						href="/history"
@@ -252,7 +252,7 @@ export default function StudentDashboard() {
 	);
 }
 
-/* ── Panel wrapper ──────────────────────────────────────────────── */
+/* ── Panel wrapper ─────── */
 function Panel({
 	title,
 	action,
@@ -287,7 +287,7 @@ function Panel({
 	);
 }
 
-/* ── Listing row ────────────────────────────────────────────────── */
+/* ── Listing row ───────── */
 function ListingRow({ item }: { item: Item }) {
 	return (
 		<div className="flex items-center justify-between gap-4 px-5 py-3.5 transition-colors hover:bg-surfaceVariant/60">
@@ -300,7 +300,7 @@ function ListingRow({ item }: { item: Item }) {
 	);
 }
 
-/* ── Booking row ────────────────────────────────────────────────── */
+/* ── Booking row ───────── */
 function BookingRow({ booking }: { booking: Booking }) {
 	return (
 		<div className="flex items-center justify-between gap-4 px-5 py-3.5 transition-colors hover:bg-surfaceVariant/60">
@@ -312,7 +312,7 @@ function BookingRow({ booking }: { booking: Booking }) {
 	);
 }
 
-/* ── View all link ──────────────────────────────────────────────── */
+/* ── View all link ─────── */
 function ViewAll({ href, label }: { href: string; label: string }) {
 	return (
 		<Link
