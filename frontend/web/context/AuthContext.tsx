@@ -13,10 +13,7 @@ import { usePathname, useRouter } from "next/navigation";
 
 import api from "@/lib/api";
 import {
-	clearSession,
-	getStoredToken,
 	hasRole,
-	storeSession,
 	type AccessibleRole,
 } from "@/lib/auth";
 import {
@@ -54,7 +51,6 @@ function normalizeRoles(roles: UserRole[] = []): UserRole[] {
 }
 
 function getHomeRoute(_roles: UserRole[]) {
-	// Replace this with role-specific routes if needed.
 	return "/dashboard";
 }
 
@@ -77,10 +73,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 	}, []);
 
 	const applySession = useCallback(
-		(token: string, nextUser: AuthUser, nextRoles: UserRole[]) => {
+		(nextUser: AuthUser, nextRoles: UserRole[]) => {
 			const normalizedRoles = normalizeRoles(nextRoles);
-
-			storeSession(token, nextUser, normalizedRoles);
 			setUser(nextUser);
 			setRoles(normalizedRoles);
 			setError(null);
@@ -89,8 +83,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 	);
 
 	const logout = useCallback(() => {
-		nextRequestSeq(); // invalidate any in-flight refresh/login result
-		clearSession();
+		nextRequestSeq();
+		// Fire-and-forget: clears the httpOnly cookie on the server.
+		api.post("/auth/logout").catch(() => {});
 		setUser(null);
 		setRoles([]);
 		setError(null);
@@ -103,32 +98,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
 	const refresh = useCallback(async () => {
 		const seq = nextRequestSeq();
-		const token = getStoredToken();
-
-		if (!token) {
-			clearSession();
-			if (isMountedRef.current && seq === requestSeqRef.current) {
-				setUser(null);
-				setRoles([]);
-				setError(null);
-				setLoading(false);
-			}
-			return;
-		}
 
 		try {
+			// Cookie is sent automatically via withCredentials; 401 means not logged in.
 			const { data } = await api.get<CurrentUserResponse>("/auth/me");
 
 			if (isMountedRef.current && seq === requestSeqRef.current) {
-				applySession(token, data.user, data.roles ?? []);
+				applySession(data.user, data.roles ?? []);
 			}
-		} catch (err) {
-			clearSession();
-
+		} catch (err: unknown) {
 			if (isMountedRef.current && seq === requestSeqRef.current) {
 				setUser(null);
 				setRoles([]);
-				setError("Failed to restore session");
+				const status = (err as { response?: { status?: number } })?.response?.status;
+				// 401 is normal (not logged in), not an application error.
+				if (status !== 401) {
+					setError("Failed to restore session");
+				}
 			}
 		} finally {
 			if (isMountedRef.current && seq === requestSeqRef.current) {
@@ -167,7 +153,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 				}
 
 				const normalizedRoles = normalizeRoles(data.roles ?? []);
-				applySession(data.token, data.user, normalizedRoles);
+				applySession(data.user, normalizedRoles);
 
 				suppressLoginRedirectRef.current = !redirect;
 				setError(null);

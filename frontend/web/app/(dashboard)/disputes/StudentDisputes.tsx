@@ -1,13 +1,11 @@
 "use client";
 
 import React, { useEffect, useMemo, useState } from "react";
-import Link from "next/link";
 import api from "@/lib/api";
 import {
 	CheckCircle2,
 	FileText,
 	Loader2,
-	Scale,
 	AlertTriangle,
 } from "lucide-react";
 
@@ -146,29 +144,14 @@ export default function DisputesPage() {
 
 	return (
 		<div className="mx-auto max-w-7xl space-y-6 px-4 pb-20 sm:px-6 lg:px-8">
-			{/* Header section – matches admin layout */}
-			<div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-				<div>
-					<h1 className="text-2xl font-bold text-textPrimary tracking-tight">
-						Disputes
-					</h1>
-					<p className="mt-1 text-sm text-textSecondary">
-						View your dispute history or raise a new issue for admin review.
-					</p>
-				</div>
-
-				<div className="flex flex-wrap gap-2">
-					<Link
-						href="/disputes/my"
-						className="inline-flex items-center gap-2 rounded-xl border border-outlineVariant bg-surface px-4 py-2 text-sm font-semibold text-textSecondary transition hover:bg-surfaceVariant">
-						<FileText className="h-4 w-4" /> My Disputes
-					</Link>
-					<Link
-						href="/disputes/raise"
-						className="inline-flex items-center gap-2 rounded-xl bg-error px-4 py-2 text-sm font-bold text-white shadow-sm transition hover:bg-errorDark">
-						<Scale className="h-4 w-4" /> Raise a Dispute
-					</Link>
-				</div>
+			{/* Header */}
+			<div>
+				<h1 className="text-2xl font-bold text-textPrimary tracking-tight">
+					Disputes
+				</h1>
+				<p className="mt-1 text-sm text-textSecondary">
+					View your dispute history or raise a new issue for admin review.
+				</p>
 			</div>
 
 			{/* Error banner – consistent with admin error style */}

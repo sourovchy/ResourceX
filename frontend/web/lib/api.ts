@@ -1,11 +1,11 @@
 import axios from "axios";
-import { clearSession, getStoredToken } from "@/lib/auth";
 import { logger } from "@/lib/logger";
 
+const API_BASE =
+	process.env.NEXT_PUBLIC_API_URL?.replace(/\/$/, "") || "http://localhost:8082/api";
+
 const api = axios.create({
-	baseURL:
-		process.env.NEXT_PUBLIC_API_URL?.replace(/\/$/, "") ||
-		"http://localhost:8082/api",
+	baseURL: API_BASE,
 	withCredentials: true,
 	headers: {
 		"Content-Type": "application/json",
@@ -13,39 +13,15 @@ const api = axios.create({
 	},
 });
 
-api.interceptors.request.use((config) => {
-	if (typeof window === "undefined") {
-		return config;
-	}
-
-	const publicPaths = [
-		"/auth/login",
-		"/auth/register",
-		"/otp/request",
-		"/otp/resend",
-		"/otp/verify",
-	];
-	const requestUrl = config.url ?? "";
-
-	if (publicPaths.some((path) => requestUrl.startsWith(path))) {
-		return config;
-	}
-
-	const token = getStoredToken();
-
-	if (token && config.headers) {
-		config.headers.Authorization = `Bearer ${token}`;
-		logger.debug(
-			`[API Request] ${config.method?.toUpperCase()} ${requestUrl} - Token attached`,
-		);
-	} else if (!publicPaths.some((path) => requestUrl.startsWith(path))) {
-		logger.warn(
-			`[API Warning] No token found for protected endpoint: ${config.method?.toUpperCase()} ${requestUrl}`,
-		);
-	}
-
-	return config;
-});
+// Paths whose 401/403 errors are handled by their own callers (not the global redirect).
+const SELF_HANDLED_PATHS = [
+	"/auth/login",
+	"/auth/register",
+	"/auth/me",       // refresh() handles 401 — user is simply not logged in
+	"/otp/request",
+	"/otp/resend",
+	"/otp/verify",
+];
 
 api.interceptors.response.use(
 	(response) => {
@@ -54,7 +30,7 @@ api.interceptors.response.use(
 	},
 	(error) => {
 		const status = error.response?.status;
-		const url = error.config?.url;
+		const url = error.config?.url ?? "";
 		const data = error.response?.data;
 
 		logger.error(`[API Error] ${status} ${url}`, {
@@ -64,20 +40,15 @@ api.interceptors.response.use(
 			data,
 		});
 
-		const publicPaths = [
-			"/auth/login",
-			"/auth/register",
-			"/otp/request",
-			"/otp/resend",
-			"/otp/verify",
-		];
-		const isPublicRequest = url && publicPaths.some((path) => url.startsWith(path));
+		const isSelfHandled = SELF_HANDLED_PATHS.some((path) => url.startsWith(path));
 
-		if (typeof window !== "undefined" && [401, 403].includes(status) && !isPublicRequest) {
+		if (typeof window !== "undefined" && [401, 403].includes(status) && !isSelfHandled) {
 			logger.warn(
-				`[Auth Error] ${status} - Clearing session and redirecting to login`,
+				`[Auth Error] ${status} — clearing cookie and redirecting to login`,
 			);
-			clearSession();
+			fetch(`${API_BASE}/auth/logout`, { method: "POST", credentials: "include" }).catch(
+				() => {},
+			);
 			window.location.href = "/auth/login";
 		}
 

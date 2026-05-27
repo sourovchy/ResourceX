@@ -2,8 +2,9 @@
 
 import React, { useState } from "react";
 import Link from "next/link";
-import { ArrowLeft, UploadCloud, CheckCircle2 } from "lucide-react";
+import { ArrowLeft, UploadCloud, CheckCircle2, X } from "lucide-react";
 import api from "@/lib/api";
+import { useImageUpload } from "@/hooks/useImageUpload";
 
 type FormState = {
 	title: string;
@@ -28,12 +29,14 @@ export default function AddItemPage() {
 		deposit: "",
 		availability: "",
 	});
-
-	const [images, setImages] = useState<File[]>([]);
 	const [categories, setCategories] = useState<any[]>([]);
 
+	const { previews, addFiles, removeFile, uploadAll, uploading, error: uploadError } =
+		useImageUpload({ purpose: "ITEM_IMAGE", maxFiles: 5, maxSizeMB: 5 });
+
 	React.useEffect(() => {
-		api.get("/categories")
+		api
+			.get("/categories")
 			.then((res) => setCategories(res.data?.content ?? res.data ?? []))
 			.catch(console.error);
 	}, []);
@@ -44,21 +47,7 @@ export default function AddItemPage() {
 		setIsLoading(true);
 
 		try {
-			// Upload images first
-			const uploadedImageUrls: string[] = [];
-			for (const file of images) {
-				const formData = new FormData();
-				formData.append("file", file);
-
-				// Because file upload is multipart/form-data, we need to let axios set the boundaries
-				const uploadRes = await api.post("/files/upload?purpose=ITEM_IMAGE", formData, {
-					headers: { "Content-Type": "multipart/form-data" },
-				});
-
-				if (uploadRes.data && uploadRes.data.fileUrl) {
-					uploadedImageUrls.push(uploadRes.data.fileUrl);
-				}
-			}
+			const uploadedImageUrls = await uploadAll();
 
 			const payload = {
 				title: form.title,
@@ -85,12 +74,6 @@ export default function AddItemPage() {
 		>,
 	) => {
 		setForm({ ...form, [e.target.name]: e.target.value });
-	};
-
-	const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-		if (e.target.files) {
-			setImages(Array.from(e.target.files));
-		}
 	};
 
 	if (submitted) {
@@ -130,9 +113,9 @@ export default function AddItemPage() {
 				Add New Item
 			</h1>
 
-			{error && (
+			{(error || uploadError) && (
 				<div className="rounded-xl bg-errorLight p-4 text-sm font-semibold text-error">
-					{error}
+					{error || uploadError}
 				</div>
 			)}
 
@@ -172,7 +155,9 @@ export default function AddItemPage() {
 								required>
 								<option value="">Select Category</option>
 								{categories.map((c) => (
-									<option key={c.id || c.name} value={c.name}>{c.name}</option>
+									<option key={c.id || c.name} value={c.name}>
+										{c.name}
+									</option>
 								))}
 							</select>
 						</div>
@@ -211,9 +196,10 @@ export default function AddItemPage() {
 						/>
 					</div>
 				</div>
+
 				{/* Pricing & Deposit */}
 				<div className="space-y-3 sm:space-y-4">
-					<h2 className="text-sm font-bold uppercase tracking-wider text-textSecondary border-b border-borderLight pb-2">
+					<h2 className="border-b border-borderLight pb-2 text-sm font-bold uppercase tracking-wider text-textSecondary">
 						Pricing & Deposit
 					</h2>
 
@@ -222,7 +208,6 @@ export default function AddItemPage() {
 							<label className="text-sm font-bold text-textPrimary">
 								Daily Rental Price
 							</label>
-
 							<input
 								name="price"
 								value={form.price}
@@ -240,7 +225,6 @@ export default function AddItemPage() {
 							<label className="text-sm font-bold text-textPrimary">
 								Security Deposit
 							</label>
-
 							<input
 								name="deposit"
 								value={form.deposit}
@@ -257,7 +241,7 @@ export default function AddItemPage() {
 
 				{/* Photos */}
 				<div className="space-y-3 sm:space-y-4">
-					<h2 className="text-sm font-bold uppercase tracking-wider text-textSecondary border-b border-borderLight pb-2">
+					<h2 className="border-b border-borderLight pb-2 text-sm font-bold uppercase tracking-wider text-textSecondary">
 						Photos
 					</h2>
 
@@ -267,29 +251,49 @@ export default function AddItemPage() {
 							Click to upload photos
 						</p>
 						<p className="text-xs text-textSecondary">
-							PNG, JPG up to 5MB (Min 1 required)
+							JPEG, PNG, WEBP · up to 5 MB each · max 5 images
 						</p>
-
 						<input
 							type="file"
 							multiple
+							accept="image/jpeg,image/png,image/webp"
 							className="hidden"
-							onChange={handleFileChange}
+							onChange={(e) => e.target.files && addFiles(e.target.files)}
 						/>
 					</label>
 
-					{images.length > 0 && (
-						<p className="text-xs text-textSecondary">
-							{images.length} file(s) selected
-						</p>
+					{previews.length > 0 && (
+						<div className="grid grid-cols-3 gap-2 sm:grid-cols-4 sm:gap-3">
+							{previews.map((p, i) => (
+								<div
+									key={i}
+									className="relative aspect-square overflow-hidden rounded-xl border border-borderLight bg-surfaceVariant">
+									<img
+										src={p.url}
+										alt=""
+										className="h-full w-full object-cover"
+									/>
+									<button
+										type="button"
+										onClick={() => removeFile(i)}
+										className="absolute right-1 top-1 flex h-5 w-5 items-center justify-center rounded-full bg-black/60 text-white transition hover:bg-error">
+										<X className="h-3 w-3" />
+									</button>
+								</div>
+							))}
+						</div>
 					)}
 				</div>
 
 				<button
 					type="submit"
-					disabled={isLoading}
+					disabled={isLoading || uploading}
 					className="mt-6 w-full rounded-xl bg-primary py-3.5 font-bold text-white shadow-sm transition-colors hover:bg-primaryDark disabled:cursor-not-allowed disabled:opacity-50 sm:mt-8 sm:py-4">
-					{isLoading ? "Publishing..." : "Publish Listing"}
+					{uploading
+						? "Uploading images..."
+						: isLoading
+							? "Publishing..."
+							: "Publish Listing"}
 				</button>
 			</form>
 		</div>

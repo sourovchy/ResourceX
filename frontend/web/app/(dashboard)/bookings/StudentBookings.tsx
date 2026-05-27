@@ -3,7 +3,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { ArrowRight, Clock, Loader2 } from "lucide-react";
+import { AlertTriangle, ArrowRight, Clock, Loader2 } from "lucide-react";
 import api from "@/lib/api";
 
 type BookingStatus =
@@ -269,6 +269,16 @@ export default function MyBookingsPage() {
 										className="flex items-center justify-center gap-1 rounded-xl border border-primaryLight bg-primaryLight px-4 py-2 text-sm font-bold text-primary transition-colors hover:bg-primary hover:text-white">
 										Leave Review
 										<ArrowRight className="w-3 h-3" />
+									</Link>
+								)}
+
+								{(booking.status === "APPROVED" ||
+									booking.status === "COMPLETED") && (
+									<Link
+										href={`/disputes/raise?bookingId=${booking.bookingId}`}
+										className="flex items-center justify-center gap-1 rounded-xl border border-errorLight bg-errorLight px-4 py-2 text-sm font-bold text-errorDark transition-colors hover:bg-error hover:text-white">
+										<AlertTriangle className="w-3 h-3" />
+										Raise Dispute
 									</Link>
 								)}
 							</div>

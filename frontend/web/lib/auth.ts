@@ -1,11 +1,8 @@
-import { AuthUser, UserRole } from "@/types/auth";
+import { UserRole } from "@/types/auth";
 import { logger } from "@/lib/logger";
 
 export type AccessibleRole = "admin" | "student" | "moderator" | "super_admin";
 
-export const AUTH_TOKEN_KEY = "resourcex_token";
-export const AUTH_USER_KEY = "resourcex_user";
-export const AUTH_ROLES_KEY = "resourcex_roles";
 export const PENDING_EMAIL_KEY = "resourcex_pending_email";
 export const OTP_LAST_SEND_KEY = "resourcex_otp_last_send";
 
@@ -28,40 +25,14 @@ export function clearOtpLastSendTimestamp() {
 	localStorage.removeItem(OTP_LAST_SEND_KEY);
 }
 
-export function getStoredToken() {
-	if (typeof window === "undefined") return null;
-	return localStorage.getItem(AUTH_TOKEN_KEY);
+/** No-op: JWT is stored in an httpOnly cookie set by the backend. */
+export function storeSession() {
+	logger.debug("[Auth] Session established via httpOnly cookie");
 }
 
-export function storeSession(
-	token: string,
-	user: AuthUser,
-	roles: UserRole[] = [],
-) {
-	const userWithRoles = roles.length ? { ...user, roles } : user;
-	localStorage.setItem(AUTH_TOKEN_KEY, token);
-	localStorage.setItem(AUTH_USER_KEY, JSON.stringify(userWithRoles));
-	localStorage.setItem(AUTH_ROLES_KEY, JSON.stringify(roles));
-
-	if (typeof document !== "undefined") {
-		document.cookie = `${AUTH_TOKEN_KEY}=${token}; path=/; max-age=86400; SameSite=Lax`;
-	}
-
-	logger.debug("[Auth] Session stored with roles:", roles);
-}
-
+/** No-op: session cookie is cleared by POST /auth/logout on the backend. */
 export function clearSession() {
-	if (typeof window === "undefined") return;
-
-	localStorage.removeItem(AUTH_TOKEN_KEY);
-	localStorage.removeItem(AUTH_USER_KEY);
-	localStorage.removeItem(AUTH_ROLES_KEY);
-	
-	if (typeof document !== "undefined") {
-		document.cookie = `${AUTH_TOKEN_KEY}=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT`;
-	}
-
-	logger.debug("[Auth] Session cleared");
+	logger.debug("[Auth] clearSession called — cookie cleared by backend logout");
 }
 
 export function hasRole(roles: UserRole[] | undefined, role: AccessibleRole) {
@@ -72,23 +43,17 @@ export function hasRole(roles: UserRole[] | undefined, role: AccessibleRole) {
 
 	logger.debug(`[Auth] Checking role "${role}" against user roles:`, roles);
 
-	// Map AccessibleRole to check patterns
 	if (role === "admin") {
-		// "admin" should allow anyone with admin-level access
 		return roles.some((value) => ADMIN_ROLES.includes(value));
 	} else if (role === "super_admin") {
-		// "super_admin" should allow ONLY super admin
 		return roles.includes("ROLE_SUPER_ADMIN");
 	} else if (role === "moderator") {
-		// "moderator" should allow moderator or higher
 		return roles.some((value) =>
 			["ROLE_MODERATOR", "ROLE_SUPER_ADMIN", "ROLE_ADMIN"].includes(value),
 		);
 	} else if (role === "student") {
-		// "student" allows any authenticated user
 		return roles.some((value) => AUTHENTICATED_ROLES.includes(value));
 	}
 
-	// Fallback: check if any authenticated role matches
 	return roles.some((value) => AUTHENTICATED_ROLES.includes(value));
 }

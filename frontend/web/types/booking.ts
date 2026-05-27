@@ -10,6 +10,7 @@ export interface BookingResponse {
   startDate: string;
   endDate: string;
   status: BookingStatus;
+  rejectionReason?: string | null;
   totalPrice: number;
   createdAt?: string;
   updatedAt?: string;

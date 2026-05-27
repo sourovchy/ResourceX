@@ -2,6 +2,7 @@ package com.resourcex.resourcex.security;
 
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
+import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
@@ -22,6 +23,8 @@ import java.io.IOException;
 @Slf4j
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
+    private static final String COOKIE_NAME = "resourcex_token";
+
     private final JwtService jwtService;
     private final UserDetailsService userDetailsService;
 
@@ -32,6 +35,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         return HttpMethod.OPTIONS.matches(request.getMethod())
                 || path.equals("/api/auth/login")
                 || path.equals("/api/auth/register")
+                || path.equals("/api/auth/logout")
                 || path.startsWith("/api/otp/")
                 || path.startsWith("/swagger-ui/")
                 || path.startsWith("/v3/api-docs/");
@@ -43,30 +47,26 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             HttpServletResponse response,
             FilterChain filterChain) throws ServletException, IOException {
 
-        String authHeader = request.getHeader("Authorization");
         String path = request.getServletPath();
 
-        if (authHeader == null || !authHeader.startsWith("Bearer ")) {
-            log.debug("No Bearer token for path: {}", path);
+        if (SecurityContextHolder.getContext().getAuthentication() != null) {
             filterChain.doFilter(request, response);
             return;
         }
 
-        String jwt = authHeader.substring(7).trim();
+        String jwt = extractToken(request);
 
-        if (jwt.isBlank() || SecurityContextHolder.getContext().getAuthentication() != null) {
-            log.debug("JWT blank or already authenticated for path: {}", path);
+        if (jwt == null || jwt.isBlank()) {
+            log.debug("No token found for path: {}", path);
             filterChain.doFilter(request, response);
             return;
         }
 
         try {
             String email = jwtService.extractEmail(jwt);
-            log.debug("Extracted email from JWT: {}", email);
 
             if (email != null && !email.isBlank()) {
                 UserDetails userDetails = userDetailsService.loadUserByUsername(email);
-                log.debug("Loaded user details for: {}. Authorities: {}", email, userDetails.getAuthorities());
 
                 if (jwtService.isTokenValid(jwt, userDetails.getUsername())) {
                     UsernamePasswordAuthenticationToken authToken = new UsernamePasswordAuthenticationToken(
@@ -78,19 +78,33 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                             new WebAuthenticationDetailsSource().buildDetails(request));
 
                     SecurityContextHolder.getContext().setAuthentication(authToken);
-                    log.info("Successfully authenticated user: {} with authorities: {} for path: {}",
-                            email, userDetails.getAuthorities(), path);
+                    log.debug("Authenticated user: {} for path: {}", email, path);
                 } else {
                     log.warn("Token validation failed for user: {} at path: {}", email, path);
                 }
-            } else {
-                log.warn("Email extraction failed from JWT for path: {}", path);
             }
         } catch (Exception e) {
             log.error("Error processing JWT authentication for path: {}", path, e);
-            // Continue without authentication
         }
 
         filterChain.doFilter(request, response);
+    }
+
+    private String extractToken(HttpServletRequest request) {
+        String authHeader = request.getHeader("Authorization");
+        if (authHeader != null && authHeader.startsWith("Bearer ")) {
+            return authHeader.substring(7).trim();
+        }
+
+        Cookie[] cookies = request.getCookies();
+        if (cookies != null) {
+            for (Cookie cookie : cookies) {
+                if (COOKIE_NAME.equals(cookie.getName())) {
+                    return cookie.getValue();
+                }
+            }
+        }
+
+        return null;
     }
 }

@@ -181,7 +181,7 @@ public class BookingServiceImpl implements BookingService {
 
     @Override
     @Transactional
-    public BookingResponse rejectBooking(Long bookingId) {
+    public BookingResponse rejectBooking(Long bookingId, String reason) {
         Booking booking = bookingRepository.findById(bookingId)
                 .orElseThrow(() -> new ResourceNotFoundException("Booking not found"));
 
@@ -192,6 +192,9 @@ public class BookingServiceImpl implements BookingService {
         }
 
         booking.setStatus(Booking.BookingStatus.REJECTED);
+        if (reason != null && !reason.isBlank()) {
+            booking.setRejectionReason(reason);
+        }
 
         Booking saved = bookingRepository.save(booking);
         syncItemAvailability(saved.getItem());

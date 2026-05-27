@@ -3,84 +3,16 @@
 import React, { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import api from "@/lib/api";
+import type { ItemResponse } from "@/types/item";
 import {
 	Star,
-	MapPin,
-	CalendarDays,
 	Shield,
 	CheckCircle2,
 	AlertTriangle,
 	ArrowLeft,
 	Heart,
-	MessageSquare,
 	Loader2,
 } from "lucide-react";
-
-type ItemOwner = {
-	userId?: string | number;
-	name?: string;
-	verified?: boolean;
-	trustScore?: number;
-};
-
-type ItemResponse = {
-	id?: string | number;
-	itemId?: string | number;
-	title?: string;
-	name?: string;
-	description?: string;
-	category?: string;
-	itemCondition?: string;
-	condition?: string;
-	dailyRate?: number;
-	pricePerDay?: number;
-	rentalPricePerDay?: number;
-	deposit?: number;
-	securityDeposit?: number;
-	imageUrls?: string[];
-	images?: string[];
-	owner?: ItemOwner;
-	ownerName?: string;
-	ownerId?: string | number;
-};
-
-function normalizeItem(raw: any) {
-	const imageList =
-		raw?.imageUrls ?? raw?.images ?? raw?.imageUrl ?? [];
-
-	return {
-		itemId: String(raw?.itemId ?? raw?.id ?? ""),
-		title: raw?.title ?? raw?.name ?? "Untitled Item",
-		description:
-			raw?.description ?? "No description provided for this item.",
-		category: raw?.category ?? "General",
-		itemCondition:
-			raw?.itemCondition ?? raw?.condition ?? "Good",
-		dailyRate: Number(
-			raw?.dailyRate ??
-				raw?.pricePerDay ??
-				raw?.rentalPricePerDay ??
-				0,
-		),
-		deposit: Number(raw?.deposit ?? raw?.securityDeposit ?? 0),
-		imageUrls: Array.isArray(imageList)
-			? imageList
-			: imageList
-				? [imageList]
-				: [],
-		owner: {
-			userId:
-				raw?.owner?.userId ?? raw?.ownerId ?? raw?.user?.userId,
-			name:
-				raw?.owner?.name ??
-				raw?.ownerName ??
-				raw?.user?.name ??
-				"Unknown Owner",
-			verified: Boolean(raw?.owner?.verified ?? true),
-			trustScore: Number(raw?.owner?.trustScore ?? 100),
-		},
-	};
-}
 
 export default function ItemDetailPage({ params }: { params: { id: string } }) {
 	const [item, setItem] = useState<ItemResponse | null>(null);
@@ -94,43 +26,15 @@ export default function ItemDetailPage({ params }: { params: { id: string } }) {
 			setLoading(true);
 			setError(null);
 
-			const endpoints = [
-				`/items/${params.id}`,
-				`/item/${params.id}`,
-				`/borrow/items/${params.id}`,
-			];
-
 			try {
-				for (const endpoint of endpoints) {
-					try {
-						const response = await api.get(endpoint);
-						const normalized = normalizeItem(response.data);
-
-						if (!active) return;
-
-						setItem(normalized);
-						setLoading(false);
-						return;
-					} catch {
-						// Try next endpoint.
-					}
-				}
-
-				throw new Error("Failed to load item details.");
-			} catch (err) {
-				console.error("Error fetching item details:", err);
-
+				const response = await api.get<ItemResponse>(`/items/${params.id}`);
 				if (!active) return;
-
-				setError(
-					err instanceof Error
-						? err.message
-						: "Failed to load item details.",
-				);
+				setItem(response.data);
+			} catch (err) {
+				if (!active) return;
+				setError(err instanceof Error ? err.message : "Failed to load item details.");
 			} finally {
-				if (active) {
-					setLoading(false);
-				}
+				if (active) setLoading(false);
 			}
 		};
 
@@ -141,9 +45,12 @@ export default function ItemDetailPage({ params }: { params: { id: string } }) {
 		};
 	}, [params.id]);
 
-	const ownerTrustScore = useMemo(() => {
-		return Number(item?.owner?.trustScore ?? 100);
-	}, [item?.owner?.trustScore]);
+	const ownerTrustScore = useMemo(
+		() => item?.owner?.studentProfile?.trustScore ?? 0,
+		[item?.owner?.studentProfile?.trustScore],
+	);
+
+	const isOwnerVerified = item?.owner?.studentProfile?.emailVerified ?? false;
 
 	if (loading) {
 		return (
@@ -172,10 +79,8 @@ export default function ItemDetailPage({ params }: { params: { id: string } }) {
 		);
 	}
 
-	const itemImage =
-		item.imageUrls?.[0] ||
-		"https://placehold.co/800x500?text=No+Image";
-	const allImages = (item.imageUrls?.length ?? 0) > 0 ? item.imageUrls ?? [] : [itemImage];
+	const itemImage = item.imageUrls?.[0] || "https://placehold.co/800x500?text=No+Image";
+	const allImages = item.imageUrls?.length > 0 ? item.imageUrls : [itemImage];
 
 	return (
 		<div className="mx-auto max-w-4xl space-y-5 px-3 pb-20 sm:space-y-6 sm:px-0">
@@ -200,7 +105,7 @@ export default function ItemDetailPage({ params }: { params: { id: string } }) {
 						</button>
 					</div>
 					<div className="flex gap-3 overflow-x-auto pb-2 scrollbar-none sm:gap-4">
-						{allImages.map((img: string, i: number) => (
+						{allImages.map((img, i) => (
 							<div
 								key={i}
 								className={`h-16 w-16 shrink-0 cursor-pointer overflow-hidden rounded-xl border-2 transition-all sm:h-20 sm:w-20 ${i === 0 ? "border-primary" : "border-transparent opacity-70 hover:opacity-100"}`}>
@@ -242,30 +147,22 @@ export default function ItemDetailPage({ params }: { params: { id: string } }) {
 									Rental Price
 								</div>
 								<div className="text-2xl font-extrabold text-primary sm:text-3xl">
-									৳ {item.dailyRate?.toLocaleString() || 0}
+									৳ {item.dailyRate?.toLocaleString() ?? 0}
 									<span className="text-sm text-textSecondary font-medium">
 										{" "}
 										/ day
 									</span>
 								</div>
 							</div>
-							<div className="text-right">
-								<div className="text-sm font-semibold text-textSecondary mb-1">
-									Deposit
-								</div>
-								<div className="text-xl font-bold text-textPrimary">
-									৳ {item.deposit?.toLocaleString() || 0}
-								</div>
-							</div>
 						</div>
 						<Link
-							href={`/borrow/book/${item.itemId || params.id}`}
+							href={`/borrow/book/${item.itemId}`}
 							className="block w-full rounded-xl bg-primary py-3.5 text-center font-bold text-white shadow-sm transition-colors hover:bg-primaryDark">
 							Book This Item
 						</Link>
 						<div className="flex items-start gap-2 rounded-xl bg-warningLight/50 p-3 text-xs font-medium text-warningDark">
 							<AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
-							Deposit is fully refundable provided the item is returned in the
+							Please inspect the item carefully upon pickup and return it in the
 							same condition.
 						</div>
 					</div>
@@ -285,14 +182,12 @@ export default function ItemDetailPage({ params }: { params: { id: string } }) {
 								<div>
 									<div className="flex min-w-0 items-center gap-1.5 font-bold text-textPrimary">
 										{item.owner?.name || "Unknown Owner"}
-										{item.owner?.verified && (
+										{isOwnerVerified && (
 											<CheckCircle2 className="w-4 h-4 text-success" />
 										)}
 									</div>
 									<div className="mt-0.5 text-xs text-textSecondary">
-										{item.owner?.verified
-											? "Verified Campus Student"
-											: "Campus Member"}
+										{isOwnerVerified ? "Verified Campus Student" : "Campus Member"}
 									</div>
 								</div>
 							</div>

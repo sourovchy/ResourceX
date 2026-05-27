@@ -16,6 +16,7 @@ import {
 import api from "@/lib/api";
 import { isPasswordStrong, validatePhone, normalizePhone } from "@/lib/validation";
 import { useAuth } from "@/context/AuthContext";
+import { useImageUpload } from "@/hooks/useImageUpload";
 
 type UserProfile = {
 	userId?: number;
@@ -48,9 +49,12 @@ export default function EditProfilePage() {
 		avatarUrl: null,
 	});
 
-	const [avatarFile, setAvatarFile] = useState<File | null>(null);
-	const [avatarPreviewUrl, setAvatarPreviewUrl] = useState<string | null>(null);
-	const [uploadingAvatar, setUploadingAvatar] = useState(false);
+	const {
+		previews: avatarPreviews,
+		setPreviews: setAvatarPreviews,
+		uploadAll: uploadAvatar,
+		uploading: uploadingAvatar,
+	} = useImageUpload({ purpose: "PROFILE_IMAGE", maxFiles: 1, maxSizeMB: 2 });
 
 	const [profileCurrentPassword, setProfileCurrentPassword] = useState("");
 
@@ -76,15 +80,6 @@ export default function EditProfilePage() {
 	const [showCurrentPassword, setShowCurrentPassword] = useState(false);
 	const [showNewPassword, setShowNewPassword] = useState(false);
 	const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-
-	// Cleanup preview URL on unmount or change
-	useEffect(() => {
-		return () => {
-			if (avatarPreviewUrl) {
-				URL.revokeObjectURL(avatarPreviewUrl);
-			}
-		};
-	}, [avatarPreviewUrl]);
 
 	useEffect(() => {
 		const loadProfile = async () => {
@@ -162,14 +157,14 @@ export default function EditProfilePage() {
 		}
 
 		setProfileError("");
-		setAvatarFile(file);
 
-		// Revoke previous preview URL before creating new one
-		if (avatarPreviewUrl) {
-			URL.revokeObjectURL(avatarPreviewUrl);
+		// Revoke previous blob URL before replacing
+		const prev = avatarPreviews[0];
+		if (prev?.file && prev.url.startsWith("blob:")) {
+			URL.revokeObjectURL(prev.url);
 		}
-		setAvatarPreviewUrl(URL.createObjectURL(file));
-	}, [avatarPreviewUrl]);
+		setAvatarPreviews([{ file, url: URL.createObjectURL(file) }]);
+	}, [avatarPreviews, setAvatarPreviews]);
 
 	const handleProfileSubmit = async (e: React.FormEvent) => {
 		e.preventDefault();
@@ -200,23 +195,12 @@ export default function EditProfilePage() {
 			let uploadedAvatarUrl = profile.avatarUrl;
 
 			// Upload avatar if a new file was selected
-			if (avatarFile) {
-				setUploadingAvatar(true);
-				const formData = new FormData();
-				formData.append("file", avatarFile);
-
-				try {
-					const uploadRes = await api.post("/files/upload?purpose=PROFILE_IMAGE", formData, {
-						headers: { "Content-Type": "multipart/form-data" },
-					});
-
-					if (uploadRes.data && uploadRes.data.fileUrl) {
-						uploadedAvatarUrl = uploadRes.data.fileUrl;
-					} else {
-						throw new Error("Failed to upload avatar. Please try again.");
-					}
-				} finally {
-					setUploadingAvatar(false);
+			if (avatarPreviews[0]?.file) {
+				const urls = await uploadAvatar();
+				if (urls[0]) {
+					uploadedAvatarUrl = urls[0];
+				} else {
+					throw new Error("Failed to upload avatar. Please try again.");
 				}
 			}
 
@@ -273,13 +257,7 @@ export default function EditProfilePage() {
 			setProfile(newlySavedProfile);
 			setOriginalProfile(newlySavedProfile);
 			setProfileCurrentPassword("");
-			setAvatarFile(null);
-
-			if (avatarPreviewUrl) {
-				URL.revokeObjectURL(avatarPreviewUrl);
-				setAvatarPreviewUrl(null);
-			}
-
+			setAvatarPreviews([]);
 			setProfileSuccess(true);
 			setTimeout(() => setProfileSuccess(false), 2500);
 		} catch (err: any) {
@@ -401,9 +379,9 @@ export default function EditProfilePage() {
 				<div className="flex flex-col items-center gap-4 border-b border-borderLight pb-6 sm:pb-8">
 					<label className="group relative cursor-pointer">
 						<div className="flex h-20 w-20 items-center justify-center overflow-hidden rounded-full border-2 border-transparent bg-primaryLight text-2xl font-extrabold text-primary transition-colors group-hover:border-primary sm:h-24 sm:w-24 sm:text-3xl">
-							{avatarPreviewUrl || profile.avatarUrl ? (
+							{avatarPreviews[0]?.url || profile.avatarUrl ? (
 								<img
-									src={avatarPreviewUrl || profile.avatarUrl || ""}
+									src={avatarPreviews[0]?.url || profile.avatarUrl || ""}
 									alt="Profile avatar"
 									className="h-full w-full object-cover"
 								/>
@@ -424,7 +402,7 @@ export default function EditProfilePage() {
 					</label>
 
 					<div className="text-center text-sm font-bold text-primary">
-						{avatarFile ? avatarFile.name : "Change Avatar / Photo"}
+						{avatarPreviews[0]?.file?.name ?? "Change Avatar / Photo"}
 					</div>
 				</div>
 
@@ -556,6 +534,11 @@ export default function EditProfilePage() {
 							<>
 								<Loader2 className="h-4 w-4 animate-spin" />
 								{uploadingAvatar ? "Uploading photo..." : "Saving..."}
+							</>
+						) : uploadingAvatar ? (
+							<>
+								<Loader2 className="h-4 w-4 animate-spin" />
+								Uploading photo...
 							</>
 						) : (
 							<>

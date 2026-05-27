@@ -1,5 +1,6 @@
 package com.resourcex.resourcex.dto.response;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import lombok.*;
 
@@ -18,8 +19,10 @@ public class AuthResponse {
 
     private String message;
 
+    @JsonIgnore
     private String token;
 
+    @JsonIgnore
     private String tokenType;
 
     private UserResponse user;

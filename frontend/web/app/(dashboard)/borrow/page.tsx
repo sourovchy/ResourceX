@@ -7,6 +7,7 @@ import api from "@/lib/api";
 import {
 	Search,
 	Loader2,
+	Heart,
 } from "lucide-react";
 
 export default function BorrowPage() {
@@ -102,6 +103,12 @@ if (error) {
 				</div>
 
 				<div className="flex w-full items-center gap-3 md:w-auto">
+					<Link
+						href="/borrow/wishlist"
+						className="inline-flex shrink-0 items-center gap-2 rounded-xl border border-borderLight bg-surfaceVariant px-4 py-2 text-sm font-semibold text-textSecondary transition-colors hover:border-primary/40 hover:text-primary">
+						<Heart className="w-4 h-4" />
+						<span className="hidden sm:inline">Wishlist</span>
+					</Link>
 					<div className="relative min-w-0 flex-1 md:w-64">
 						<Search className="w-4 h-4 text-textTertiary absolute left-3 top-1/2 -translate-y-1/2" />
 						<input

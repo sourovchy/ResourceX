@@ -55,6 +55,10 @@ public class Booking {
 
     @Column(name = "approved_at")
     private LocalDateTime approvedAt;
+
+    @Column(name = "rejection_reason", length = 1000)
+    private String rejectionReason;
+
     @OneToOne(mappedBy = "booking", fetch = FetchType.LAZY)
     private Payment payment;
 

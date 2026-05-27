@@ -23,19 +23,15 @@ export const disputeService = {
   resolveDispute: async (
     disputeId: number,
     resolutionData: {
+      status: string;
       resolution: string;
-      resolvedByUserId: number;
+      actionType: string;
+      penaltyAmount?: number;
     }
   ): Promise<DisputeResponse> => {
-    const response = await api.post<DisputeResponse>(
+    const response = await api.patch<DisputeResponse>(
       `/disputes/${disputeId}/resolve`,
-      null,
-      {
-        params: {
-          resolution: resolutionData.resolution,
-          userId: resolutionData.resolvedByUserId,
-        },
-      }
+      resolutionData
     );
     return response.data;
   },

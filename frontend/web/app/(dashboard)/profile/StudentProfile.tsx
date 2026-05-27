@@ -14,6 +14,7 @@ import {
 	BookOpen,
 	CheckCircle2,
 	Loader2,
+	MessageSquare,
 } from "lucide-react";
 
 type Item = { itemId: number };
@@ -127,6 +128,11 @@ export default function ProfilePage() {
 							href="/profile/edit"
 							className="mt-6 flex w-full items-center justify-center gap-2 rounded-xl border border-borderLight bg-surfaceVariant py-2.5 font-bold text-textPrimary transition-colors hover:bg-borderLight">
 							<Edit3 className="w-4 h-4" /> Edit Profile
+						</Link>
+						<Link
+							href="/profile/my-reviews"
+							className="mt-2 flex w-full items-center justify-center gap-2 rounded-xl border border-primaryLight bg-primaryLight py-2.5 font-bold text-primary transition-colors hover:bg-primary hover:text-white">
+							<MessageSquare className="w-4 h-4" /> My Reviews
 						</Link>
 					</div>
 

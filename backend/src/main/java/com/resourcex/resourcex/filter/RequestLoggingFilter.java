@@ -9,10 +9,18 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
+import java.util.Set;
 
 @Slf4j
 @Component
 public class RequestLoggingFilter extends OncePerRequestFilter {
+
+    private static final Set<String> SENSITIVE_PATHS = Set.of(
+            "/api/auth/login",
+            "/api/auth/register",
+            "/api/auth/forgot-password",
+            "/api/auth/reset-password"
+    );
 
     @Override
     protected void doFilterInternal(
@@ -21,17 +29,22 @@ public class RequestLoggingFilter extends OncePerRequestFilter {
             FilterChain filterChain
     ) throws ServletException, IOException {
 
-        String queryString = request.getQueryString();
         String path = request.getRequestURI();
-        String fullPath = queryString == null ? path : path + "?" + queryString;
+        String logPath = SENSITIVE_PATHS.contains(path) ? path : withQueryString(request);
 
         log.info(
                 "Incoming Request: {} {} from {}",
                 request.getMethod(),
-                fullPath,
+                logPath,
                 request.getRemoteAddr()
         );
 
         filterChain.doFilter(request, response);
+    }
+
+    private String withQueryString(HttpServletRequest request) {
+        String query = request.getQueryString();
+        String path = request.getRequestURI();
+        return query == null ? path : path + "?" + query;
     }
 }

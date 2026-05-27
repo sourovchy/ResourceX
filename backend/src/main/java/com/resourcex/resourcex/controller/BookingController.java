@@ -1,6 +1,7 @@
 package com.resourcex.resourcex.controller;
 
 import com.resourcex.resourcex.dto.request.CreateBookingRequest;
+import com.resourcex.resourcex.dto.request.RejectBookingRequest;
 import com.resourcex.resourcex.dto.response.BookingResponse;
 import com.resourcex.resourcex.service.BookingService;
 import jakarta.validation.Valid;
@@ -66,8 +67,10 @@ public class BookingController {
     @PatchMapping("/{bookingId}/reject")
     @PreAuthorize("hasAnyRole('ADMIN','MODERATOR','SUPER_ADMIN') or isAuthenticated()")
     public BookingResponse rejectBooking(
-            @PathVariable Long bookingId) {
-        return bookingService.rejectBooking(bookingId);
+            @PathVariable Long bookingId,
+            @RequestBody(required = false) RejectBookingRequest request) {
+        String reason = request != null ? request.getReason() : null;
+        return bookingService.rejectBooking(bookingId, reason);
     }
 
     @PatchMapping("/{bookingId}/cancel")

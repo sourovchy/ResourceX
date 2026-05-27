@@ -20,6 +20,7 @@ import {
     ShieldAlert,
     ShieldCheck,
     UserCog,
+    History,
 } from "lucide-react";
 
 type NavItem = {
@@ -104,6 +105,12 @@ const DASHBOARD_NAV: NavItem[] = [
         icon: UserCog,
         label: "Staff",
         roles: ["super_admin"],
+    },
+    {
+        href: "/history",
+        icon: History,
+        label: "History",
+        roles: ["student"],
     },
     {
         href: "/notifications",

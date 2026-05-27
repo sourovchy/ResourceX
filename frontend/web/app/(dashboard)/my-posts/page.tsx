@@ -71,6 +71,17 @@ export default function MyPostsPage() {
 
 	const deletePost = async (itemId: number) => {
 		try {
+			const item = posts.find((p) => p.itemId === itemId);
+			if (item?.imageUrls?.length) {
+				await Promise.allSettled(
+					item.imageUrls.map((url) => {
+						const storedName = url.split("/").pop();
+						return storedName
+							? api.delete(`/files/${storedName}`)
+							: Promise.resolve();
+					}),
+				);
+			}
 			await api.delete(`/items/${itemId}`);
 			await fetchPosts();
 		} catch {

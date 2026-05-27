@@ -14,6 +14,11 @@ public interface FileStorageService {
     FileUploadResponse storeFile(MultipartFile file, FilePurpose purpose, UserDetails userDetails);
 
     /**
+     * Store a file from a base64 string (useful for migrating existing data or API uploads).
+     */
+    FileUploadResponse storeBase64File(String base64Data, String fileName, FilePurpose purpose, UserDetails userDetails);
+
+    /**
      * Load a file as a resource. Validates permissions if the file is private.
      */
     Resource loadAsResource(String storedName, UserDetails userDetails);

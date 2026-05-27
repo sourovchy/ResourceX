@@ -32,20 +32,6 @@ type PendingUser = {
 	createdAt?: string;
 };
 
-type ApiListResponse<T> =
-	| T[]
-	| {
-			data?: T[];
-			content?: T[];
-	  };
-
-function normalizeListResponse<T>(payload: ApiListResponse<T> | any): T[] {
-	if (Array.isArray(payload)) return payload;
-	if (Array.isArray(payload?.data)) return payload.data;
-	if (Array.isArray(payload?.content)) return payload.content;
-	return [];
-}
-
 export default function AdminHomePage() {
 	const [stats, setStats] = useState<DashboardStats | null>(null);
 	const [pendingUsers, setPendingUsers] = useState<PendingUser[]>([]);
@@ -61,16 +47,17 @@ export default function AdminHomePage() {
 				setError("");
 
 				const [statsRes, pendingRes] = await Promise.all([
-					api.get<DashboardStats | { data?: DashboardStats }>("/admin/dashboard"),
-					api.get<ApiListResponse<PendingUser> | any>("/admin/pending-users"),
+					api.get<DashboardStats>("/admin/dashboard"),
+					api.get<{ content?: PendingUser[] }>("/admin/pending-users"),
 				]);
 
 				if (!active) return;
 
-				const statsData = (statsRes.data as any)?.data ?? statsRes.data;
-				setStats(statsData as DashboardStats);
+				setStats(statsRes.data);
 
-				const pendingList = normalizeListResponse<PendingUser>(pendingRes.data);
+				const pendingList = Array.isArray(pendingRes.data?.content)
+					? pendingRes.data.content
+					: [];
 				setPendingUsers(pendingList);
 			} catch (err) {
 				console.error(err);

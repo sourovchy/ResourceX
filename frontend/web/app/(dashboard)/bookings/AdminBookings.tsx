@@ -44,28 +44,15 @@ interface BookingRow {
 
 interface BookingApiRow {
 	bookingId?: string | number;
-	id?: string | number;
-	itemName?: string;
 	item?: {
-		name?: string;
+		title?: string;
+		owner?: { name?: string };
 	};
-	ownerName?: string;
-	owner?: {
-		name?: string;
-	};
-	renterName?: string;
-	renter?: {
-		name?: string;
-	};
+	renter?: { name?: string };
 	startDate?: string;
 	endDate?: string;
-	bookingStartDate?: string;
-	bookingEndDate?: string;
 	totalPrice?: number | string;
-	amount?: number | string;
 	status?: string;
-	createdAt?: string;
-	updatedAt?: string;
 }
 
 const STATUS_STYLES: Record<string, string> = {
@@ -87,13 +74,10 @@ const FILTERS: FilterType[] = [
 	"REJECTED",
 ];
 
-const STATUS_OPTIONS: BookingStatus[] = [
-	"ACTIVE",
-	"OVERDUE",
-	"COMPLETED",
-	"PENDING",
-	"CANCELLED",
-	"REJECTED",
+const OVERRIDE_STATUS_OPTIONS: { value: BookingStatus; label: string }[] = [
+	{ value: "COMPLETED", label: "Complete" },
+	{ value: "CANCELLED", label: "Cancel (Admin)" },
+	{ value: "REJECTED", label: "Reject" },
 ];
 
 function normalizeStatus(status?: string): BookingStatus {
@@ -113,13 +97,13 @@ function normalizeStatus(status?: string): BookingStatus {
 
 function normalizeBooking(row: BookingApiRow): BookingRow {
 	return {
-		bookingId: row.bookingId ?? row.id ?? "",
-		itemName: row.itemName ?? row.item?.name ?? "Unknown item",
-		ownerName: row.ownerName ?? row.owner?.name ?? "Unknown owner",
-		renterName: row.renterName ?? row.renter?.name ?? "Unknown renter",
-		startDate: row.startDate ?? row.bookingStartDate ?? row.createdAt ?? "",
-		endDate: row.endDate ?? row.bookingEndDate ?? row.updatedAt ?? "",
-		totalPrice: Number(row.totalPrice ?? row.amount ?? 0),
+		bookingId: row.bookingId ?? "",
+		itemName: row.item?.title ?? "Unknown item",
+		ownerName: row.item?.owner?.name ?? "Unknown owner",
+		renterName: row.renter?.name ?? "Unknown renter",
+		startDate: row.startDate ?? "",
+		endDate: row.endDate ?? "",
+		totalPrice: Number(row.totalPrice ?? 0),
 		status: normalizeStatus(row.status),
 	};
 }
@@ -135,7 +119,7 @@ export default function AdminBookingsPage() {
 	const [search, setSearch] = useState("");
 	const [filter, setFilter] = useState<FilterType>("ALL");
 	const [overrideId, setOverrideId] = useState<string | number | null>(null);
-	const [overrideStatus, setOverrideStatus] = useState<BookingStatus>("ACTIVE");
+	const [overrideStatus, setOverrideStatus] = useState<BookingStatus>("COMPLETED");
 	const [bookings, setBookings] = useState<BookingRow[]>([]);
 	const [loading, setLoading] = useState(true);
 	const [submitting, setSubmitting] = useState(false);
@@ -151,22 +135,8 @@ export default function AdminBookingsPage() {
 			const response = await api.get(`/bookings?page=${page}&size=10`);
 			const raw = response.data;
 
-			let list: BookingApiRow[] = [];
-
-			if (raw?.data?.content) {
-				list = raw.data.content;
-				setTotalPages(raw.data.totalPages || 0);
-			} else if (Array.isArray(raw?.data)) {
-				list = raw.data;
-				setTotalPages(1);
-			} else if (Array.isArray(raw)) {
-				list = raw;
-				setTotalPages(1);
-			} else if (Array.isArray(raw?.content)) {
-				list = raw.content;
-				setTotalPages(raw.totalPages || 0);
-			}
-
+			const list: BookingApiRow[] = Array.isArray(raw?.content) ? raw.content : [];
+			setTotalPages(raw?.totalPages ?? 1);
 			setBookings(list.map(normalizeBooking));
 		} catch (err) {
 			const errorDetails = logErrorDetails(err, {
@@ -213,7 +183,17 @@ export default function AdminBookingsPage() {
 
 	const openOverrideModal = (booking: BookingRow) => {
 		setOverrideId(booking.bookingId);
-		setOverrideStatus(booking.status);
+		const overridable = OVERRIDE_STATUS_OPTIONS.map((o) => o.value);
+		setOverrideStatus(overridable.includes(booking.status) ? booking.status : "COMPLETED");
+	};
+
+	const overrideActionEndpoint = (status: BookingStatus): string => {
+		switch (status) {
+			case "COMPLETED": return `/bookings/${overrideId}/complete`;
+			case "CANCELLED": return `/bookings/${overrideId}/moderate-cancel`;
+			case "REJECTED": return `/bookings/${overrideId}/reject`;
+			default: throw new Error(`No admin action endpoint for status: ${status}`);
+		}
 	};
 
 	const applyOverride = async () => {
@@ -221,9 +201,7 @@ export default function AdminBookingsPage() {
 
 		try {
 			setSubmitting(true);
-			await api.patch(`/bookings/${overrideId}/status`, {
-				status: overrideStatus,
-			});
+			await api.patch(overrideActionEndpoint(overrideStatus));
 			await fetchBookings(pageIndex);
 			setOverrideId(null);
 		} catch (err) {
@@ -331,9 +309,9 @@ export default function AdminBookingsPage() {
 								setOverrideStatus(e.target.value as BookingStatus)
 							}
 							className="w-full rounded-xl border border-outlineVariant bg-surfaceVariant px-3 py-2.5 text-sm text-textPrimary outline-none focus:ring-2 focus:ring-primary">
-							{STATUS_OPTIONS.map((s) => (
-								<option key={s} value={s}>
-									{s}
+							{OVERRIDE_STATUS_OPTIONS.map(({ value, label }) => (
+								<option key={value} value={value}>
+									{label}
 								</option>
 							))}
 						</select>

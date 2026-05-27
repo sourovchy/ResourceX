@@ -21,7 +21,7 @@ public interface BookingService {
 
     BookingResponse approveBooking(Long bookingId);
 
-    BookingResponse rejectBooking(Long bookingId);
+    BookingResponse rejectBooking(Long bookingId, String reason);
 
     BookingResponse cancelBooking(Long bookingId);
 

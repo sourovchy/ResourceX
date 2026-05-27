@@ -31,5 +31,5 @@ export type CurrentUserResponse = {
 
 export type AuthResponse = CurrentUserResponse & {
 	message: string;
-	token: string;
+	success: boolean;
 };

@@ -3,54 +3,10 @@
 import React, { useEffect, useState } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
-import { ArrowLeft, UploadCloud, CheckCircle2, Loader2 } from "lucide-react";
+import { ArrowLeft, UploadCloud, CheckCircle2, Loader2, X } from "lucide-react";
 import api from "@/lib/api";
-
-type ItemResponse = {
-	id?: string | number;
-	itemId?: string | number;
-	title?: string;
-	category?: string;
-	itemCategory?: string;
-	condition?: string;
-	itemCondition?: string;
-	description?: string;
-	dailyRate?: number | string;
-	securityDeposit?: number | string;
-	deposit?: number | string;
-	isActive?: boolean;
-	available?: boolean;
-	status?: string;
-	imageUrls?: string[];
-	images?: string[];
-	[item: string]: unknown;
-};
-
-const toStringValue = (value: unknown, fallback = "") => {
-	if (value === null || value === undefined) return fallback;
-	return String(value);
-};
-
-const toNumberString = (value: unknown, fallback = "") => {
-	if (value === null || value === undefined || value === "") return fallback;
-	const n = Number(value);
-	return Number.isFinite(n) ? String(n) : fallback;
-};
-
-const unwrapItem = (payload: unknown): ItemResponse | null => {
-	if (!payload || typeof payload !== "object") return null;
-
-	const record = payload as Record<string, unknown>;
-	const candidates = [record.data, record.item, record.result, record.payload, payload];
-
-	for (const candidate of candidates) {
-		if (candidate && typeof candidate === "object") {
-			return candidate as ItemResponse;
-		}
-	}
-
-	return null;
-};
+import type { ItemResponse } from "@/types/item";
+import { useImageUpload } from "@/hooks/useImageUpload";
 
 export default function EditItemPage() {
 	const params = useParams();
@@ -68,7 +24,16 @@ export default function EditItemPage() {
 	const [price, setPrice] = useState("");
 	const [deposit, setDeposit] = useState("");
 	const [isActive, setIsActive] = useState(true);
-	const [images, setImages] = useState<File[]>([]);
+
+	const {
+		previews,
+		setPreviews,
+		addFiles,
+		removeFile,
+		uploadAll,
+		uploading,
+		error: uploadError,
+	} = useImageUpload({ purpose: "ITEM_IMAGE", maxFiles: 5, maxSizeMB: 5 });
 
 	useEffect(() => {
 		const loadItem = async () => {
@@ -78,30 +43,37 @@ export default function EditItemPage() {
 			setError("");
 
 			try {
-				const res = await api.get(`/items/${id}`);
-				const item = unwrapItem(res.data);
+				const res = await api.get<ItemResponse>(`/items/${id}`);
+				const item = res.data;
 
-				if (!item) {
-					throw new Error("Item not found.");
+				setTitle(item.title ?? "");
+				setCategory(item.category ?? "");
+				setCondition(item.itemCondition ?? "");
+				setDesc(item.description ?? "");
+				setPrice(item.dailyRate != null ? String(item.dailyRate) : "");
+				setDeposit("");
+				setIsActive(item.status === "AVAILABLE");
+
+				if (item.imageUrls?.length) {
+					setPreviews(
+						item.imageUrls.map((url) => ({
+							url,
+							storedName: url.split("/").pop(),
+						})),
+					);
 				}
-
-				setTitle(toStringValue(item.title));
-				setCategory(toStringValue(item.category ?? item.itemCategory));
-				setCondition(toStringValue(item.condition ?? item.itemCondition));
-				setDesc(toStringValue(item.description));
-				setPrice(toNumberString(item.dailyRate));
-				setDeposit(toNumberString(item.securityDeposit ?? item.deposit));
-				setIsActive(Boolean(item.isActive ?? item.available ?? item.status === "ACTIVE"));
 			} catch (err: any) {
 				console.error("Failed to load item", err);
-				setError(err?.response?.data?.message || err.message || "Failed to load item");
+				setError(
+					err?.response?.data?.message || err.message || "Failed to load item",
+				);
 			} finally {
 				setIsFetching(false);
 			}
 		};
 
 		loadItem();
-	}, [id]);
+	}, [id, setPreviews]);
 
 	const handleSubmit = async (e: React.FormEvent) => {
 		e.preventDefault();
@@ -109,19 +81,7 @@ export default function EditItemPage() {
 		setIsLoading(true);
 
 		try {
-			const uploadedImageUrls: string[] = [];
-			if (images.length > 0) {
-				for (const file of images) {
-					const formData = new FormData();
-					formData.append("file", file);
-					const uploadRes = await api.post("/files/upload?purpose=ITEM_IMAGE", formData, {
-						headers: { "Content-Type": "multipart/form-data" },
-					});
-					if (uploadRes.data && uploadRes.data.fileUrl) {
-						uploadedImageUrls.push(uploadRes.data.fileUrl);
-					}
-				}
-			}
+			const imageUrls = await uploadAll();
 
 			const payload: Record<string, unknown> = {
 				title,
@@ -131,25 +91,18 @@ export default function EditItemPage() {
 				dailyRate: Number.parseFloat(price),
 				securityDeposit: deposit ? Number.parseFloat(deposit) : 0,
 				isActive,
+				imageUrls,
 			};
-
-			if (uploadedImageUrls.length > 0) {
-				payload.imageUrls = uploadedImageUrls;
-			}
 
 			await api.put(`/items/${id}`, payload);
 			setSubmitted(true);
 		} catch (err: any) {
 			console.error("Failed to update item", err);
-			setError(err?.response?.data?.message || err.message || "Failed to update item");
+			setError(
+				err?.response?.data?.message || err.message || "Failed to update item",
+			);
 		} finally {
 			setIsLoading(false);
-		}
-	};
-
-	const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-		if (e.target.files) {
-			setImages(Array.from(e.target.files));
 		}
 	};
 
@@ -159,7 +112,9 @@ export default function EditItemPage() {
 		return (
 			<div className="mx-auto flex max-w-3xl flex-col items-center justify-center space-y-3 px-3 py-16 text-center sm:px-4 sm:py-20">
 				<Loader2 className="h-8 w-8 animate-spin text-primary sm:h-10 sm:w-10" />
-				<p className="text-sm font-medium text-textSecondary sm:text-base">Loading item details...</p>
+				<p className="text-sm font-medium text-textSecondary sm:text-base">
+					Loading item details...
+				</p>
 			</div>
 		);
 	}
@@ -170,8 +125,12 @@ export default function EditItemPage() {
 				<div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-successLight text-success sm:h-20 sm:w-20">
 					<CheckCircle2 className="h-8 w-8 sm:h-10 sm:w-10" />
 				</div>
-				<h1 className="text-2xl font-extrabold text-textPrimary sm:text-3xl">Changes Saved!</h1>
-				<p className="text-sm text-textSecondary sm:text-base">Your item has been updated successfully.</p>
+				<h1 className="text-2xl font-extrabold text-textPrimary sm:text-3xl">
+					Changes Saved!
+				</h1>
+				<p className="text-sm text-textSecondary sm:text-base">
+					Your item has been updated successfully.
+				</p>
 				<Link
 					href="/my-posts"
 					className="mt-4 inline-block rounded-xl bg-primary px-5 py-3 text-sm font-bold text-white shadow-sm transition-colors hover:bg-primaryDark sm:px-6">
@@ -190,7 +149,9 @@ export default function EditItemPage() {
 			</Link>
 
 			<div className="flex flex-col items-start justify-between gap-3 sm:flex-row sm:items-center sm:gap-4">
-				<h1 className="text-xl font-bold tracking-tight text-textPrimary sm:text-2xl">Edit Item</h1>
+				<h1 className="text-xl font-bold tracking-tight text-textPrimary sm:text-2xl">
+					Edit Item
+				</h1>
 
 				<div className="flex items-center gap-2 rounded-xl bg-surfaceVariant px-4 py-2 text-sm font-bold text-textPrimary">
 					Available:
@@ -209,13 +170,20 @@ export default function EditItemPage() {
 
 			{!isActive && (
 				<div className="rounded-xl border border-warning/30 bg-warningLight px-4 py-3 text-sm font-medium text-warning">
-					This item is currently unavailable. Enable availability before editing the listing details.
+					This item is currently unavailable. Enable availability before
+					editing the listing details.
 				</div>
 			)}
 
-			{error && <div className="rounded-xl bg-errorLight p-4 text-sm font-semibold text-error">{error}</div>}
+			{(error || uploadError) && (
+				<div className="rounded-xl bg-errorLight p-4 text-sm font-semibold text-error">
+					{error || uploadError}
+				</div>
+			)}
 
-			<form onSubmit={handleSubmit} className="space-y-5 rounded-2xl border border-borderLight bg-surface p-4 shadow-sm sm:p-6 md:p-8">
+			<form
+				onSubmit={handleSubmit}
+				className="space-y-5 rounded-2xl border border-borderLight bg-surface p-4 shadow-sm sm:p-6 md:p-8">
 				<div className="space-y-3 sm:space-y-4">
 					<h2 className="border-b border-borderLight pb-2 text-xs font-bold uppercase tracking-wider text-textSecondary sm:text-sm">
 						Basic Info
@@ -228,7 +196,9 @@ export default function EditItemPage() {
 							onChange={(e) => setTitle(e.target.value)}
 							disabled={fieldDisabled}
 							className={`w-full rounded-xl border border-borderLight px-4 py-3 text-sm transition ${
-								fieldDisabled ? "cursor-not-allowed bg-surfaceVariant text-textSecondary" : "bg-surface text-textPrimary"
+								fieldDisabled
+									? "cursor-not-allowed bg-surfaceVariant text-textSecondary"
+									: "bg-surface text-textPrimary"
 							}`}
 							maxLength={100}
 						/>
@@ -236,13 +206,17 @@ export default function EditItemPage() {
 
 					<div className="grid grid-cols-1 gap-4 md:grid-cols-2">
 						<div className="space-y-2">
-							<label className="text-sm font-bold text-textPrimary">Category</label>
+							<label className="text-sm font-bold text-textPrimary">
+								Category
+							</label>
 							<select
 								value={category}
 								onChange={(e) => setCategory(e.target.value)}
 								disabled={fieldDisabled}
 								className={`w-full rounded-xl border border-borderLight px-4 py-3 text-sm transition ${
-									fieldDisabled ? "cursor-not-allowed bg-surfaceVariant text-textSecondary" : "bg-surface text-textPrimary"
+									fieldDisabled
+										? "cursor-not-allowed bg-surfaceVariant text-textSecondary"
+										: "bg-surface text-textPrimary"
 								}`}>
 								<option value="Electronics">Electronics</option>
 								<option value="Academic">Academic</option>
@@ -250,13 +224,17 @@ export default function EditItemPage() {
 						</div>
 
 						<div className="space-y-2">
-							<label className="text-sm font-bold text-textPrimary">Condition</label>
+							<label className="text-sm font-bold text-textPrimary">
+								Condition
+							</label>
 							<select
 								value={condition}
 								onChange={(e) => setCondition(e.target.value)}
 								disabled={fieldDisabled}
 								className={`w-full rounded-xl border border-borderLight px-4 py-3 text-sm transition ${
-									fieldDisabled ? "cursor-not-allowed bg-surfaceVariant text-textSecondary" : "bg-surface text-textPrimary"
+									fieldDisabled
+										? "cursor-not-allowed bg-surfaceVariant text-textSecondary"
+										: "bg-surface text-textPrimary"
 								}`}>
 								<option value="New">New</option>
 								<option value="Good">Good</option>
@@ -266,14 +244,18 @@ export default function EditItemPage() {
 					</div>
 
 					<div className="space-y-2">
-						<label className="text-sm font-bold text-textPrimary">Description</label>
+						<label className="text-sm font-bold text-textPrimary">
+							Description
+						</label>
 						<textarea
 							value={desc}
 							onChange={(e) => setDesc(e.target.value)}
 							rows={4}
 							disabled={fieldDisabled}
 							className={`w-full resize-none rounded-xl border border-borderLight px-4 py-3 text-sm transition ${
-								fieldDisabled ? "cursor-not-allowed bg-surfaceVariant text-textSecondary" : "bg-surface text-textPrimary"
+								fieldDisabled
+									? "cursor-not-allowed bg-surfaceVariant text-textSecondary"
+									: "bg-surface text-textPrimary"
 							}`}
 							maxLength={1000}
 						/>
@@ -287,8 +269,12 @@ export default function EditItemPage() {
 
 					<div className="grid grid-cols-1 gap-4 md:grid-cols-2">
 						<div className="space-y-2">
-							<label className="text-sm font-bold text-textPrimary">Daily Rental Rate</label>
-							<p className="text-xs text-textSecondary">Enter rental cost per day. Example: 500 = ৳500/day</p>
+							<label className="text-sm font-bold text-textPrimary">
+								Daily Rental Rate
+							</label>
+							<p className="text-xs text-textSecondary">
+								Enter rental cost per day. Example: 500 = ৳500/day
+							</p>
 							<input
 								value={price}
 								onChange={(e) => setPrice(e.target.value)}
@@ -297,15 +283,21 @@ export default function EditItemPage() {
 								max="100000"
 								disabled={fieldDisabled}
 								className={`w-full rounded-xl border px-4 py-3 text-sm transition ${
-									fieldDisabled ? "cursor-not-allowed bg-surfaceVariant text-textSecondary" : "border-borderLight bg-surface text-textPrimary"
+									fieldDisabled
+										? "cursor-not-allowed bg-surfaceVariant text-textSecondary"
+										: "border-borderLight bg-surface text-textPrimary"
 								}`}
 								placeholder="e.g. 500"
 							/>
 						</div>
 
 						<div className="space-y-2">
-							<label className="text-sm font-bold text-textPrimary">Security Deposit</label>
-							<p className="text-xs text-textSecondary">Optional refundable amount before renting</p>
+							<label className="text-sm font-bold text-textPrimary">
+								Security Deposit
+							</label>
+							<p className="text-xs text-textSecondary">
+								Optional refundable amount before renting
+							</p>
 							<input
 								value={deposit}
 								onChange={(e) => setDeposit(e.target.value)}
@@ -314,7 +306,9 @@ export default function EditItemPage() {
 								max="100000"
 								disabled={fieldDisabled}
 								className={`w-full rounded-xl border px-4 py-3 text-sm transition ${
-									fieldDisabled ? "cursor-not-allowed bg-surfaceVariant text-textSecondary" : "border-borderLight bg-surface text-textPrimary"
+									fieldDisabled
+										? "cursor-not-allowed bg-surfaceVariant text-textSecondary"
+										: "border-borderLight bg-surface text-textPrimary"
 								}`}
 								placeholder="e.g. 100"
 							/>
@@ -327,25 +321,63 @@ export default function EditItemPage() {
 						Photos
 					</h2>
 
-					<label className={`flex cursor-pointer flex-col items-center justify-center rounded-2xl border-2 border-dashed border-borderLight bg-surfaceVariant p-5 text-center transition-colors hover:border-primary sm:p-8 ${fieldDisabled ? "cursor-not-allowed opacity-60" : ""}`}>
+					<label
+						className={`flex cursor-pointer flex-col items-center justify-center rounded-2xl border-2 border-dashed border-borderLight bg-surfaceVariant p-5 text-center transition-colors hover:border-primary sm:p-8 ${fieldDisabled ? "cursor-not-allowed opacity-60" : ""}`}>
 						<UploadCloud className="mb-2 h-8 w-8 text-primary sm:h-10 sm:w-10" />
-						<span className="text-sm font-bold text-textPrimary">Upload Photos</span>
-
-						<input type="file" multiple className="hidden" onChange={handleFileChange} disabled={fieldDisabled} />
+						<span className="text-sm font-bold text-textPrimary">
+							Upload Photos
+						</span>
+						<span className="mt-1 text-xs text-textSecondary">
+							JPEG, PNG, WEBP · up to 5 MB each · max 5 images
+						</span>
+						<input
+							type="file"
+							multiple
+							accept="image/jpeg,image/png,image/webp"
+							className="hidden"
+							onChange={(e) => e.target.files && addFiles(e.target.files)}
+							disabled={fieldDisabled}
+						/>
 					</label>
 
-					{images.length > 0 && <p className="mt-2 text-xs text-textSecondary">{images.length} file(s) selected</p>}
+					{previews.length > 0 && (
+						<div className="grid grid-cols-3 gap-2 sm:grid-cols-4 sm:gap-3">
+							{previews.map((p, i) => (
+								<div
+									key={i}
+									className="relative aspect-square overflow-hidden rounded-xl border border-borderLight bg-surfaceVariant">
+									<img
+										src={p.url}
+										alt=""
+										className="h-full w-full object-cover"
+									/>
+									{!fieldDisabled && (
+										<button
+											type="button"
+											onClick={() => removeFile(i)}
+											className="absolute right-1 top-1 flex h-5 w-5 items-center justify-center rounded-full bg-black/60 text-white transition hover:bg-error">
+											<X className="h-3 w-3" />
+										</button>
+									)}
+								</div>
+							))}
+						</div>
+					)}
 				</div>
 
 				<button
 					type="submit"
-					disabled={fieldDisabled || isLoading}
+					disabled={fieldDisabled || isLoading || uploading}
 					className={`mt-6 w-full rounded-xl py-3.5 font-bold shadow-sm transition-colors sm:mt-8 sm:py-4 ${
-						fieldDisabled || isLoading
+						fieldDisabled || isLoading || uploading
 							? "cursor-not-allowed bg-outlineVariant text-textSecondary"
 							: "bg-primary text-white hover:bg-primaryDark"
 					}`}>
-					{isLoading ? "Saving..." : "Save Changes"}
+					{uploading
+						? "Uploading images..."
+						: isLoading
+							? "Saving..."
+							: "Save Changes"}
 				</button>
 			</form>
 		</div>

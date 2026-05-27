@@ -7,6 +7,7 @@ import {
 	AlertCircle,
 	ArrowLeft,
 	Check,
+	CheckCircle2,
 	Clock,
 	Loader2,
 	MessageSquare,
@@ -59,13 +60,6 @@ type RawRequest = {
 	[item: string]: unknown;
 };
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8080";
-
-const getAuthToken = () => {
-	if (typeof window === "undefined") return null;
-	return localStorage.getItem("campusvault_token");
-};
-
 const toRequestStatus = (value: unknown): RequestStatus => {
 	const normalized = String(value ?? "").toUpperCase();
 	if (normalized === "APPROVED" || normalized === "ACCEPTED") return "Approved";
@@ -116,77 +110,10 @@ const mapRequest = (request: RawRequest): RequestItem => ({
 	createdAt: request.createdAt ? String(request.createdAt) : undefined,
 });
 
-const requestEndpointCandidates = (postId: string | null) => {
-	const base = postId
-		? [`/bookings/requests?postId=${encodeURIComponent(postId)}`, `/booking-requests?postId=${encodeURIComponent(postId)}`, `/requests?postId=${encodeURIComponent(postId)}`]
-		: ["/bookings/requests", "/booking-requests", "/requests"];
-	return base;
-};
-
-const actionEndpointCandidates = (requestId: string, action: "approve" | "reject") => {
-	if (action === "approve") {
-		return [
-			`/bookings/requests/${requestId}/approve`,
-			`/booking-requests/${requestId}/approve`,
-			`/requests/${requestId}/approve`,
-			`/bookings/${requestId}/approve`,
-		];
-	}
-
-	return [
-		`/bookings/requests/${requestId}/reject`,
-		`/booking-requests/${requestId}/reject`,
-		`/requests/${requestId}/reject`,
-		`/bookings/${requestId}/reject`,
-	];
-};
-
-async function tryGetRequests(postId: string | null): Promise<RequestItem[]> {
-	const token = getAuthToken();
-	if (!token) {
-		throw new Error("Please sign in to view booking requests.");
-	}
-
-	let lastError: unknown = null;
-
-	for (const endpoint of requestEndpointCandidates(postId)) {
-		try {
-			const res = await api.get(endpoint, {
-				headers: { Authorization: `Bearer ${token}` },
-			});
-			return unwrapRequests(res.data).map(mapRequest);
-		} catch (err) {
-			lastError = err;
-		}
-	}
-
-	if (lastError instanceof Error) throw lastError;
-	throw new Error("Failed to load booking requests.");
-}
-
-async function tryAction(
-	requestId: string,
-	action: "approve" | "reject",
-	payload?: Record<string, unknown>,
-) {
-	const token = getAuthToken();
-	if (!token) {
-		throw new Error("Please sign in to manage booking requests.");
-	}
-
-	let lastError: unknown = null;
-	for (const endpoint of actionEndpointCandidates(requestId, action)) {
-		try {
-			return await api.post(endpoint, payload ?? {}, {
-				headers: { Authorization: `Bearer ${token}` },
-			});
-		} catch (err) {
-			lastError = err;
-		}
-	}
-
-	if (lastError instanceof Error) throw lastError;
-	throw new Error(`Failed to ${action} request.`);
+async function fetchOwnerBookings(postId: string | null): Promise<RequestItem[]> {
+	const res = await api.get("/bookings/owner");
+	const all = unwrapRequests(res.data).map(mapRequest);
+	return postId ? all.filter((r) => r.postId === postId) : all;
 }
 
 export default function RequestsPage() {
@@ -197,11 +124,17 @@ export default function RequestsPage() {
 	const [loading, setLoading] = useState(true);
 	const [error, setError] = useState("");
 	const [filter, setFilter] = useState<RequestStatus | "All">("Pending");
+	const [successMessage, setSuccessMessage] = useState("");
 
 	const [rejectModalOpen, setRejectModalOpen] = useState(false);
 	const [selectedRequestId, setSelectedRequestId] = useState<string | null>(null);
 	const [rejectionReason, setRejectionReason] = useState("");
 	const [busyRequestId, setBusyRequestId] = useState<string | null>(null);
+
+	const showSuccess = (msg: string) => {
+		setSuccessMessage(msg);
+		setTimeout(() => setSuccessMessage(""), 4000);
+	};
 
 	useEffect(() => {
 		const load = async () => {
@@ -209,7 +142,7 @@ export default function RequestsPage() {
 			setError("");
 
 			try {
-				const liveRequests = await tryGetRequests(postId);
+				const liveRequests = await fetchOwnerBookings(postId);
 				setRequests(liveRequests);
 			} catch (err: any) {
 				console.error("Failed to load requests", err);
@@ -245,12 +178,13 @@ export default function RequestsPage() {
 		setBusyRequestId(id);
 		setError("");
 		try {
-			await tryAction(id, "approve");
+			await api.patch(`/bookings/${id}/approve`);
 			setRequests((prev) =>
 				prev.map((r) =>
 					r.id === id ? { ...r, status: "Approved", rejectionReason: undefined } : r,
 				),
 			);
+			showSuccess("Booking approved successfully.");
 		} catch (err: any) {
 			console.error("Approve failed", err);
 			setError(err?.response?.data?.message || err.message || "Failed to approve request.");
@@ -281,7 +215,7 @@ export default function RequestsPage() {
 		setError("");
 
 		try {
-			await tryAction(selectedRequestId, "reject", { reason });
+			await api.patch(`/bookings/${selectedRequestId}/reject`, { reason });
 			setRequests((prev) =>
 				prev.map((r) =>
 					r.id === selectedRequestId
@@ -290,6 +224,7 @@ export default function RequestsPage() {
 				),
 			);
 			closeRejectModal();
+			showSuccess("Booking rejected and reason saved.");
 		} catch (err: any) {
 			console.error("Reject failed", err);
 			setError(err?.response?.data?.message || err.message || "Failed to reject request.");
@@ -325,6 +260,12 @@ export default function RequestsPage() {
 			</div>
 
 			{error && <div className="rounded-xl bg-errorLight p-4 text-sm font-semibold text-error">{error}</div>}
+
+			{successMessage && (
+				<div className="flex items-center gap-2 rounded-xl bg-successLight p-4 text-sm font-semibold text-success">
+					<CheckCircle2 className="h-4 w-4 shrink-0" /> {successMessage}
+				</div>
+			)}
 
 			<div className="flex flex-wrap gap-2 border-b border-borderLight">
 				{(["Pending", "Approved", "Rejected", "All"] as const).map((tab) => (

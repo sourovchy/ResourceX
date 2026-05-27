@@ -1,9 +1,8 @@
 "use client";
 
 import React, { useEffect, useMemo, useState } from "react";
-import Link from "next/link";
 import api from "@/lib/api";
-import { FileText, Loader2, Scale, AlertTriangle, CheckCircle2 } from "lucide-react";
+import { FileText, Loader2, AlertTriangle, CheckCircle2 } from "lucide-react";
 
 type Dispute = {
 	disputeId: number;
@@ -126,21 +125,13 @@ export default function MyDisputesPage() {
 
 	return (
 		<div className="mx-auto max-w-5xl space-y-5 px-3 pb-20 sm:space-y-6 sm:px-0">
-			<div className="flex flex-col gap-4 rounded-2xl border border-borderLight bg-surface p-4 shadow-sm sm:p-6 md:flex-row md:items-center md:justify-between">
-				<div className="min-w-0">
-					<h1 className="text-xl font-bold tracking-tight text-textPrimary sm:text-2xl">
-						My Disputes &amp; Case History
-					</h1>
-					<p className="mt-1 text-sm text-textSecondary">
-						View all disputes tied to your authenticated account.
-					</p>
-				</div>
-
-				<Link
-					href="/disputes/raise"
-					className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-error px-5 py-2.5 text-sm font-bold text-white shadow-sm transition-colors hover:bg-errorDark md:w-auto">
-					<Scale className="h-4 w-4" /> Raise a Dispute
-				</Link>
+			<div>
+				<h1 className="text-xl font-bold tracking-tight text-textPrimary sm:text-2xl">
+					My Disputes &amp; Case History
+				</h1>
+				<p className="mt-1 text-sm text-textSecondary">
+					View all disputes tied to your authenticated account.
+				</p>
 			</div>
 
 			{error && (

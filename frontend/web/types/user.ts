@@ -18,6 +18,7 @@ export interface UserResponse {
   studentProfile?: StudentProfileResponse | null;
   roles?: string[];
   createdAt?: string;
+  avatarUrl?: string | null;
 }
 
 export interface PendingUserResponse {

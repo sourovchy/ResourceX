@@ -10,6 +10,7 @@ import {
 	DollarSign,
 	Loader2,
 } from "lucide-react";
+import api from "@/lib/api";
 
 type BookingStatus =
 	| "PENDING"
@@ -52,14 +53,7 @@ type EarningsRow = {
 	monthKey: string;
 };
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8080";
-
 const money = (value: number) => `৳ ${new Intl.NumberFormat("en-BD").format(value)}`;
-
-const getAuthToken = () => {
-	if (typeof window === "undefined") return null;
-	return localStorage.getItem("campusvault_token");
-};
 
 const toNumber = (value: unknown) => {
 	const n = Number(value);
@@ -121,23 +115,8 @@ export default function EarningsPage() {
 			setError("");
 
 			try {
-				const token = getAuthToken();
-				if (!token) {
-					throw new Error("Please sign in to view earnings.");
-				}
-
-				const res = await fetch(`${API_BASE_URL}/api/bookings/my`, {
-					headers: {
-						Authorization: `Bearer ${token}`,
-					},
-				});
-
-				if (!res.ok) {
-					throw new Error("Failed to load earnings data.");
-				}
-
-				const payload = await res.json();
-				const rawBookings = unwrapBookings(payload);
+				const res = await api.get("/bookings/owner");
+				const rawBookings = unwrapBookings(res.data);
 
 				const rows = rawBookings
 					.map((booking) => {
