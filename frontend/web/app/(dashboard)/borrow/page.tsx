@@ -7,8 +7,6 @@ import api from "@/lib/api";
 import {
 	Search,
 	Loader2,
-	Heart,
-	Shield,
 } from "lucide-react";
 
 export default function BorrowPage() {
@@ -91,58 +89,48 @@ if (error) {
 }
 
 	return (
-		<div className="mx-auto max-w-6xl space-y-5 px-3 pb-20 sm:space-y-6 sm:px-0">
+		<div className="mx-auto max-w-6xl space-y-5 px-3 pb-20 sm:space-y-6 sm:px-4 lg:px-0">
 			{/* Header */}
-			<div className="flex flex-col gap-4 rounded-2xl border border-borderLight bg-surface p-4 shadow-sm md:flex-row md:items-center md:justify-between sm:p-6">
+			<div className="flex flex-col items-start justify-between gap-3 sm:flex-row sm:items-center sm:gap-4">
 				<div className="min-w-0">
 					<h1 className="text-xl font-bold tracking-tight text-textPrimary sm:text-2xl">
-						Browse Items to Rent
+						Browse Items
 					</h1>
-					<p className="mt-1 text-sm text-textSecondary">
+					<p className="mt-1 text-sm text-textSecondary sm:text-base">
 						Find the gear you need, from trusted students on campus.
 					</p>
 				</div>
-
-				<div className="flex w-full items-center gap-3 md:w-auto">
-					<Link
-						href="/borrow/deposit-tracker"
-						className="inline-flex shrink-0 items-center gap-2 rounded-xl border border-borderLight bg-surfaceVariant px-4 py-2 text-sm font-semibold text-textSecondary transition-colors hover:border-primary/40 hover:text-primary">
-						<Shield className="w-4 h-4" />
-						<span className="hidden sm:inline">Deposits</span>
-					</Link>
-					<Link
-						href="/borrow/wishlist"
-						className="inline-flex shrink-0 items-center gap-2 rounded-xl border border-borderLight bg-surfaceVariant px-4 py-2 text-sm font-semibold text-textSecondary transition-colors hover:border-primary/40 hover:text-primary">
-						<Heart className="w-4 h-4" />
-						<span className="hidden sm:inline">Wishlist</span>
-					</Link>
-					<div className="relative min-w-0 flex-1 md:w-64">
-						<Search className="w-4 h-4 text-textTertiary absolute left-3 top-1/2 -translate-y-1/2" />
-						<input
-							type="text"
-							placeholder="Search items..."
-							value={searchQuery}
-							onChange={(e) => setSearchQuery(e.target.value)}
-							className="w-full rounded-xl border border-borderLight bg-surfaceVariant py-2 pl-9 pr-4 text-sm text-textPrimary outline-none focus:border-primary focus:ring-1 focus:ring-primary"
-						/>
-					</div>
-				</div>
 			</div>
 
-			{/* Categories */}
-			<div className="flex gap-2 overflow-x-auto pb-2 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-				{categories.map((cat) => (
-					<button
-						key={cat}
-						onClick={() => setActiveCategory(cat)}
-						className={`whitespace-nowrap rounded-full px-3 py-2 text-sm font-semibold transition-all sm:px-4 ${
-							activeCategory === cat
-								? "bg-primary text-white shadow-md shadow-primary/20"
-								: "bg-surface border border-borderLight text-textSecondary hover:border-primary/40"
-						}`}>
-						{cat}
-					</button>
-				))}
+			{/* Search and Filters Row */}
+			<div className="flex flex-col-reverse gap-4 sm:flex-row sm:items-center sm:justify-between">
+				{/* Categories */}
+				<div className="flex w-full gap-2 overflow-x-auto pb-1 sm:w-auto sm:pb-0 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+					{categories.map((cat) => (
+						<button
+							key={cat}
+							onClick={() => setActiveCategory(cat)}
+							className={`whitespace-nowrap rounded-full px-3 py-2 text-sm font-semibold transition-all sm:px-4 ${
+								activeCategory === cat
+									? "bg-primary text-white shadow-md shadow-primary/20"
+									: "bg-surface border border-borderLight text-textSecondary hover:border-primary/40 hover:text-textPrimary"
+							}`}>
+							{cat}
+						</button>
+					))}
+				</div>
+
+				{/* Search */}
+				<div className="relative w-full shrink-0 sm:w-72">
+					<Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-textTertiary" />
+					<input
+						type="text"
+						placeholder="Search items..."
+						value={searchQuery}
+						onChange={(e) => setSearchQuery(e.target.value)}
+						className="w-full rounded-xl border border-borderLight bg-surface py-2.5 pl-9 pr-4 text-sm text-textPrimary shadow-sm outline-none focus:border-primary focus:ring-1 focus:ring-primary"
+					/>
+				</div>
 			</div>
 
 			{/* Grid */}
@@ -165,9 +153,9 @@ if (error) {
 					))}
 				</div>
 			) : (
-				<div className="rounded-2xl border border-dashed border-borderLight bg-surfaceVariant px-4 py-14 text-center sm:py-20">
+				<div className="rounded-2xl border border-borderLight bg-surface py-16 text-center shadow-sm sm:py-20">
 					<p className="text-sm font-medium text-textSecondary sm:text-base">
-						No listings found. Create your first listing.
+						No listings found for your search.
 					</p>
 				</div>
 			)}
