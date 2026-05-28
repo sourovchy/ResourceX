@@ -6,6 +6,8 @@ import { MessageSquare, Star } from "lucide-react";
 import api from "@/lib/api";
 import { useAuth } from "@/context/AuthContext";
 import type { ReviewResponse } from "@/types/review";
+import { PageEmpty } from "@/components/ui/PageEmpty";
+import { formatShortDate } from "@/lib/dateUtils";
 
 type ReviewTab = "received" | "given";
 
@@ -85,14 +87,15 @@ export default function MyReviewsPage() {
 					{error}
 				</div>
 			) : reviews.length === 0 ? (
-				<div className="rounded-2xl border border-borderLight bg-surface p-4 text-center shadow-sm sm:p-8">
-					<p className="text-sm font-semibold text-textPrimary">No reviews yet</p>
-					<p className="mt-2 text-sm text-textSecondary">
-						{tab === "received"
+				<PageEmpty
+					icon={Star}
+					title="No reviews yet"
+					description={
+						tab === "received"
 							? "Reviews from other users will appear here once submitted."
-							: "Reviews you have written will appear here."}
-					</p>
-				</div>
+							: "Reviews you have written will appear here after completing a booking."
+					}
+				/>
 			) : (
 				<div className="space-y-4 pt-2">
 					{reviews.map((r) => {
@@ -108,7 +111,7 @@ export default function MyReviewsPage() {
 										</h3>
 										<div className="mt-1 text-xs font-semibold text-textSecondary">
 											{tab === "received" ? "Received" : "Given"} •{" "}
-											{r.createdAt ? new Date(r.createdAt).toLocaleDateString() : "—"}
+											{formatShortDate(r.createdAt)}
 										</div>
 									</div>
 									<div className="flex items-center gap-1">

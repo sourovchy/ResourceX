@@ -2,7 +2,7 @@
 
 import React, { useState } from "react";
 import Link from "next/link";
-import { UploadCloud, CheckCircle2, X } from "lucide-react";
+import { UploadCloud, CheckCircle2, X, Loader2 } from "lucide-react";
 import api from "@/lib/api";
 import { useImageUpload } from "@/hooks/useImageUpload";
 
@@ -20,6 +20,7 @@ export default function AddItemPage() {
 	const [submitted, setSubmitted] = useState(false);
 	const [isLoading, setIsLoading] = useState(false);
 	const [error, setError] = useState("");
+	const [fieldErrors, setFieldErrors] = useState<Partial<Record<keyof FormState, string>>>({});
 	const [form, setForm] = useState<FormState>({
 		title: "",
 		category: "",
@@ -72,9 +73,26 @@ export default function AddItemPage() {
 		return () => { active = false; };
 	}, []);
 
+	const validate = (): boolean => {
+		const errors: Partial<Record<keyof FormState, string>> = {};
+		if (!form.title.trim() || form.title.trim().length < 3) errors.title = "Title must be at least 3 characters.";
+		if (!form.category) errors.category = "Please select a category.";
+		if (!form.condition) errors.condition = "Please select a condition.";
+		if (!form.description.trim() || form.description.trim().length < 20) errors.description = "Description must be at least 20 characters.";
+		const price = parseFloat(form.price);
+		if (!form.price || isNaN(price) || price <= 0) errors.price = "Enter a valid daily price greater than 0.";
+		if (form.deposit) {
+			const dep = parseFloat(form.deposit);
+			if (isNaN(dep) || dep < 0) errors.deposit = "Deposit must be a non-negative number.";
+		}
+		setFieldErrors(errors);
+		return Object.keys(errors).length === 0;
+	};
+
 	const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
 		e.preventDefault();
 		setError("");
+		if (!validate()) return;
 		setIsLoading(true);
 
 		try {
@@ -105,7 +123,11 @@ export default function AddItemPage() {
 			HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement
 		>,
 	) => {
-		setForm({ ...form, [e.target.name]: e.target.value });
+		const { name, value } = e.target;
+		setForm((prev) => ({ ...prev, [name]: value }));
+		if (fieldErrors[name as keyof FormState]) {
+			setFieldErrors((prev) => ({ ...prev, [name]: undefined }));
+		}
 	};
 
 	if (submitted) {
@@ -164,10 +186,10 @@ export default function AddItemPage() {
 							onChange={handleChange}
 							type="text"
 							placeholder="e.g. Sony Alpha A7III"
-							className="w-full rounded-xl border border-borderLight bg-surface px-4 py-3 text-sm text-textPrimary transition focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
+							className={`w-full rounded-xl border bg-surface px-4 py-3 text-sm text-textPrimary transition focus:outline-none focus:ring-1 ${fieldErrors.title ? "border-error focus:border-error focus:ring-error" : "border-borderLight focus:border-primary focus:ring-primary"}`}
 							maxLength={100}
-							required
 						/>
+						{fieldErrors.title && <p className="text-xs text-error">{fieldErrors.title}</p>}
 					</div>
 
 					<div className="grid grid-cols-1 gap-4 md:grid-cols-2">
@@ -195,8 +217,8 @@ export default function AddItemPage() {
 									</option>
 								))}
 							</select>
-							{categoriesError && (
-								<p className="mt-1 text-xs text-error">{categoriesError}</p>
+							{(categoriesError || fieldErrors.category) && (
+								<p className="mt-1 text-xs text-error">{categoriesError || fieldErrors.category}</p>
 							)}
 						</div>
 
@@ -208,13 +230,13 @@ export default function AddItemPage() {
 								name="condition"
 								value={form.condition}
 								onChange={handleChange}
-								className="w-full rounded-xl border border-borderLight bg-surface px-4 py-3 text-sm text-textPrimary transition focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
-								required>
+								className={`w-full rounded-xl border bg-surface px-4 py-3 text-sm text-textPrimary transition focus:outline-none focus:ring-1 ${fieldErrors.condition ? "border-error focus:border-error focus:ring-error" : "border-borderLight focus:border-primary focus:ring-primary"}`}>
 								<option value="">Select Condition</option>
 								<option value="New">New</option>
 								<option value="Good">Good</option>
 								<option value="Fair">Fair</option>
 							</select>
+							{fieldErrors.condition && <p className="text-xs text-error">{fieldErrors.condition}</p>}
 						</div>
 					</div>
 
@@ -228,10 +250,10 @@ export default function AddItemPage() {
 							onChange={handleChange}
 							rows={4}
 							placeholder="Describe the item, what is included, and any important rules..."
-							className="w-full resize-none rounded-xl border border-borderLight bg-surface px-4 py-3 text-sm text-textPrimary transition focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
+							className={`w-full resize-none rounded-xl border bg-surface px-4 py-3 text-sm text-textPrimary transition focus:outline-none focus:ring-1 ${fieldErrors.description ? "border-error focus:border-error focus:ring-error" : "border-borderLight focus:border-primary focus:ring-primary"}`}
 							maxLength={1000}
-							required
 						/>
+						{fieldErrors.description && <p className="text-xs text-error">{fieldErrors.description}</p>}
 					</div>
 				</div>
 
@@ -254,9 +276,9 @@ export default function AddItemPage() {
 								min="0"
 								max="100000"
 								placeholder="Rental cost per day e.g. 500"
-								className="w-full rounded-xl border border-borderLight bg-surface px-4 py-3 text-sm text-textPrimary transition focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
-								required
+								className={`w-full rounded-xl border bg-surface px-4 py-3 text-sm text-textPrimary transition focus:outline-none focus:ring-1 ${fieldErrors.price ? "border-error focus:border-error focus:ring-error" : "border-borderLight focus:border-primary focus:ring-primary"}`}
 							/>
+							{fieldErrors.price && <p className="text-xs text-error">{fieldErrors.price}</p>}
 						</div>
 
 						<div className="space-y-2">
@@ -271,8 +293,9 @@ export default function AddItemPage() {
 								min="0"
 								max="100000"
 								placeholder="Optional security deposit e.g. 100"
-								className="w-full rounded-xl border border-borderLight bg-surface px-4 py-3 text-sm text-textPrimary transition focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
+								className={`w-full rounded-xl border bg-surface px-4 py-3 text-sm text-textPrimary transition focus:outline-none focus:ring-1 ${fieldErrors.deposit ? "border-error focus:border-error focus:ring-error" : "border-borderLight focus:border-primary focus:ring-primary"}`}
 							/>
+							{fieldErrors.deposit && <p className="text-xs text-error">{fieldErrors.deposit}</p>}
 						</div>
 					</div>
 				</div>
@@ -327,11 +350,14 @@ export default function AddItemPage() {
 					type="submit"
 					disabled={isLoading || uploading}
 					className="mt-6 w-full rounded-xl bg-primary py-3.5 font-bold text-white shadow-sm transition-colors hover:bg-primaryDark disabled:cursor-not-allowed disabled:opacity-50 sm:mt-8 sm:py-4">
-					{uploading
-						? "Uploading images..."
-						: isLoading
-							? "Publishing..."
-							: "Publish Listing"}
+					{uploading || isLoading ? (
+						<span className="flex items-center justify-center gap-2">
+							<Loader2 className="h-4 w-4 animate-spin" />
+							{uploading ? "Uploading images..." : "Publishing..."}
+						</span>
+					) : (
+						"Publish Listing"
+					)}
 				</button>
 			</form>
 		</div>

@@ -1,13 +1,10 @@
 "use client";
 
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useState } from "react";
+import { CheckCircle2, FileText, Loader2, AlertTriangle } from "lucide-react";
 import api from "@/lib/api";
-import {
-	CheckCircle2,
-	FileText,
-	Loader2,
-	AlertTriangle,
-} from "lucide-react";
+import { PageEmpty } from "@/components/ui/PageEmpty";
+import { formatShortDate } from "@/lib/dateUtils";
 
 type Dispute = {
 	disputeId: number;
@@ -18,69 +15,7 @@ type Dispute = {
 	title?: string;
 };
 
-type DisputeApiResponse =
-	| {
-			disputes?: unknown;
-			data?: unknown;
-			content?: unknown;
-	  }
-	| unknown;
-
-const DISPUTE_ENDPOINTS = ["/disputes", "/api/disputes", "/student/disputes"];
-
-function normalizeDispute(raw: any): Dispute {
-	return {
-		disputeId: Number(raw?.disputeId ?? raw?.id ?? raw?.dispute_id ?? 0),
-		bookingId: Number(
-			raw?.bookingId ?? raw?.booking_id ?? raw?.booking?.bookingId ?? 0,
-		),
-		status: String(raw?.status ?? "open"),
-		createdAt: raw?.createdAt ?? raw?.created_at ?? raw?.createdOn,
-		reason: raw?.reason ?? raw?.description ?? raw?.message ?? raw?.details,
-		title: raw?.title ?? raw?.subject ?? raw?.issueTitle,
-	};
-}
-
-function extractDisputes(payload: DisputeApiResponse) {
-	const root: any = payload && typeof payload === "object" ? payload : {};
-	const source = root.disputes ?? root.data ?? root.content ?? payload;
-
-	if (!Array.isArray(source)) {
-		return [] as Dispute[];
-	}
-
-	return source.map((item: any) => normalizeDispute(item));
-}
-
-function getAuthHeaders(): Record<string, string> {
-	if (typeof window === "undefined") return {};
-
-	const token = localStorage.getItem("resourcex_token");
-
-	return token
-		? {
-				Authorization: `Bearer ${token}`,
-			}
-		: {};
-}
-
-async function fetchDisputesFromEndpoint(endpoint: string) {
-	const response = await api.get<DisputeApiResponse>(endpoint, {
-		headers: {
-			"Content-Type": "application/json",
-			...getAuthHeaders(),
-		},
-	});
-
-	return extractDisputes(response.data);
-}
-
-function formatDate(date?: string) {
-	if (!date) return "—";
-	return new Date(date).toLocaleDateString();
-}
-
-export default function DisputesPage() {
+export default function StudentDisputes() {
 	const [disputes, setDisputes] = useState<Dispute[]>([]);
 	const [loading, setLoading] = useState(true);
 	const [error, setError] = useState<string | null>(null);
@@ -88,50 +23,25 @@ export default function DisputesPage() {
 	useEffect(() => {
 		let active = true;
 
-		const loadDisputes = async () => {
+		const load = async () => {
 			setLoading(true);
 			setError(null);
-
 			try {
-				let loadedDisputes: Dispute[] = [];
-
-				for (const endpoint of DISPUTE_ENDPOINTS) {
-					try {
-						const normalized = await fetchDisputesFromEndpoint(endpoint);
-						if (normalized.length > 0) {
-							loadedDisputes = normalized;
-							break;
-						}
-					} catch {
-						// try next endpoint
-					}
-				}
-
+				const res = await api.get<Dispute[] | { content?: Dispute[] }>("/disputes");
 				if (!active) return;
-				setDisputes(loadedDisputes);
+				const data = res.data;
+				setDisputes(Array.isArray(data) ? data : (data as { content?: Dispute[] }).content ?? []);
 			} catch (err) {
 				if (!active) return;
-				setError(
-					err instanceof Error ? err.message : "Failed to load disputes.",
-				);
+				setError(err instanceof Error ? err.message : "Failed to load disputes.");
 			} finally {
 				if (active) setLoading(false);
 			}
 		};
 
-		void loadDisputes();
-
-		return () => {
-			active = false;
-		};
+		void load();
+		return () => { active = false; };
 	}, []);
-
-	const openCount = useMemo(
-		() =>
-			disputes.filter((dispute) => dispute.status.toLowerCase() !== "resolved")
-				.length,
-		[disputes],
-	);
 
 	if (loading) {
 		return (
@@ -144,17 +54,13 @@ export default function DisputesPage() {
 
 	return (
 		<div className="mx-auto max-w-7xl space-y-6 px-4 pb-20 sm:px-6 lg:px-8">
-			{/* Header */}
 			<div>
-				<h1 className="text-2xl font-bold text-textPrimary tracking-tight">
-					Disputes
-				</h1>
+				<h1 className="text-2xl font-bold tracking-tight text-textPrimary">Disputes</h1>
 				<p className="mt-1 text-sm text-textSecondary">
 					View your dispute history or raise a new issue for admin review.
 				</p>
 			</div>
 
-			{/* Error banner – consistent with admin error style */}
 			{error && (
 				<div className="flex items-center gap-3 rounded-xl border border-error/40 bg-errorLight px-4 py-3 text-sm font-medium text-error">
 					<AlertTriangle className="h-4 w-4 shrink-0" />
@@ -162,44 +68,50 @@ export default function DisputesPage() {
 				</div>
 			)}
 
-			{/* Disputes list card – matches pending approvals panel */}
-			<div className="overflow-hidden rounded-xl border border-borderLight bg-surface shadow-sm">
-				{disputes.length === 0 ? (
-					<div className="flex flex-col items-center justify-center gap-3 px-5 py-12 text-center">
-						<CheckCircle2 className="h-12 w-12 text-success" />
-						<p className="text-textSecondary">
-							You have no open or past disputes.
-						</p>
-						<p className="text-xs text-textTertiary">
-							Open disputes: {openCount}
-						</p>
-					</div>
-				) : (
+			{disputes.length === 0 ? (
+				<PageEmpty
+					icon={CheckCircle2}
+					title="No disputes on record"
+					description="You have no open or past disputes. If something goes wrong with a booking, you can raise a dispute from the Bookings page."
+				/>
+			) : (
+				<div className="overflow-hidden rounded-xl border border-borderLight bg-surface shadow-sm">
 					<div className="divide-y divide-borderLight">
-						{disputes.map((dispute) => (
-							<div
-								key={dispute.disputeId}
-								className="flex flex-col gap-3 px-5 py-4 transition-colors hover:bg-surfaceVariant/60 sm:flex-row sm:items-center sm:justify-between">
-								<div className="min-w-0 flex-1">
-									<div className="font-bold text-textPrimary">
-										{dispute.title ?? `Booking #${dispute.bookingId}`}
+						{disputes.map((d) => {
+							const status = d.status.toLowerCase();
+							const statusClass =
+								status === "resolved"
+									? "bg-successLight text-success"
+									: status === "rejected"
+										? "bg-errorLight text-error"
+										: "bg-warningLight text-warningDark";
+
+							return (
+								<div
+									key={d.disputeId}
+									className="flex flex-col gap-3 px-5 py-4 transition-colors hover:bg-surfaceVariant/60 sm:flex-row sm:items-center sm:justify-between">
+									<div className="min-w-0 flex-1">
+										<div className="font-bold text-textPrimary">
+											{d.title ?? `Booking #${d.bookingId}`}
+										</div>
+										<div className="mt-0.5 text-sm text-textSecondary">
+											DSP-{d.disputeId}
+											{d.reason ? ` • ${d.reason}` : ""}
+										</div>
+										<div className="mt-1 text-xs text-textTertiary">
+											Filed: {formatShortDate(d.createdAt)}
+										</div>
 									</div>
-									<div className="mt-0.5 text-sm text-textSecondary">
-										DSP-{dispute.disputeId}
-										{dispute.reason ? ` • ${dispute.reason}` : ""}
-									</div>
-									<div className="mt-1 text-xs text-textTertiary">
-										Created: {formatDate(dispute.createdAt)}
-									</div>
+									<span
+										className={`inline-flex w-fit shrink-0 items-center rounded-full px-2.5 py-1 text-xs font-bold capitalize ${statusClass}`}>
+										{d.status}
+									</span>
 								</div>
-								<span className="inline-flex w-fit shrink-0 items-center rounded-full bg-warningLight px-2.5 py-1 text-xs font-bold capitalize text-warning">
-									{dispute.status}
-								</span>
-							</div>
-						))}
+							);
+						})}
 					</div>
-				)}
-			</div>
+				</div>
+			)}
 		</div>
 	);
 }

@@ -12,14 +12,25 @@ import {
 	AlertTriangle,
 	Heart,
 	Loader2,
+	Link2,
 } from "lucide-react";
+import { useToast } from "@/context/ToastContext";
 
 export default function ItemDetailPage({ params }: { params: { id: string } }) {
+	const { toast } = useToast();
 	const [item, setItem] = useState<ItemResponse | null>(null);
 	const [loading, setLoading] = useState(true);
 	const [error, setError] = useState<string | null>(null);
 	const [isWishlisted, setIsWishlisted] = useState(false);
 	const [wishlistLoading, setWishlistLoading] = useState(false);
+
+	const copyShareLink = () => {
+		const url = window.location.href;
+		navigator.clipboard.writeText(url).then(
+			() => toast("Link copied to clipboard!"),
+			() => toast("Could not copy link.", "error"),
+		);
+	};
 
 	useEffect(() => {
 		let active = true;
@@ -201,6 +212,12 @@ export default function ItemDetailPage({ params }: { params: { id: string } }) {
 							className="block w-full rounded-xl bg-primary py-3.5 text-center font-bold text-white shadow-sm transition-colors hover:bg-primaryDark">
 							Book This Item
 						</Link>
+						<button
+							onClick={copyShareLink}
+							className="flex w-full items-center justify-center gap-2 rounded-xl border border-borderLight py-3 text-sm font-semibold text-textSecondary transition-colors hover:bg-surfaceVariant">
+							<Link2 className="h-4 w-4" />
+							Copy Shareable Link
+						</button>
 						<div className="flex items-start gap-2 rounded-xl bg-warningLight/50 p-3 text-xs font-medium text-warningDark">
 							<AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
 							Please inspect the item carefully upon pickup and return it in the

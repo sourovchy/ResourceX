@@ -126,6 +126,7 @@ CREATE TABLE items (
     daily_rate     DECIMAL(10,2) NOT NULL,
     status         ENUM('AVAILABLE', 'UNAVAILABLE', 'BLOCKED') NOT NULL DEFAULT 'AVAILABLE',
     description    TEXT,
+    version        BIGINT NOT NULL DEFAULT 0,
     created_at     TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at     TIMESTAMP NULL DEFAULT NULL ON UPDATE CURRENT_TIMESTAMP,
     CONSTRAINT fk_items_owner
@@ -148,6 +149,7 @@ CREATE TABLE bookings (
     end_date             DATE NOT NULL,
     returned_date        DATE DEFAULT NULL,
     total_price          DECIMAL(10,2) NOT NULL,
+    version              BIGINT NOT NULL DEFAULT 0,
     approved_by_user_id  BIGINT DEFAULT NULL,
     approved_at          TIMESTAMP NULL DEFAULT NULL,
     created_at           TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
