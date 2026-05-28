@@ -23,7 +23,6 @@ export default function EditItemPage() {
 	const [desc, setDesc] = useState("");
 	const [price, setPrice] = useState("");
 	const [deposit, setDeposit] = useState("");
-	const [isActive, setIsActive] = useState(true);
 
 	const [categories, setCategories] = useState<{ id: string | number; name: string }[]>([]);
 	const [isCategoriesLoading, setIsCategoriesLoading] = useState(true);
@@ -46,7 +45,7 @@ export default function EditItemPage() {
 			try {
 				const res = await api.get("/categories");
 				if (!active) return;
-				
+
 				const raw = res.data;
 				const list = Array.isArray(raw)
 					? raw
@@ -55,7 +54,7 @@ export default function EditItemPage() {
 						: Array.isArray(raw?.content)
 							? raw.content
 							: [];
-				
+
 				const normalizedCategories = list.map((c: any) => ({
 					id: c.id ?? c.categoryId ?? c.name,
 					name: c.name ?? "",
@@ -89,7 +88,6 @@ export default function EditItemPage() {
 				setDesc(item.description ?? "");
 				setPrice(item.dailyRate != null ? String(item.dailyRate) : "");
 				setDeposit(item.deposit != null ? String(item.deposit) : "");
-				setIsActive(item.status === "AVAILABLE");
 
 				if (item.imageUrls?.length) {
 					setPreviews(
@@ -143,8 +141,6 @@ export default function EditItemPage() {
 		}
 	};
 
-	const fieldDisabled = !isActive;
-
 	if (isFetching) {
 		return (
 			<div className="mx-auto flex max-w-3xl flex-col items-center justify-center space-y-3 px-3 py-16 text-center sm:px-4 sm:py-20">
@@ -179,34 +175,13 @@ export default function EditItemPage() {
 
 	return (
 		<div className="mx-auto max-w-3xl space-y-5 px-3 pb-16 sm:px-4 sm:pb-20 lg:px-0">
-			
 
-			<div className="flex flex-col items-start justify-between gap-3 sm:flex-row sm:items-center sm:gap-4">
+
+			<div>
 				<h1 className="text-xl font-bold tracking-tight text-textPrimary sm:text-2xl">
 					Edit Item
 				</h1>
-
-				<div className="flex items-center gap-2 rounded-xl bg-surfaceVariant px-4 py-2 text-sm font-bold text-textPrimary">
-					Available:
-					<button
-						type="button"
-						onClick={() => setIsActive(!isActive)}
-						className={`relative h-5 w-10 rounded-full transition-colors ${isActive ? "bg-success" : "bg-outlineVariant"}`}>
-						<span
-							className={`absolute top-0.5 h-4 w-4 rounded-full bg-white transition-transform ${
-								isActive ? "left-[22px]" : "left-0.5"
-							}`}
-						/>
-					</button>
-				</div>
 			</div>
-
-			{!isActive && (
-				<div className="rounded-xl border border-warning/30 bg-warningLight px-4 py-3 text-sm font-medium text-warning">
-					This item is currently unavailable. Enable availability before
-					editing the listing details.
-				</div>
-			)}
 
 			{(error || uploadError) && (
 				<div className="rounded-xl bg-errorLight p-4 text-sm font-semibold text-error">
@@ -227,12 +202,7 @@ export default function EditItemPage() {
 						<input
 							value={title}
 							onChange={(e) => setTitle(e.target.value)}
-							disabled={fieldDisabled}
-							className={`w-full rounded-xl border border-borderLight px-4 py-3 text-sm transition ${
-								fieldDisabled
-									? "cursor-not-allowed bg-surfaceVariant text-textSecondary"
-									: "bg-surface text-textPrimary"
-							}`}
+							className="w-full rounded-xl border border-borderLight bg-surface px-4 py-3 text-sm text-textPrimary transition"
 							maxLength={100}
 						/>
 					</div>
@@ -245,9 +215,9 @@ export default function EditItemPage() {
 							<select
 								value={category}
 								onChange={(e) => setCategory(e.target.value)}
-								disabled={fieldDisabled || isCategoriesLoading || !!categoriesError}
+								disabled={isCategoriesLoading || !!categoriesError}
 								className={`w-full rounded-xl border border-borderLight px-4 py-3 text-sm transition ${
-									fieldDisabled || isCategoriesLoading || !!categoriesError
+									isCategoriesLoading || !!categoriesError
 										? "cursor-not-allowed bg-surfaceVariant text-textSecondary"
 										: "bg-surface text-textPrimary"
 								}`}>
@@ -276,12 +246,8 @@ export default function EditItemPage() {
 							<select
 								value={condition}
 								onChange={(e) => setCondition(e.target.value)}
-								disabled={fieldDisabled}
-								className={`w-full rounded-xl border border-borderLight px-4 py-3 text-sm transition ${
-									fieldDisabled
-										? "cursor-not-allowed bg-surfaceVariant text-textSecondary"
-										: "bg-surface text-textPrimary"
-								}`}>
+								className="w-full rounded-xl border border-borderLight bg-surface px-4 py-3 text-sm text-textPrimary transition"
+							>
 								<option value="New">New</option>
 								<option value="Good">Good</option>
 								<option value="Fair">Fair</option>
@@ -297,12 +263,7 @@ export default function EditItemPage() {
 							value={desc}
 							onChange={(e) => setDesc(e.target.value)}
 							rows={4}
-							disabled={fieldDisabled}
-							className={`w-full resize-none rounded-xl border border-borderLight px-4 py-3 text-sm transition ${
-								fieldDisabled
-									? "cursor-not-allowed bg-surfaceVariant text-textSecondary"
-									: "bg-surface text-textPrimary"
-							}`}
+							className="w-full resize-none rounded-xl border border-borderLight bg-surface px-4 py-3 text-sm text-textPrimary transition"
 							maxLength={1000}
 						/>
 					</div>
@@ -327,12 +288,7 @@ export default function EditItemPage() {
 								type="number"
 								min="0"
 								max="100000"
-								disabled={fieldDisabled}
-								className={`w-full rounded-xl border px-4 py-3 text-sm transition ${
-									fieldDisabled
-										? "cursor-not-allowed bg-surfaceVariant text-textSecondary"
-										: "border-borderLight bg-surface text-textPrimary"
-								}`}
+								className="w-full rounded-xl border border-borderLight bg-surface px-4 py-3 text-sm text-textPrimary transition"
 								placeholder="e.g. 500"
 							/>
 						</div>
@@ -350,12 +306,7 @@ export default function EditItemPage() {
 								type="number"
 								min="0"
 								max="100000"
-								disabled={fieldDisabled}
-								className={`w-full rounded-xl border px-4 py-3 text-sm transition ${
-									fieldDisabled
-										? "cursor-not-allowed bg-surfaceVariant text-textSecondary"
-										: "border-borderLight bg-surface text-textPrimary"
-								}`}
+								className="w-full rounded-xl border border-borderLight bg-surface px-4 py-3 text-sm text-textPrimary transition"
 								placeholder="e.g. 100"
 							/>
 						</div>
@@ -368,7 +319,7 @@ export default function EditItemPage() {
 					</h2>
 
 					<label
-						className={`flex cursor-pointer flex-col items-center justify-center rounded-2xl border-2 border-dashed border-borderLight bg-surfaceVariant p-5 text-center transition-colors hover:border-primary sm:p-8 ${fieldDisabled ? "cursor-not-allowed opacity-60" : ""}`}>
+						className="flex cursor-pointer flex-col items-center justify-center rounded-2xl border-2 border-dashed border-borderLight bg-surfaceVariant p-5 text-center transition-colors hover:border-primary sm:p-8">
 						<UploadCloud className="mb-2 h-8 w-8 text-primary sm:h-10 sm:w-10" />
 						<span className="text-sm font-bold text-textPrimary">
 							Upload Photos
@@ -382,7 +333,6 @@ export default function EditItemPage() {
 							accept="image/jpeg,image/png,image/webp"
 							className="hidden"
 							onChange={(e) => e.target.files && addFiles(e.target.files)}
-							disabled={fieldDisabled}
 						/>
 					</label>
 
@@ -397,14 +347,14 @@ export default function EditItemPage() {
 										alt=""
 										className="h-full w-full object-cover"
 									/>
-									{!fieldDisabled && (
+									{
 										<button
 											type="button"
 											onClick={() => removeFile(i)}
 											className="absolute right-1 top-1 flex h-5 w-5 items-center justify-center rounded-full bg-black/60 text-white transition hover:bg-error">
 											<X className="h-3 w-3" />
 										</button>
-									)}
+									}
 								</div>
 							))}
 						</div>
@@ -413,9 +363,9 @@ export default function EditItemPage() {
 
 				<button
 					type="submit"
-					disabled={fieldDisabled || isLoading || uploading}
+					disabled={isLoading || uploading}
 					className={`mt-6 w-full rounded-xl py-3.5 font-bold shadow-sm transition-colors sm:mt-8 sm:py-4 ${
-						fieldDisabled || isLoading || uploading
+						isLoading || uploading
 							? "cursor-not-allowed bg-outlineVariant text-textSecondary"
 							: "bg-primary text-white hover:bg-primaryDark"
 					}`}>

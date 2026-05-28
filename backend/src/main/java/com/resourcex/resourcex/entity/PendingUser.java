@@ -47,9 +47,8 @@ public class PendingUser {
     @Column(length = 100)
     private String department;
 
-    @Lob
-    @Column(name = "id_card_data_url", columnDefinition = "LONGTEXT")
-    private String idCardDataUrl;
+    @Column(name = "id_card_file_id")
+    private Long idCardFileId;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)

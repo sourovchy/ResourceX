@@ -40,9 +40,8 @@ public class StudentProfile {
     @Column(length = 100)
     private String department;
 
-    @Lob
-    @Column(name = "id_card_data_url", columnDefinition = "LONGTEXT")
-    private String idCardDataUrl;
+    @Column(name = "id_card_file_id")
+    private Long idCardFileId;
 
     @Builder.Default
     @Column(name = "trust_score", nullable = false)

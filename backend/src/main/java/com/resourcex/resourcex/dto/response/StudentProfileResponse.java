@@ -13,7 +13,7 @@ public class StudentProfileResponse {
     private String phone;
     private String university;
     private String department;
-    private String idCardDataUrl;
+    private Long idCardFileId;
     private Integer trustScore;
     private Boolean emailVerified;
     private Boolean phoneVerified;

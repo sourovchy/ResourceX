@@ -49,6 +49,5 @@ public class RegisterRequest {
     @Size(max = 100, message = "Department name must not exceed 100 characters")
     private String department;
 
-    @Size(max = 5000, message = "ID card data URL is too long")
-    private String idCardDataUrl;
+    private Long idCardFileId;
 }

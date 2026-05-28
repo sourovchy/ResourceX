@@ -17,7 +17,7 @@ public class PendingUserResponse {
     private String phone;
     private String university;
     private String department;
-    private String idCardDataUrl;
+    private Long idCardFileId;
     private PendingUserStatus status;
     private LocalDateTime createdAt;
 }

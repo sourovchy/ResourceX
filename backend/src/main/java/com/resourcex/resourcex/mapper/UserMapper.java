@@ -49,7 +49,7 @@ public class UserMapper {
                         .university(studentProfile.getUniversity() != null ? studentProfile.getUniversity().getName()
                                 : null)
                         .department(studentProfile.getDepartment())
-                        .idCardDataUrl(studentProfile.getIdCardDataUrl())
+                        .idCardFileId(studentProfile.getIdCardFileId())
                         .trustScore(studentProfile.getTrustScore())
                         .emailVerified(studentProfile.getEmailVerified())
                         .phoneVerified(studentProfile.getPhoneVerified())

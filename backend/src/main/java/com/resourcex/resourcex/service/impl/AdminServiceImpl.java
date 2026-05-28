@@ -102,7 +102,7 @@ public class AdminServiceImpl implements AdminService {
                                 .phone(pending.getPhone())
                                 .university(pending.getUniversity())
                                 .department(pending.getDepartment())
-                                .idCardDataUrl(pending.getIdCardDataUrl())
+                                .idCardFileId(pending.getIdCardFileId())
                                 .trustScore(100)
                                 .emailVerified(false)
                                 .phoneVerified(false)
@@ -281,7 +281,7 @@ public class AdminServiceImpl implements AdminService {
                                 .phone(pending.getPhone())
                                 .university(pending.getUniversity() != null ? pending.getUniversity().getName() : null)
                                 .department(pending.getDepartment())
-                                .idCardDataUrl(pending.getIdCardDataUrl())
+                                .idCardFileId(pending.getIdCardFileId())
                                 .status(pending.getStatus())
                                 .createdAt(pending.getCreatedAt())
                                 .build();

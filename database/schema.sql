@@ -100,7 +100,7 @@ CREATE TABLE pending_users (
     department          VARCHAR(100),
     status              ENUM('PENDING', 'APPROVED', 'REJECTED') NOT NULL DEFAULT 'PENDING',
     password_hash       VARCHAR(255) NOT NULL,
-    id_card_data_url    LONGTEXT,
+    id_card_file_id     BIGINT NULL,
     reviewed_by_user_id BIGINT NULL,
     reviewed_at         TIMESTAMP NULL DEFAULT NULL,
     rejection_reason    TEXT NULL,
@@ -109,12 +109,15 @@ CREATE TABLE pending_users (
     CONSTRAINT fk_pending_users_university
         FOREIGN KEY (university_id) REFERENCES universities(university_id) ON DELETE SET NULL,
     CONSTRAINT fk_pending_users_reviewed_by
-        FOREIGN KEY (reviewed_by_user_id) REFERENCES users(user_id) ON DELETE SET NULL
+        FOREIGN KEY (reviewed_by_user_id) REFERENCES users(user_id) ON DELETE SET NULL,
+    CONSTRAINT fk_pending_users_id_card
+        FOREIGN KEY (id_card_file_id) REFERENCES files(file_id) ON DELETE SET NULL
 ) ENGINE=InnoDB;
 
 CREATE INDEX idx_pending_users_status ON pending_users(status);
 CREATE INDEX idx_pending_users_university_id ON pending_users(university_id);
 CREATE INDEX idx_pending_users_reviewed_by ON pending_users(reviewed_by_user_id);
+CREATE INDEX idx_pending_users_id_card_file_id ON pending_users(id_card_file_id);
 
 CREATE TABLE otp_tokens (
     id            BIGINT AUTO_INCREMENT PRIMARY KEY,

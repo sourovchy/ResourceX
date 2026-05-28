@@ -10,7 +10,9 @@ import com.resourcex.resourcex.entity.StudentProfile;
 import com.resourcex.resourcex.entity.University;
 import com.resourcex.resourcex.entity.User;
 import com.resourcex.resourcex.entity.UserStatus;
+import com.resourcex.resourcex.exception.BadRequestException;
 import com.resourcex.resourcex.exception.ConflictException;
+import com.resourcex.resourcex.exception.ResourceNotFoundException;
 import com.resourcex.resourcex.exception.UnauthorizedException;
 import com.resourcex.resourcex.mapper.UserMapper;
 import com.resourcex.resourcex.repository.PendingUserRepository;
@@ -46,6 +48,7 @@ public class AuthServiceImpl implements AuthService {
     private final PasswordEncoder passwordEncoder;
     private final JwtService jwtService;
     private final EmailService emailService;
+    private final com.resourcex.resourcex.repository.FileMetadataRepository fileMetadataRepository;
     private final com.resourcex.resourcex.service.OtpService otpService;
     private final AuditLogService auditLogService;
 
@@ -72,6 +75,17 @@ public class AuthServiceImpl implements AuthService {
 
         University university = resolveUniversity(request.getUniversity());
 
+        if (request.getIdCardFileId() == null) {
+            throw new BadRequestException("ID Card file is required");
+        }
+
+        com.resourcex.resourcex.entity.FileMetadata file = fileMetadataRepository.findById(request.getIdCardFileId())
+                .orElseThrow(() -> new ResourceNotFoundException("ID Card file not found"));
+
+        if (file.getPurpose() != com.resourcex.resourcex.entity.FilePurpose.ID_CARD) {
+            throw new BadRequestException("Invalid file purpose for ID card");
+        }
+
         PendingUser pendingUser = PendingUser.builder()
                 .studentId(request.getStudentId())
                 .name(request.getName())
@@ -80,7 +94,7 @@ public class AuthServiceImpl implements AuthService {
                 .phone(request.getPhone())
                 .university(university)
                 .department(request.getDepartment())
-                .idCardDataUrl(request.getIdCardDataUrl())
+                .idCardFileId(request.getIdCardFileId())
                 .status(PendingUserStatus.REGISTERED)
                 .build();
 
