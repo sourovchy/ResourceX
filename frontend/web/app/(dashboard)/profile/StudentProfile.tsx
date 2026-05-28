@@ -80,7 +80,11 @@ export default function ProfilePage() {
 		);
 	}
 
-	const successfulReturns = bookings.filter(
+	const safeItems = Array.isArray(items) ? items : [];
+	const safeBookings = Array.isArray(bookings) ? bookings : [];
+	const safeReviews = Array.isArray(reviews) ? reviews : [];
+
+	const successfulReturns = safeBookings.filter(
 		(booking) => booking.status === "COMPLETED",
 	).length;
 	const studentProfile =
@@ -156,12 +160,12 @@ export default function ProfilePage() {
 						<ProfileStat
 							icon={<Package className="w-6 h-6" />}
 							label="Items Listed"
-							value={items.length}
+							value={safeItems.length}
 						/>
 						<ProfileStat
 							icon={<BookOpen className="w-6 h-6" />}
 							label="Total Rentals"
-							value={bookings.length}
+							value={safeBookings.length}
 						/>
 						<ProfileStat
 							icon={<CheckCircle2 className="w-6 h-6" />}
@@ -171,7 +175,7 @@ export default function ProfilePage() {
 						<ProfileStat
 							icon={<Star className="w-6 h-6" />}
 							label="Reviews Rcvd"
-							value={reviews.length}
+							value={safeReviews.length}
 						/>
 					</div>
 
@@ -188,12 +192,12 @@ export default function ProfilePage() {
 						</div>
 
 						<div className="divide-y divide-borderLight">
-							{reviews.length === 0 ? (
+							{safeReviews.length === 0 ? (
 								<div className="py-8 text-sm text-textSecondary">
 									No reviews available.
 								</div>
 							) : (
-								reviews.slice(0, 3).map((review) => (
+								safeReviews.slice(0, 3).map((review) => (
 									<div key={review.reviewId} className="py-4">
 										<div className="mb-2 flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
 											<div className="break-words text-sm font-bold text-textPrimary">
