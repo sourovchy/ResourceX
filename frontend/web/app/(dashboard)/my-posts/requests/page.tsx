@@ -66,16 +66,8 @@ const toRequestStatus = (value: unknown): RequestStatus => {
 	return "Pending";
 };
 
-const unwrapRequests = (payload: unknown): RawRequest[] => {
-	if (Array.isArray(payload)) return payload as RawRequest[];
-	if (payload && typeof payload === "object") {
-		const record = payload as Record<string, unknown>;
-		const candidate =
-			record.data ?? record.requests ?? record.items ?? record.results ?? record.content;
-		if (Array.isArray(candidate)) return candidate as RawRequest[];
-	}
-	return [];
-};
+const unwrapRequests = (payload: unknown): RawRequest[] =>
+	Array.isArray(payload) ? (payload as RawRequest[]) : [];
 
 const toSafeNumber = (value: unknown, fallback = 0) => {
 	const n = Number(value);

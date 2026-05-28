@@ -26,22 +26,20 @@ public class JwtChannelInterceptor implements ChannelInterceptor {
         StompHeaderAccessor accessor = MessageHeaderAccessor.getAccessor(message, StompHeaderAccessor.class);
 
         if (accessor != null && StompCommand.CONNECT.equals(accessor.getCommand())) {
-            String authHeader = accessor.getFirstNativeHeader("Authorization");
+            String jwt = extractJwt(accessor);
 
-            if (authHeader != null && authHeader.startsWith("Bearer ")) {
-                String jwt = authHeader.substring(7).trim();
-                
+            if (jwt != null) {
                 try {
                     String email = jwtService.extractEmail(jwt);
                     if (email != null && !email.isBlank()) {
                         UserDetails userDetails = userDetailsService.loadUserByUsername(email);
-                        
+
                         if (jwtService.isTokenValid(jwt, userDetails.getUsername())) {
                             UsernamePasswordAuthenticationToken authToken = new UsernamePasswordAuthenticationToken(
                                     userDetails,
                                     null,
                                     userDetails.getAuthorities());
-                            
+
                             accessor.setUser(authToken);
                             log.debug("Successfully authenticated user for WebSocket: {}", email);
                         } else {
@@ -56,5 +54,21 @@ public class JwtChannelInterceptor implements ChannelInterceptor {
             }
         }
         return message;
+    }
+
+    private String extractJwt(StompHeaderAccessor accessor) {
+        String authHeader = accessor.getFirstNativeHeader("Authorization");
+        if (authHeader != null && authHeader.startsWith("Bearer ")) {
+            return authHeader.substring(7).trim();
+        }
+        // Fall back to JWT extracted from the httpOnly cookie during the HTTP handshake
+        var sessionAttributes = accessor.getSessionAttributes();
+        if (sessionAttributes != null) {
+            Object cookieJwt = sessionAttributes.get("jwt");
+            if (cookieJwt instanceof String token && !token.isBlank()) {
+                return token;
+            }
+        }
+        return null;
     }
 }

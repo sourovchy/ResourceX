@@ -18,6 +18,9 @@ import com.resourcex.resourcex.service.AuditLogService;
 import com.resourcex.resourcex.service.DisputeService;
 import com.resourcex.resourcex.entity.AuditLog;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.Pageable;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
@@ -89,23 +92,24 @@ public class DisputeServiceImpl implements DisputeService {
 
     @Override
     @Transactional(readOnly = true)
-    public List<DisputeResponse> getAllDisputes() {
+    public Page<DisputeResponse> getAllDisputes(Pageable pageable) {
         User user = resolveCurrentUser();
 
         if (isAdmin()) {
-            return disputeRepository.findAll()
-                    .stream()
-                    .map(DisputeMapper::toResponse)
-                    .toList();
+            return disputeRepository.findAll(pageable).map(DisputeMapper::toResponse);
         }
 
-        return disputeRepository.findAll()
+        List<DisputeResponse> userDisputes = disputeRepository.findAll()
                 .stream()
                 .filter(dispute ->
                         isBookingParticipant(dispute.getBooking(), user)
                                 || dispute.getRaisedBy().getUserId().equals(user.getUserId()))
                 .map(DisputeMapper::toResponse)
                 .toList();
+        int start = (int) pageable.getOffset();
+        int end = Math.min(start + pageable.getPageSize(), userDisputes.size());
+        List<DisputeResponse> pageSlice = start >= userDisputes.size() ? List.of() : userDisputes.subList(start, end);
+        return new PageImpl<>(pageSlice, pageable, userDisputes.size());
     }
 
     @Override

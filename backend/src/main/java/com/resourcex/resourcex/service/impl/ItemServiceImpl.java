@@ -158,14 +158,10 @@ public class ItemServiceImpl implements ItemService {
 
     @Override
     @Transactional(readOnly = true)
-    public List<ItemResponse> getMyItems() {
+    public Page<ItemResponse> getMyItems(Pageable pageable) {
         User owner = resolveCurrentUser();
-
-        return itemRepository.findByOwner(owner)
-                .stream()
-                .filter(item -> item.getStatus() != Item.ItemStatus.DELETED)
-                .map(ItemMapper::toResponse)
-                .toList();
+        return itemRepository.findByOwnerAndStatusNot(owner, Item.ItemStatus.DELETED, pageable)
+                .map(ItemMapper::toResponse);
     }
 
     @Override

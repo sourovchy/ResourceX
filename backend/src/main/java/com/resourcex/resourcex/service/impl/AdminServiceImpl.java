@@ -112,9 +112,7 @@ public class AdminServiceImpl implements AdminService {
                                                 .role(defaultRole)
                                                 .build());
 
-                pending.setStatus(PendingUserStatus.APPROVED);
-                pending.setReviewedAt(LocalDateTime.now());
-                pendingUserRepository.save(pending);
+                pendingUserRepository.delete(pending);
 
                 auditLogService.logAction(
                                 AuditLog.ActorType.SYSTEM,
@@ -142,10 +140,7 @@ public class AdminServiceImpl implements AdminService {
                                 ? reason.trim()
                                 : "No rejection reason provided";
 
-                pending.setStatus(PendingUserStatus.REJECTED);
-                pending.setRejectionReason(rejectionReason);
-                pending.setReviewedAt(LocalDateTime.now());
-                pendingUserRepository.save(pending);
+                pendingUserRepository.delete(pending);
 
                 auditLogService.logAction(
                                 AuditLog.ActorType.SYSTEM,

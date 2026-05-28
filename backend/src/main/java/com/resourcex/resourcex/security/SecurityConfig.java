@@ -60,8 +60,10 @@ public class SecurityConfig {
                                                 .requestMatchers("/api/otp/**")
                                                 .permitAll()
 
-                                                // Public File endpoints (GET only – uploads require auth)
+                                                // Public File endpoints
                                                 .requestMatchers(HttpMethod.GET, "/api/files/**")
+                                                .permitAll()
+                                                .requestMatchers(HttpMethod.POST, "/api/files/upload")
                                                 .permitAll()
 
                                                 // Swagger

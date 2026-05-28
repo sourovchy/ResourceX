@@ -5,6 +5,10 @@ import com.resourcex.resourcex.dto.response.ReviewResponse;
 import com.resourcex.resourcex.service.ReviewService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.web.PageableDefault;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -27,8 +31,10 @@ public class ReviewController {
     }
 
     @GetMapping
-    public List<ReviewResponse> getAllReviews() {
-        return reviewService.getAllReviews();
+    public Page<ReviewResponse> getAllReviews(
+            @PageableDefault(size = 20, sort = "reviewId", direction = Sort.Direction.DESC) Pageable pageable
+    ) {
+        return reviewService.getAllReviews(pageable);
     }
 
     @GetMapping("/reviewer/{reviewerId}")

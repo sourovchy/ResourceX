@@ -1,5 +1,6 @@
 import React from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { ImageIcon, Shield, Star } from "lucide-react";
 
 interface ItemCardProps {
@@ -41,10 +42,12 @@ const ItemCard = ({ item, href }: ItemCardProps) => {
 			{/* Image */}
 			<div className="relative h-40 w-full overflow-hidden xs:h-44 sm:h-48 md:h-52">
 				{item.image ? (
-					<img
+					<Image
 						src={item.image}
 						alt={item.title}
-						className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+						fill
+						className="object-cover transition-transform duration-300 group-hover:scale-105"
+						sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
 					/>
 				) : (
 					<div className="w-full h-full bg-surfaceVariant flex items-center justify-center text-textTertiary">

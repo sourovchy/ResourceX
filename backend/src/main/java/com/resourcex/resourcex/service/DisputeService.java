@@ -4,6 +4,8 @@ import com.resourcex.resourcex.dto.request.CreateDisputeRequest;
 import com.resourcex.resourcex.dto.request.ResolutionRequest;
 import com.resourcex.resourcex.dto.response.DisputeResponse;
 import com.resourcex.resourcex.entity.Dispute.DisputeStatus;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 
 import java.util.List;
 
@@ -13,7 +15,7 @@ public interface DisputeService {
 
     DisputeResponse getDisputeById(Long disputeId);
 
-    List<DisputeResponse> getAllDisputes();
+    Page<DisputeResponse> getAllDisputes(Pageable pageable);
 
     List<DisputeResponse> getDisputesByUser(Long userId);
 

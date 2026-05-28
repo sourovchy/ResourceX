@@ -18,7 +18,7 @@ public interface ItemService {
 
     Page<ItemResponse> getAllItems(String category, String searchQuery, Pageable pageable);
 
-    List<ItemResponse> getMyItems();
+    Page<ItemResponse> getMyItems(Pageable pageable);
 
     void deleteItem(Long itemId);
 }

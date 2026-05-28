@@ -14,8 +14,6 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.web.PageableDefault;
 
-import java.util.List;
-
 @RestController
 @RequestMapping("/api/items")
 @RequiredArgsConstructor
@@ -43,8 +41,10 @@ public class ItemController {
 
     @GetMapping("/me")
     @PreAuthorize("isAuthenticated()")
-    public List<ItemResponse> getMyItems() {
-        return itemService.getMyItems();
+    public Page<ItemResponse> getMyItems(
+            @PageableDefault(size = 20, sort = "itemId", direction = Sort.Direction.DESC) Pageable pageable
+    ) {
+        return itemService.getMyItems(pageable);
     }
 
     @GetMapping("/{itemId}")

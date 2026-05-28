@@ -4,6 +4,8 @@ import React, { useMemo } from "react";
 import AuthGuard from "@/components/auth/AuthGuard";
 import AppShell from "@/components/layout/AppShell";
 import { useAuth } from "@/context/AuthContext";
+import { useRouter } from "next/navigation";
+import { useEffect } from "react";
 import { type AccessibleRole } from "@/lib/auth";
 import {
     LayoutDashboard,
@@ -138,10 +140,15 @@ export default function DashboardLayout({
     children: React.ReactNode;
 }) {
     const { user, roles, loading } = useAuth();
-    const currentRole = useMemo(
-        () => getHighestAccessibleRole(roles),
-        [roles],
-    );
+    const router = useRouter();
+
+    const currentRole = useMemo(() => getHighestAccessibleRole(roles), [roles]);
+
+    useEffect(() => {
+        if (!loading && (!currentRole || !user)) {
+            router.replace("/auth/login");
+        }
+    }, [loading, currentRole, user, router]);
 
     const filteredNavItems = useMemo(() => {
         if (!currentRole) return [];
@@ -163,11 +170,7 @@ export default function DashboardLayout({
     }
 
     if (!currentRole || !user) {
-        return (
-            <div className="flex min-h-screen items-center justify-center bg-bgPrimary px-4 text-center text-sm text-textSecondary">
-                Unable to determine your role. Please sign in again.
-            </div>
-        );
+        return null;
     }
 
     return (

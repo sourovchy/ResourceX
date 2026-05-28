@@ -19,7 +19,7 @@ import {
 } from "lucide-react";
 import { DataTable } from "@/components/ui/DataTable";
 
-type UserStatus = "VERIFIED" | "PENDING" | "SUSPENDED" | "REJECTED";
+type UserStatus = "VERIFIED" | "PENDING" | "SUSPENDED";
 type FilterType = "ALL" | UserStatus;
 type ReviewMode = "APPROVE" | "REJECT" | "SUSPEND" | "REACTIVATE" | null;
 
@@ -50,14 +50,12 @@ const STATUS_MAP: Record<string, UserStatus> = {
 	PENDING_VERIFICATION: "PENDING",
 	PENDING_APPROVAL: "PENDING",
 	APPROVED: "VERIFIED",
-	REJECTED: "REJECTED",
 };
 
 const STATUS_COLORS: Record<UserStatus, string> = {
 	VERIFIED: "bg-successLight text-success",
 	PENDING: "bg-warningLight text-warning",
 	SUSPENDED: "bg-errorLight text-error",
-	REJECTED: "bg-surfaceVariant text-textSecondary",
 };
 
 const WARNING_COLORS = [
@@ -72,7 +70,6 @@ const FILTERS: FilterType[] = [
 	"PENDING",
 	"VERIFIED",
 	"SUSPENDED",
-	"REJECTED",
 ];
 
 const SUMMARY_CARDS: {
@@ -208,7 +205,7 @@ export default function AdminUsersPage() {
 							? "VERIFIED"
 							: u.status === "SUSPENDED"
 								? "SUSPENDED"
-								: "REJECTED",
+								: "SUSPENDED",
 					trustScore: u.studentProfile?.trustScore || 0,
 					bookings: 0,
 					registered: new Date(u.createdAt).toLocaleDateString(),
@@ -320,7 +317,7 @@ export default function AdminUsersPage() {
 								? "VERIFIED"
 								: u.status === "SUSPENDED"
 									? "SUSPENDED"
-									: "REJECTED",
+									: "SUSPENDED",
 						trustScore: u.studentProfile?.trustScore || 0,
 						bookings: 0,
 						registered: new Date(u.createdAt).toLocaleDateString(),
@@ -424,9 +421,6 @@ export default function AdminUsersPage() {
 		}
 	};
 
-	const restoreForReview = (userId: string) => {
-		// Placeholder
-	};
 
 	return (
 		<div className="mx-auto max-w-7xl space-y-6 px-4 pb-20 sm:px-6 lg:px-8">
@@ -614,15 +608,6 @@ export default function AdminUsersPage() {
 											</button>
 										)}
 
-										{u.status === "REJECTED" && (
-											<button
-												type="button"
-												onClick={() => restoreForReview(u.id)}
-												className="flex items-center gap-1 rounded-lg bg-warningLight px-2.5 py-1.5 text-xs font-bold text-warning transition hover:opacity-90">
-												<Clock className="h-3.5 w-3.5" />
-												Re‑review
-											</button>
-										)}
 
 										<button
 											type="button"
@@ -829,15 +814,6 @@ export default function AdminUsersPage() {
 										</button>
 									)}
 
-									{selectedUser.status === "REJECTED" && (
-										<button
-											type="button"
-											onClick={() => restoreForReview(selectedUser.id)}
-											className="flex w-full items-center justify-center gap-2 rounded-xl bg-warningLight px-4 py-2.5 text-sm font-bold text-warning transition hover:opacity-90">
-											<Clock className="h-4 w-4" />
-											Send back to review
-										</button>
-									)}
 
 									<Link
 										href={`/users/${selectedUser.id}${selectedUser.status === "PENDING" ? "?type=pending" : ""}`}

@@ -30,6 +30,10 @@ public class FileController {
             @RequestParam("purpose") FilePurpose purpose,
             @AuthenticationPrincipal UserDetails userDetails) {
 
+        if (userDetails == null && purpose != FilePurpose.ID_CARD) {
+            throw new com.resourcex.resourcex.exception.UnauthorizedException("Authentication required for this upload purpose");
+        }
+
         FileUploadResponse response = fileStorageService.storeFile(file, purpose, userDetails);
         return ResponseEntity.ok(response);
     }

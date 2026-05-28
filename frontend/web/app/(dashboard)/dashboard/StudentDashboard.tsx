@@ -67,8 +67,24 @@ export default function StudentDashboard() {
           api.get<Booking[]>("/bookings/me").catch(() => ({ data: [] as Booking[] })),
         ]);
         if (!active) return;
-        setItems(itemsRes.data ?? []);
-        setBookings(bookingsRes.data ?? []);
+
+        const rawItems = itemsRes.data as unknown;
+        setItems(
+          Array.isArray(rawItems)
+            ? (rawItems as Item[])
+            : Array.isArray((rawItems as any)?.content)
+              ? (rawItems as any).content
+              : [],
+        );
+
+        const rawBookings = bookingsRes.data as unknown;
+        setBookings(
+          Array.isArray(rawBookings)
+            ? (rawBookings as Booking[])
+            : Array.isArray((rawBookings as any)?.content)
+              ? (rawBookings as any).content
+              : [],
+        );
       } catch {
         if (active) setError("Could not load your dashboard data.");
       } finally {

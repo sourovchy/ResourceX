@@ -2,6 +2,7 @@
 
 import React, { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import api from "@/lib/api";
 import type { ItemResponse } from "@/types/item";
 import {
@@ -119,10 +120,13 @@ export default function ItemDetailPage({ params }: { params: { id: string } }) {
 				{/* Images Area */}
 				<div className="space-y-3 sm:space-y-4">
 					<div className="group relative aspect-[4/3] overflow-hidden rounded-2xl border border-borderLight bg-surfaceVariant shadow-sm">
-						<img
+						<Image
 							src={itemImage}
 							alt={item.title}
-							className="h-full w-full object-cover"
+							fill
+							className="object-cover"
+							sizes="(max-width: 768px) 100vw, 50vw"
+							priority
 						/>
 						<button
 							onClick={toggleWishlist}
@@ -140,8 +144,8 @@ export default function ItemDetailPage({ params }: { params: { id: string } }) {
 						{allImages.map((img, i) => (
 							<div
 								key={i}
-								className={`h-16 w-16 shrink-0 cursor-pointer overflow-hidden rounded-xl border-2 transition-all sm:h-20 sm:w-20 ${i === 0 ? "border-primary" : "border-transparent opacity-70 hover:opacity-100"}`}>
-								<img src={img} alt="" className="w-full h-full object-cover" />
+								className={`relative h-16 w-16 shrink-0 cursor-pointer overflow-hidden rounded-xl border-2 transition-all sm:h-20 sm:w-20 ${i === 0 ? "border-primary" : "border-transparent opacity-70 hover:opacity-100"}`}>
+								<Image src={img} alt="" fill className="object-cover" sizes="80px" />
 							</div>
 						))}
 					</div>

@@ -9,6 +9,8 @@ import com.resourcex.resourcex.repository.*;
 import com.resourcex.resourcex.service.AuditLogService;
 import com.resourcex.resourcex.service.PenaltyService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -133,12 +135,8 @@ public class PenaltyServiceImpl implements PenaltyService {
 
     @Override
     @Transactional(readOnly = true)
-    public List<PenaltyResponse> getAllPenalties() {
-
-        return penaltyRepository.findAll()
-                .stream()
-                .map(penaltyMapper::toResponse)
-                .toList();
+    public Page<PenaltyResponse> getAllPenalties(Pageable pageable) {
+        return penaltyRepository.findAll(pageable).map(penaltyMapper::toResponse);
     }
 
     @Override

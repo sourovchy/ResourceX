@@ -14,6 +14,9 @@ import com.resourcex.resourcex.repository.ReviewRepository;
 import com.resourcex.resourcex.repository.UserRepository;
 import com.resourcex.resourcex.service.ReviewService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.Pageable;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
@@ -74,23 +77,24 @@ public class ReviewServiceImpl implements ReviewService {
 
     @Override
     @Transactional(readOnly = true)
-    public List<ReviewResponse> getAllReviews() {
+    public Page<ReviewResponse> getAllReviews(Pageable pageable) {
         User currentUser = resolveCurrentUser();
 
         if (isAdmin()) {
-            return reviewRepository.findAll()
-                    .stream()
-                    .map(ReviewMapper::toResponse)
-                    .toList();
+            return reviewRepository.findAll(pageable).map(ReviewMapper::toResponse);
         }
 
-        return reviewRepository.findAll()
+        List<ReviewResponse> userReviews = reviewRepository.findAll()
                 .stream()
                 .filter(review ->
                         review.getReviewer().getUserId().equals(currentUser.getUserId())
                                 || review.getReviewee().getUserId().equals(currentUser.getUserId()))
                 .map(ReviewMapper::toResponse)
                 .toList();
+        int start = (int) pageable.getOffset();
+        int end = Math.min(start + pageable.getPageSize(), userReviews.size());
+        List<ReviewResponse> pageSlice = start >= userReviews.size() ? List.of() : userReviews.subList(start, end);
+        return new PageImpl<>(pageSlice, pageable, userReviews.size());
     }
 
     @Override

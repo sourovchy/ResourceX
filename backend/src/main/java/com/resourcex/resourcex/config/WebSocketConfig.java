@@ -1,6 +1,7 @@
 package com.resourcex.resourcex.config;
 
 import com.resourcex.resourcex.security.JwtChannelInterceptor;
+import com.resourcex.resourcex.security.JwtHandshakeInterceptor;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.Ordered;
@@ -29,11 +30,12 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
     @Override
     public void registerStompEndpoints(StompEndpointRegistry registry) {
         registry.addEndpoint("/ws-endpoint")
+                .addInterceptors(new JwtHandshakeInterceptor())
                 .setAllowedOriginPatterns("*")
                 .withSockJS();
-        
-        // Also add one without SockJS for clients that support native websockets
+
         registry.addEndpoint("/ws-endpoint")
+                .addInterceptors(new JwtHandshakeInterceptor())
                 .setAllowedOriginPatterns("*");
     }
 

@@ -7,6 +7,10 @@ import com.resourcex.resourcex.entity.Dispute.DisputeStatus;
 import com.resourcex.resourcex.service.DisputeService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.web.PageableDefault;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -33,8 +37,10 @@ public class DisputeController {
     }
 
     @GetMapping
-    public List<DisputeResponse> getAllDisputes() {
-        return disputeService.getAllDisputes();
+    public Page<DisputeResponse> getAllDisputes(
+            @PageableDefault(size = 20, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable
+    ) {
+        return disputeService.getAllDisputes(pageable);
     }
 
     @GetMapping("/user/{userId}")

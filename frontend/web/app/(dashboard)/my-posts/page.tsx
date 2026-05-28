@@ -2,6 +2,7 @@
 
 import React, { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import api from "@/lib/api";
 import {
 	PlusCircle,
@@ -43,10 +44,13 @@ export default function MyPostsPage() {
 		try {
 			setLoading(true);
 			const [itemsRes, requestRes] = await Promise.all([
-				api.get<Item[]>("/items/me"),
+				api.get<{ content: Item[] } | Item[]>("/items/me"),
 				api.get<Booking[]>("/bookings/owner"),
 			]);
-			setPosts(itemsRes.data ?? []);
+			const itemsData = itemsRes.data;
+			setPosts(
+				Array.isArray(itemsData) ? itemsData : (itemsData as { content: Item[] }).content ?? [],
+			);
 			setRequests(requestRes.data ?? []);
 			setError("");
 		} catch {
@@ -137,7 +141,7 @@ export default function MyPostsPage() {
 							<div key={post.itemId} className="flex flex-col overflow-hidden rounded-lg border border-borderLight bg-surface shadow-sm">
 								<div className="relative h-40 w-full bg-surfaceVariant sm:h-44 md:h-48">
 									{post.imageUrls?.[0] ? (
-										<img src={post.imageUrls[0]} alt={post.title} className="w-full h-full object-cover" />
+										<Image src={post.imageUrls[0]} alt={post.title} fill className="object-cover" sizes="(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 33vw" />
 									) : (
 										<div className="flex h-full w-full items-center justify-center text-textTertiary">
 											<ImageIcon className="h-8 w-8 sm:h-10 sm:w-10" />

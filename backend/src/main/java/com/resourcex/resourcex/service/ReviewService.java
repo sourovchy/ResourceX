@@ -2,6 +2,8 @@ package com.resourcex.resourcex.service;
 
 import com.resourcex.resourcex.dto.request.CreateReviewRequest;
 import com.resourcex.resourcex.dto.response.ReviewResponse;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 
 import java.util.List;
 
@@ -11,7 +13,7 @@ public interface ReviewService {
 
     ReviewResponse getReviewById(Long reviewId);
 
-    List<ReviewResponse> getAllReviews();
+    Page<ReviewResponse> getAllReviews(Pageable pageable);
 
     List<ReviewResponse> getReviewsByReviewer(Long reviewerId);
 

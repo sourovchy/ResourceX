@@ -19,6 +19,8 @@ public interface ItemRepository extends JpaRepository<Item, Long> {
 
   List<Item> findByOwner(User owner);
 
+  Page<Item> findByOwnerAndStatusNot(User owner, Item.ItemStatus status, Pageable pageable);
+
   long countByOwner(User owner);
 
   long countByStatus(Item.ItemStatus status);

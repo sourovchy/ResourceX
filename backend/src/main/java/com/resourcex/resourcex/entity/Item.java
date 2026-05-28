@@ -65,6 +65,9 @@ public class Item {
     @Builder.Default
     private List<FileMetadata> images = new ArrayList<>();
 
+    @Version
+    private Long version;
+
     @Column(nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
