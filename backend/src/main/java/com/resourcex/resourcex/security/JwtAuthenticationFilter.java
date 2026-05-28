@@ -68,7 +68,11 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             if (email != null && !email.isBlank()) {
                 UserDetails userDetails = userDetailsService.loadUserByUsername(email);
 
-                if (jwtService.isTokenValid(jwt, userDetails.getUsername())) {
+                if (!userDetails.isEnabled()) {
+                    // Account is suspended or disabled — reject immediately.
+                    // Do NOT populate SecurityContext; the request will receive 401/403.
+                    log.warn("Rejected request from suspended/disabled account: {} for path: {}", email, path);
+                } else if (jwtService.isTokenValid(jwt, userDetails.getUsername())) {
                     UsernamePasswordAuthenticationToken authToken = new UsernamePasswordAuthenticationToken(
                             userDetails,
                             null,
@@ -83,6 +87,10 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                     log.warn("Token validation failed for user: {} at path: {}", email, path);
                 }
             }
+        } catch (io.jsonwebtoken.ExpiredJwtException e) {
+            log.warn("Expired JWT for path: {}", path);
+        } catch (io.jsonwebtoken.JwtException e) {
+            log.warn("Invalid JWT for path: {} — {}", path, e.getMessage());
         } catch (Exception e) {
             log.error("Error processing JWT authentication for path: {}", path, e);
         }

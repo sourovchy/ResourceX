@@ -45,6 +45,29 @@ public class User {
     @Column(name = "avatar_url", length = 1000)
     private String avatarUrl;
 
+    // ── Suspension ──────────────────────────────────────────────────────────
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "suspension_type", length = 30)
+    private SuspensionType suspensionType;
+
+    @Column(name = "suspension_reason", length = 500)
+    private String suspensionReason;
+
+    @Column(name = "suspended_at")
+    private LocalDateTime suspendedAt;
+
+    /** Null for PERMANENT suspensions; non-null for timed suspensions. */
+    @Column(name = "suspended_until")
+    private LocalDateTime suspendedUntil;
+
+    @Column(name = "suspended_by_user_id")
+    private Long suspendedByUserId;
+
+    /** Set for PERMANENT suspensions; account deleted on/after this date. */
+    @Column(name = "scheduled_deletion_at")
+    private LocalDateTime scheduledDeletionAt;
+
     @PrePersist
     public void onCreate() {
         LocalDateTime now = LocalDateTime.now();

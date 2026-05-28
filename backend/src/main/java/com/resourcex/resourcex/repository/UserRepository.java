@@ -38,4 +38,16 @@ public interface UserRepository extends JpaRepository<User, Long> {
     );
 
     long countByStatus(UserStatus status);
+
+    /** Timed suspensions whose suspendedUntil has passed — to be auto-lifted. */
+    @Query("SELECT u FROM User u WHERE u.status = com.resourcex.resourcex.entity.UserStatus.SUSPENDED " +
+           "AND u.suspensionType <> com.resourcex.resourcex.entity.SuspensionType.PERMANENT " +
+           "AND u.suspendedUntil IS NOT NULL AND u.suspendedUntil <= :now")
+    List<User> findExpiredTemporarySuspensions(@Param("now") LocalDateTime now);
+
+    /** Permanently suspended users whose retention window has elapsed — to be deleted. */
+    @Query("SELECT u FROM User u WHERE u.status = com.resourcex.resourcex.entity.UserStatus.SUSPENDED " +
+           "AND u.suspensionType = com.resourcex.resourcex.entity.SuspensionType.PERMANENT " +
+           "AND u.scheduledDeletionAt IS NOT NULL AND u.scheduledDeletionAt <= :now")
+    List<User> findUsersScheduledForDeletion(@Param("now") LocalDateTime now);
 }

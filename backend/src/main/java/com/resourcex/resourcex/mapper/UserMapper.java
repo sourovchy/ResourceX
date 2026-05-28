@@ -64,6 +64,11 @@ public class UserMapper {
                 .roles(roles)
                 .createdAt(user.getCreatedAt())
                 .avatarUrl(user.getAvatarUrl())
+                .suspensionType(user.getSuspensionType())
+                .suspensionReason(user.getSuspensionReason())
+                .suspendedAt(user.getSuspendedAt())
+                .suspendedUntil(user.getSuspendedUntil())
+                .scheduledDeletionAt(user.getScheduledDeletionAt())
                 .build();
     }
 }

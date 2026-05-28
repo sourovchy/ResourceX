@@ -48,7 +48,11 @@ public class UserServiceImpl implements UserService {
     @Override
     public UserResponse getUserById(Long userId) {
         return userRepository.findById(userId)
-                .map(UserMapper::toResponse)
+                .map(user -> {
+                    List<UserRole> userRoles = userRoleRepository.findAllByUser(user);
+                    StudentProfile studentProfile = studentProfileRepository.findByUser(user).orElse(null);
+                    return UserMapper.toResponse(user, userRoles, studentProfile);
+                })
                 .orElseThrow(() -> new ResourceNotFoundException("User not found"));
     }
 
@@ -60,7 +64,11 @@ public class UserServiceImpl implements UserService {
             RoleConstants.ROLE_SUPER_ADMIN
         );
         return userRepository.findAllExcludingRoles(excludedRoles, pageable)
-                .map(UserMapper::toResponse);
+                .map(user -> {
+                    List<UserRole> userRoles = userRoleRepository.findAllByUser(user);
+                    StudentProfile studentProfile = studentProfileRepository.findByUser(user).orElse(null);
+                    return UserMapper.toResponse(user, userRoles, studentProfile);
+                });
     }
 
     @Override

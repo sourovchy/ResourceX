@@ -42,14 +42,20 @@ api.interceptors.response.use(
 
 		const isSelfHandled = SELF_HANDLED_PATHS.some((path) => url.startsWith(path));
 
-		if (typeof window !== "undefined" && [401, 403].includes(status) && !isSelfHandled) {
-			logger.warn(
-				`[Auth Error] ${status} — clearing cookie and redirecting to login`,
-			);
+		// 401 = Unauthenticated → session is gone, log out and redirect.
+		// 403 = Forbidden  → user IS authenticated but lacks permission for this
+		//       specific action; do NOT log out (e.g. a Super Admin hitting a
+		//       resource that momentarily 403s should not lose their session).
+		if (typeof window !== "undefined" && status === 401 && !isSelfHandled) {
+			logger.warn(`[Auth Error] 401 — session expired, clearing cookie and redirecting to login`);
 			fetch(`${API_BASE}/auth/logout`, { method: "POST", credentials: "include" }).catch(
 				() => {},
 			);
 			window.location.href = "/auth/login";
+		}
+
+		if (status === 403) {
+			logger.warn(`[Auth Error] 403 Forbidden for ${url} — user lacks permission, session preserved`);
 		}
 
 		return Promise.reject(error);

@@ -1,6 +1,6 @@
 import { UserResponse } from "./user";
 
-export type DisputeStatus = "PENDING" | "RESOLVED" | "REJECTED";
+export type DisputeStatus = "OPEN" | "UNDER_REVIEW" | "RESOLVED" | "CLOSED";
 
 export interface DisputeResponse {
   disputeId: number;
@@ -9,8 +9,6 @@ export interface DisputeResponse {
   status: DisputeStatus;
   reason: string;
   resolution?: string;
-  resolvedBy?: UserResponse;
   createdAt: string;
   resolvedAt?: string;
-  description?: string;
 }

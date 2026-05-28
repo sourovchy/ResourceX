@@ -1,6 +1,7 @@
 package com.resourcex.resourcex.dto.response;
 
 import com.resourcex.resourcex.dto.response.StudentProfileResponse;
+import com.resourcex.resourcex.entity.SuspensionType;
 import com.resourcex.resourcex.entity.UserStatus;
 import lombok.*;
 
@@ -29,4 +30,15 @@ public class UserResponse {
     private LocalDateTime createdAt;
 
     private String avatarUrl;
+
+    // Suspension details (null when not suspended)
+    private SuspensionType suspensionType;
+
+    private String suspensionReason;
+
+    private LocalDateTime suspendedAt;
+
+    private LocalDateTime suspendedUntil;
+
+    private LocalDateTime scheduledDeletionAt;
 }

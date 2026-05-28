@@ -1,6 +1,8 @@
 package com.resourcex.resourcex.controller;
 
 import com.resourcex.resourcex.dto.request.RejectUserRequest;
+import com.resourcex.resourcex.dto.request.SuspendUserRequest;
+import jakarta.validation.Valid;
 import com.resourcex.resourcex.dto.response.DashboardStatsResponse;
 import com.resourcex.resourcex.dto.response.PendingUserResponse;
 import com.resourcex.resourcex.service.AdminService;
@@ -62,8 +64,10 @@ public class AdminController {
     }
 
     @PostMapping("/block/{id}")
-    public ResponseEntity<Void> blockUser(@PathVariable Long id) {
-        adminService.blockUser(id);
+    public ResponseEntity<Void> blockUser(
+            @PathVariable Long id,
+            @Valid @RequestBody SuspendUserRequest request) {
+        adminService.blockUser(id, request);
         return ResponseEntity.ok().build();
     }
 

@@ -111,8 +111,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 				setUser(null);
 				setRoles([]);
 				const status = (err as { response?: { status?: number } })?.response?.status;
-				// 401 is normal (not logged in), not an application error.
-				if (status !== 401) {
+				// 401 = not logged in (normal). 403 = suspended/disabled account.
+				// Both clear the session without flagging an application error.
+				if (status !== 401 && status !== 403) {
 					setError("Failed to restore session");
 				}
 			}

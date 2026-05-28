@@ -18,22 +18,38 @@ CREATE TABLE universities (
 -- =========================================================
 
 CREATE TABLE users (
-    user_id       BIGINT AUTO_INCREMENT PRIMARY KEY,
-    name          VARCHAR(100) NOT NULL,
-    email         VARCHAR(100) NOT NULL UNIQUE,
-    password_hash VARCHAR(255) NOT NULL,
-    avatar_url    VARCHAR(1000) DEFAULT NULL,
-    status        ENUM('ACTIVE', 'SUSPENDED', 'BANNED') NOT NULL DEFAULT 'ACTIVE',
-    created_at    TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    updated_at    TIMESTAMP NULL DEFAULT NULL ON UPDATE CURRENT_TIMESTAMP
+    user_id              BIGINT AUTO_INCREMENT PRIMARY KEY,
+    name                 VARCHAR(100) NOT NULL,
+    email                VARCHAR(100) NOT NULL UNIQUE,
+    password_hash        VARCHAR(255) NOT NULL,
+    avatar_url           VARCHAR(1000) DEFAULT NULL,
+    status               ENUM('ACTIVE', 'SUSPENDED', 'BANNED') NOT NULL DEFAULT 'ACTIVE',
+    suspended_at         TIMESTAMP NULL DEFAULT NULL,
+    suspension_ends_at   TIMESTAMP NULL DEFAULT NULL,
+    suspension_reason    TEXT NULL,
+    suspended_by_user_id BIGINT NULL,
+    scheduled_deletion_at TIMESTAMP NULL DEFAULT NULL,
+    created_at           TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at           TIMESTAMP NULL DEFAULT NULL ON UPDATE CURRENT_TIMESTAMP,
+    CONSTRAINT fk_users_suspended_by
+        FOREIGN KEY (suspended_by_user_id) REFERENCES users(user_id) ON DELETE SET NULL
 ) ENGINE=InnoDB;
 
 CREATE INDEX idx_users_status ON users(status);
+CREATE INDEX idx_users_suspended_by_user_id ON users(suspended_by_user_id);
+CREATE INDEX idx_users_suspended_at ON users(suspended_at);
+CREATE INDEX idx_users_suspension_ends_at ON users(suspension_ends_at);
+CREATE INDEX idx_users_scheduled_deletion_at ON users(scheduled_deletion_at);
 
 CREATE TABLE roles (
     role_id BIGINT AUTO_INCREMENT PRIMARY KEY,
     name    VARCHAR(50) NOT NULL UNIQUE
 ) ENGINE=InnoDB;
+INSERT IGNORE INTO roles (name) VALUES
+    ('ROLE_USER'),
+    ('ROLE_ADMIN'),
+    ('ROLE_MODERATOR'),
+    ('ROLE_SUPER_ADMIN');
 
 CREATE TABLE user_roles (
     id      BIGINT AUTO_INCREMENT PRIMARY KEY,
@@ -55,6 +71,7 @@ CREATE TABLE student_profiles (
     phone           VARCHAR(20) NOT NULL UNIQUE,
     university_id   BIGINT NULL,
     department      VARCHAR(100),
+    id_card_file_id BIGINT NULL,
     trust_score     INT NOT NULL DEFAULT 100,
     email_verified  BOOLEAN NOT NULL DEFAULT FALSE,
     phone_verified  BOOLEAN NOT NULL DEFAULT FALSE,
@@ -63,12 +80,15 @@ CREATE TABLE student_profiles (
     CONSTRAINT fk_student_profiles_user
         FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE,
     CONSTRAINT fk_student_profiles_university
-        FOREIGN KEY (university_id) REFERENCES universities(university_id) ON DELETE SET NULL
+        FOREIGN KEY (university_id) REFERENCES universities(university_id) ON DELETE SET NULL,
+    CONSTRAINT fk_student_profiles_id_card
+        FOREIGN KEY (id_card_file_id) REFERENCES files(file_id) ON DELETE SET NULL
 ) ENGINE=InnoDB;
 
 CREATE INDEX idx_student_profiles_university_id ON student_profiles(university_id);
 CREATE INDEX idx_student_profiles_student_id ON student_profiles(student_id);
 CREATE INDEX idx_student_profiles_phone ON student_profiles(phone);
+CREATE INDEX idx_student_profiles_id_card_file_id ON student_profiles(id_card_file_id);
 
 CREATE TABLE pending_users (
     id                  BIGINT AUTO_INCREMENT PRIMARY KEY,

@@ -131,7 +131,7 @@ export default function ActiveRentalsPage() {
 									Renter: {booking.renter?.name || "Unknown Renter"}
 								</div>
 								<div className="text-xs text-textSecondary sm:text-sm">
-									Phone: {booking.renter?.phone || "N/A"}
+									Phone: {booking.renter?.studentProfile?.phone || "N/A"}
 								</div>
 							</div>
 

@@ -1,9 +1,13 @@
 package com.resourcex.resourcex.security;
 
+import com.resourcex.resourcex.entity.SuspensionType;
 import com.resourcex.resourcex.entity.User;
+import com.resourcex.resourcex.entity.UserStatus;
 import com.resourcex.resourcex.repository.UserRoleRepository;
 import com.resourcex.resourcex.repository.UserRepository;
 import com.resourcex.resourcex.util.constants.RoleConstants;
+
+import java.time.LocalDateTime;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
@@ -54,12 +58,44 @@ public class CustomUserDetailsServiceImpl implements UserDetailsService {
             log.debug("Loaded {} authorities for user {}: {}", authorities.size(), normalizedEmail, authorities);
         }
 
+        // Account is "enabled" only when ACTIVE, or when a timed suspension has naturally expired.
+        boolean enabled = isAccountEnabled(user);
+        if (!enabled) {
+            log.debug("Account is suspended/disabled for user: {}", normalizedEmail);
+        }
+
         UserDetails userDetails = new org.springframework.security.core.userdetails.User(
                 user.getEmail(),
                 user.getPassword(),
+                enabled,  // isEnabled
+                true,     // isAccountNonExpired
+                true,     // isCredentialsNonExpired
+                true,     // isAccountNonLocked
                 authorities);
 
-        log.debug("Successfully loaded user details for: {} with {} authorities", normalizedEmail, authorities.size());
+        log.debug("Successfully loaded user details for: {} with {} authorities, enabled={}",
+                normalizedEmail, authorities.size(), enabled);
         return userDetails;
+    }
+
+    /**
+     * An account is enabled when:
+     * <ul>
+     *   <li>Status is ACTIVE, OR</li>
+     *   <li>Status is SUSPENDED but the timed suspension window has already expired.</li>
+     * </ul>
+     */
+    private boolean isAccountEnabled(User user) {
+        if (user.getStatus() == UserStatus.ACTIVE) {
+            return true;
+        }
+        if (user.getStatus() == UserStatus.SUSPENDED) {
+            if (user.getSuspensionType() == SuspensionType.PERMANENT) {
+                return false;
+            }
+            LocalDateTime until = user.getSuspendedUntil();
+            return until != null && LocalDateTime.now().isAfter(until);
+        }
+        return false; // BANNED or unknown
     }
 }

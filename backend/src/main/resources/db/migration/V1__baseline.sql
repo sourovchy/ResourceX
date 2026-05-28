@@ -402,4 +402,4 @@ CREATE TABLE wishlist_items (
 -- Seed data: default roles
 -- =========================================================
 
-INSERT INTO roles (name) VALUES ('ROLE_ADMIN'), ('ROLE_STUDENT');
+INSERT INTO roles (name) VALUES ('ROLE_ADMIN'), ('ROLE_USER');

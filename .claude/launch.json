@@ -1,0 +1,21 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "Frontend (Next.js)",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["run", "dev"],
+      "cwd": "frontend/web",
+      "port": 3000,
+      "autoPort": false
+    },
+    {
+      "name": "Backend (Spring Boot)",
+      "runtimeExecutable": "mvn",
+      "runtimeArgs": ["spring-boot:run"],
+      "cwd": "backend",
+      "port": 8082,
+      "autoPort": false
+    }
+  ]
+}

@@ -3,7 +3,6 @@ import { UserResponse } from "./user";
 export type ItemStatus = "AVAILABLE" | "UNAVAILABLE" | "BLOCKED" | "DELETED";
 
 export interface ItemResponse {
-  name: string;
   itemId: number;
   title: string;
   description: string;

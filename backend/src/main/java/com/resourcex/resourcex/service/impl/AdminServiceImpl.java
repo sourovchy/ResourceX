@@ -1,5 +1,6 @@
 package com.resourcex.resourcex.service.impl;
 
+import com.resourcex.resourcex.dto.request.SuspendUserRequest;
 import com.resourcex.resourcex.dto.response.DashboardStatsResponse;
 import com.resourcex.resourcex.dto.response.PendingUserResponse;
 import com.resourcex.resourcex.entity.*;
@@ -13,6 +14,9 @@ import com.resourcex.resourcex.util.constants.RoleConstants;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -176,20 +180,56 @@ public class AdminServiceImpl implements AdminService {
 
         @Override
         @Transactional
-        public void blockUser(Long userId) {
+        public void blockUser(Long userId, SuspendUserRequest request) {
                 User user = userRepository.findById(userId)
                                 .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+
+                if (user.getStatus() == UserStatus.SUSPENDED) {
+                        throw new ConflictException("User is already suspended");
+                }
+
+                Long adminId = resolveCurrentAdminId();
+                LocalDateTime now = LocalDateTime.now();
+
+                LocalDateTime suspendedUntil;
+                LocalDateTime scheduledDeletion = null;
+
+                switch (request.getSuspensionType()) {
+                        case ONE_DAY     -> suspendedUntil = now.plusDays(1);
+                        case SEVEN_DAYS  -> suspendedUntil = now.plusDays(7);
+                        case THIRTY_DAYS -> suspendedUntil = now.plusDays(30);
+                        case PERMANENT   -> {
+                                suspendedUntil = null;
+                                scheduledDeletion = now.plusDays(15);
+                        }
+                        default          -> suspendedUntil = now.plusDays(1);
+                }
+
                 user.setStatus(UserStatus.SUSPENDED);
+                user.setSuspensionType(request.getSuspensionType());
+                user.setSuspensionReason(request.getReason().trim());
+                user.setSuspendedAt(now);
+                user.setSuspendedUntil(suspendedUntil);
+                user.setSuspendedByUserId(adminId);
+                user.setScheduledDeletionAt(scheduledDeletion);
                 userRepository.save(user);
 
+                String detail = String.format(
+                        "Suspended user %s — type=%s, until=%s, reason=%s",
+                        user.getEmail(),
+                        request.getSuspensionType(),
+                        suspendedUntil != null ? suspendedUntil.toString() : "PERMANENT",
+                        request.getReason()
+                );
+
                 auditLogService.logAction(
-                                AuditLog.ActorType.SYSTEM,
-                                null,
-                                "USER_BLOCKED",
+                                AuditLog.ActorType.USER,
+                                adminId,
+                                "USER_SUSPENDED",
                                 "USER",
                                 userId,
                                 AuditLog.AuditOutcome.SUCCESS,
-                                "Blocked user " + user.getEmail()
+                                detail
                 );
         }
 
@@ -198,18 +238,38 @@ public class AdminServiceImpl implements AdminService {
         public void unblockUser(Long userId) {
                 User user = userRepository.findById(userId)
                                 .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+
+                Long adminId = resolveCurrentAdminId();
+
                 user.setStatus(UserStatus.ACTIVE);
+                user.setSuspensionType(null);
+                user.setSuspensionReason(null);
+                user.setSuspendedAt(null);
+                user.setSuspendedUntil(null);
+                user.setSuspendedByUserId(null);
+                user.setScheduledDeletionAt(null);
                 userRepository.save(user);
 
                 auditLogService.logAction(
-                                AuditLog.ActorType.SYSTEM,
-                                null,
-                                "USER_UNBLOCKED",
+                                AuditLog.ActorType.USER,
+                                adminId,
+                                "USER_UNSUSPENDED",
                                 "USER",
                                 userId,
                                 AuditLog.AuditOutcome.SUCCESS,
-                                "Unblocked user " + user.getEmail()
+                                "Unsuspended user " + user.getEmail()
                 );
+        }
+
+        // ── Private helpers ──────────────────────────────────────────────────────
+
+        /** Returns the userId of the currently authenticated admin, or null if not resolvable. */
+        private Long resolveCurrentAdminId() {
+                Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+                if (auth == null || auth.getName() == null) return null;
+                return userRepository.findByEmailIgnoreCase(auth.getName())
+                                .map(User::getUserId)
+                                .orElse(null);
         }
 
         private PendingUserResponse mapToResponse(PendingUser pending) {
