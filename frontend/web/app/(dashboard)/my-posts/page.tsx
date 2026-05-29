@@ -2,7 +2,7 @@
 
 import React, { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import Image from "next/image";
+import SafeImage from "@/components/ui/SafeImage";
 import api from "@/lib/api";
 import {
 	PlusCircle,
@@ -151,19 +151,13 @@ export default function MyPostsPage() {
 								key={post.itemId}
 								className="flex flex-col overflow-hidden rounded-lg border border-borderLight bg-surface shadow-sm">
 								<div className="relative h-40 w-full bg-surfaceVariant sm:h-44 md:h-48">
-									{post.imageUrls?.[0] ? (
-										<Image
-											src={post.imageUrls[0]}
-											alt={post.title}
-											fill
-											className="object-cover"
-											sizes="(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 33vw"
-										/>
-									) : (
-										<div className="flex h-full w-full items-center justify-center text-textTertiary">
-											<ImageIcon className="h-8 w-8 sm:h-10 sm:w-10" />
-										</div>
-									)}
+									<SafeImage
+										src={post.imageUrls?.[0]}
+										alt={post.title}
+										fill
+										className="object-cover"
+										sizes="(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 33vw"
+									/>
 									<div className="absolute left-3 top-3">
 										<span
 											className={`rounded-lg px-2 py-1 text-[10px] font-bold shadow-sm backdrop-blur-md sm:px-2.5 sm:text-xs ${

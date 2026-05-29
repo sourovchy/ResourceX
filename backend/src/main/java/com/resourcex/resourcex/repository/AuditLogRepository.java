@@ -21,4 +21,6 @@ public interface AuditLogRepository extends JpaRepository<AuditLog, Long> {
             LocalDateTime startDate,
             LocalDateTime endDate
     );
+
+    List<AuditLog> findByEntityTypeAndEntityIdOrderByCreatedAtDesc(String entityType, Long entityId);
 }

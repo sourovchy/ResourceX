@@ -16,6 +16,7 @@ import com.resourcex.resourcex.repository.DisputeRepository;
 import com.resourcex.resourcex.repository.UserRepository;
 import com.resourcex.resourcex.service.AuditLogService;
 import com.resourcex.resourcex.service.DisputeService;
+import com.resourcex.resourcex.service.NotificationService;
 import com.resourcex.resourcex.entity.AuditLog;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -38,6 +39,7 @@ public class DisputeServiceImpl implements DisputeService {
     private final BookingRepository bookingRepository;
     private final UserRepository userRepository;
     private final AuditLogService auditLogService;
+    private final NotificationService notificationService;
 
     @Override
     public DisputeResponse createDispute(CreateDisputeRequest request) {
@@ -266,9 +268,44 @@ public class DisputeServiceImpl implements DisputeService {
     public void followUpStaleDisputes(java.time.LocalDateTime threshold) {
         List<DisputeStatus> statuses = List.of(DisputeStatus.OPEN, DisputeStatus.UNDER_REVIEW);
         List<Dispute> staleDisputes = disputeRepository.findByStatusInAndUpdatedAtBefore(statuses, threshold);
+
+        if (staleDisputes.isEmpty()) return;
+
+        // Collect all admin/moderator/super_admin user IDs once
+        List<Long> adminUserIds = userRepository
+                .findAllByRoleNamesList(List.of("ROLE_ADMIN", "ROLE_MODERATOR", "ROLE_SUPER_ADMIN"))
+                .stream()
+                .map(u -> u.getUserId())
+                .toList();
+
         for (Dispute dispute : staleDisputes) {
-            // Business logic for stale disputes (e.g. notify admins)
-            // Just logging for now
+            Long disputeId = dispute.getDisputeId();
+            String statusLabel = dispute.getStatus().name();
+
+            // Notify each admin
+            for (Long adminId : adminUserIds) {
+                notificationService.createDisputeNotification(
+                        adminId,
+                        disputeId,
+                        "Stale Dispute Requires Attention",
+                        "Dispute #" + disputeId + " has been in " + statusLabel +
+                                " status since " + dispute.getUpdatedAt().toLocalDate() +
+                                " and requires follow-up.",
+                        null
+                );
+            }
+
+            // Audit
+            auditLogService.logAction(
+                    AuditLog.ActorType.SYSTEM,
+                    null,
+                    "DISPUTE_STALE_FOLLOWUP",
+                    "DISPUTE",
+                    disputeId,
+                    AuditLog.AuditOutcome.SUCCESS,
+                    "Dispute #" + disputeId + " flagged as stale (" + statusLabel +
+                            " since " + dispute.getUpdatedAt().toLocalDate() + "). Admins notified."
+            );
         }
     }
 }

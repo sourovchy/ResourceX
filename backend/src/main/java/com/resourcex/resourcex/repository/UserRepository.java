@@ -17,6 +17,9 @@ public interface UserRepository extends JpaRepository<User, Long> {
     @Query("SELECT DISTINCT u FROM User u JOIN UserRole ur ON ur.user = u JOIN Role r ON ur.role = r WHERE r.name IN :roleNames")
     Page<User> findAllByRoleNames(@Param("roleNames") List<String> roleNames, Pageable pageable);
 
+    @Query("SELECT DISTINCT u FROM User u JOIN UserRole ur ON ur.user = u JOIN Role r ON ur.role = r WHERE r.name IN :roleNames")
+    List<User> findAllByRoleNamesList(@Param("roleNames") List<String> roleNames);
+
     @Query("SELECT DISTINCT u FROM User u WHERE NOT EXISTS (SELECT 1 FROM UserRole ur JOIN Role r ON ur.role = r WHERE ur.user = u AND r.name IN :excludedRoles)")
     Page<User> findAllExcludingRoles(@Param("excludedRoles") List<String> excludedRoles, Pageable pageable);
 

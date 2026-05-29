@@ -2,7 +2,7 @@
 
 import React, { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import Image from "next/image";
+import SafeImage from "@/components/ui/SafeImage";
 import api from "@/lib/api";
 import type { ItemResponse } from "@/types/item";
 import {
@@ -119,7 +119,7 @@ export default function ItemDetailPage({ params }: { params: { id: string } }) {
 		);
 	}
 
-	const itemImage = item.imageUrls?.[0] || "https://placehold.co/800x500?text=No+Image";
+	const itemImage = item.imageUrls?.[0] || "/img-placeholder.svg";
 	const allImages = item.imageUrls?.length > 0 ? item.imageUrls : [itemImage];
 
 	return (
@@ -131,7 +131,7 @@ export default function ItemDetailPage({ params }: { params: { id: string } }) {
 				{/* Images Area */}
 				<div className="space-y-3 sm:space-y-4">
 					<div className="group relative aspect-[4/3] overflow-hidden rounded-2xl border border-borderLight bg-surfaceVariant shadow-sm">
-						<Image
+						<SafeImage
 							src={itemImage}
 							alt={item.title}
 							fill
@@ -156,7 +156,7 @@ export default function ItemDetailPage({ params }: { params: { id: string } }) {
 							<div
 								key={i}
 								className={`relative h-16 w-16 shrink-0 cursor-pointer overflow-hidden rounded-xl border-2 transition-all sm:h-20 sm:w-20 ${i === 0 ? "border-primary" : "border-transparent opacity-70 hover:opacity-100"}`}>
-								<Image src={img} alt="" fill className="object-cover" sizes="80px" />
+								<SafeImage src={img} alt="" fill className="object-cover" sizes="80px" />
 							</div>
 						))}
 					</div>

@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useMemo, useState } from "react";
-import Image from "next/image";
+import SafeImage from "@/components/ui/SafeImage";
 import Link from "next/link";
 import { AlertTriangle, ArrowRight, Clock, Loader2 } from "lucide-react";
 import api from "@/lib/api";
@@ -144,11 +144,8 @@ export default function MyBookingsPage() {
 							key={booking.bookingId}
 							className="flex flex-col gap-4 rounded-2xl border border-borderLight bg-surfaceVariant p-4 shadow-sm sm:flex-row sm:gap-5 sm:p-5">
 							<div className="relative h-40 w-full shrink-0 overflow-hidden rounded-xl sm:h-24 sm:w-24">
-								<Image
-									src={
-										booking.item?.imageUrls?.[0] ||
-										"https://images.unsplash.com/photo-1586769852836-bc069f19e1b6?auto=format&fit=crop&q=80&w=200&h=150"
-									}
+								<SafeImage
+									src={booking.item?.imageUrls?.[0]}
 									alt={booking.item?.title || "Item"}
 									fill
 									className="object-cover"

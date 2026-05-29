@@ -98,4 +98,13 @@ public class AuditLogServiceImpl implements AuditLogService {
                 .map(auditLogMapper::toResponse)
                 .collect(Collectors.toList());
     }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<AuditLogResponse> getLogsByEntityTypeAndId(String entityType, Long entityId) {
+        return auditLogRepository.findByEntityTypeAndEntityIdOrderByCreatedAtDesc(entityType, entityId)
+                .stream()
+                .map(auditLogMapper::toResponse)
+                .collect(Collectors.toList());
+    }
 }

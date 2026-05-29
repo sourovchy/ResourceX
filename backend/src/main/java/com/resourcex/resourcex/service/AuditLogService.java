@@ -27,4 +27,6 @@ public interface AuditLogService {
     List<AuditLogResponse> getLogsByEntityType(String entityType);
 
     List<AuditLogResponse> getLogsByDateRange(LocalDateTime startDate, LocalDateTime endDate);
+
+    List<AuditLogResponse> getLogsByEntityTypeAndId(String entityType, Long entityId);
 }

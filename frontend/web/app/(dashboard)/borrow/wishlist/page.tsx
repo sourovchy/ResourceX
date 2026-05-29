@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState, useCallback } from "react";
 import Link from "next/link";
-import Image from "next/image";
+import SafeImage from "@/components/ui/SafeImage";
 import {
 	Heart,
 	Search,
@@ -119,7 +119,7 @@ export default function WishlistPage() {
 							<Link href={`/borrow/item/${item.itemId}`} className="block">
 								<div className="relative h-44 w-full bg-surfaceVariant">
 									{item.imageUrls?.[0] ? (
-										<Image
+										<SafeImage
 											src={item.imageUrls[0]}
 											alt={item.title}
 											fill

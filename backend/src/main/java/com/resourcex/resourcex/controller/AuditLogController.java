@@ -42,6 +42,14 @@ public class AuditLogController {
         return ResponseEntity.ok(auditLogService.getLogsByEntityType(entityType));
     }
 
+    @GetMapping("/entity/{entityType}/{entityId}")
+    @PreAuthorize("hasAnyRole('ADMIN', 'SUPER_ADMIN')")
+    public ResponseEntity<List<AuditLogResponse>> getLogsByEntityTypeAndId(
+            @PathVariable String entityType,
+            @PathVariable Long entityId) {
+        return ResponseEntity.ok(auditLogService.getLogsByEntityTypeAndId(entityType, entityId));
+    }
+
     @GetMapping("/date-range")
     @PreAuthorize("hasAnyRole('ADMIN', 'SUPER_ADMIN')")
     public ResponseEntity<List<AuditLogResponse>> getLogsByDateRange(

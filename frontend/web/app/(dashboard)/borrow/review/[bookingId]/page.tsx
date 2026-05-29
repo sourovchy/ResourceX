@@ -97,7 +97,7 @@ function normalizeBooking(raw: any, fallbackId: string): BookingSummary {
 			raw?.item?.imageUrls?.[0] ??
 			raw?.item?.images?.[0] ??
 			raw?.image ??
-			"https://placehold.co/200x150?text=Item",
+			null,
 	};
 }
 
@@ -309,9 +309,10 @@ export default function ReviewPage({
 				{/* Booking Info Card */}
 				<div className="flex flex-col gap-4 rounded-xl border border-borderLight bg-surfaceVariant p-4 sm:flex-row sm:items-center">
 					<img
-						src={booking?.image ?? "https://placehold.co/200x150?text=Item"}
+						src={booking?.image ?? "/img-placeholder.svg"}
 						alt={booking?.item ?? "Booking item"}
 						className="h-20 w-full rounded-lg border border-borderLight object-cover sm:h-16 sm:w-16"
+						onError={(e) => { (e.currentTarget as HTMLImageElement).src = "/img-placeholder.svg"; }}
 					/>
 					<div className="min-w-0">
 						<h3 className="break-words font-bold text-textPrimary">{booking?.item ?? "Untitled Item"}</h3>

@@ -15,6 +15,7 @@ import com.resourcex.resourcex.repository.ItemRepository;
 import com.resourcex.resourcex.repository.UserRepository;
 import com.resourcex.resourcex.service.AuditLogService;
 import com.resourcex.resourcex.service.BookingService;
+import com.resourcex.resourcex.service.NotificationService;
 import com.resourcex.resourcex.entity.AuditLog;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -39,6 +40,7 @@ public class BookingServiceImpl implements BookingService {
     private final ItemRepository itemRepository;
     private final UserRepository userRepository;
     private final AuditLogService auditLogService;
+    private final NotificationService notificationService;
 
     @Override
     @Transactional
@@ -472,10 +474,44 @@ public class BookingServiceImpl implements BookingService {
     @Override
     @Transactional
     public void processOverdueBookings(java.time.LocalDate currentDate) {
-        List<Booking> overdueBookings = bookingRepository.findByStatusAndEndDateBeforeAndReturnedDateIsNull(Booking.BookingStatus.APPROVED, currentDate);
+        List<Booking> overdueBookings = bookingRepository
+                .findByStatusAndEndDateBeforeAndReturnedDateIsNull(Booking.BookingStatus.APPROVED, currentDate);
+
         for (Booking booking : overdueBookings) {
-            // Business logic for overdue bookings (e.g., penalty, notifications)
-            // Just logging for now
+            Long bookingId = booking.getBookingId();
+            Long renterId = booking.getRenter().getUserId();
+            Long ownerId = booking.getItem().getOwner().getUserId();
+            String itemTitle = booking.getItem().getTitle();
+            long daysOverdue = java.time.temporal.ChronoUnit.DAYS.between(booking.getEndDate(), currentDate);
+
+            // Notify renter
+            notificationService.createBookingNotification(
+                    renterId,
+                    bookingId,
+                    "Overdue Rental",
+                    "Your rental of \"" + itemTitle + "\" is " + daysOverdue + " day(s) overdue. Please return it immediately.",
+                    null
+            );
+
+            // Notify owner
+            notificationService.createBookingNotification(
+                    ownerId,
+                    bookingId,
+                    "Item Not Returned",
+                    "\"" + itemTitle + "\" has not been returned yet. It is " + daysOverdue + " day(s) overdue.",
+                    null
+            );
+
+            // Audit
+            auditLogService.logAction(
+                    AuditLog.ActorType.SYSTEM,
+                    null,
+                    "BOOKING_OVERDUE",
+                    "BOOKING",
+                    bookingId,
+                    AuditLog.AuditOutcome.SUCCESS,
+                    "Booking #" + bookingId + " is " + daysOverdue + " day(s) overdue. Renter and owner notified."
+            );
         }
     }
 }
