@@ -6,6 +6,7 @@ import { usePathname } from "next/navigation";
 import { useTheme } from "@/context/ThemeContext";
 import { useAuth } from "@/context/AuthContext";
 import { Sun, Moon, Menu, LogOut, User, X } from "lucide-react";
+import SidebarToggle from "./SidebarToggle";
 
 const PRIVILEGED_ROLES = ["admin", "moderator", "super_admin"] as const;
 
@@ -92,28 +93,25 @@ export default function AppShell({
 					${collapsed ? "md:w-[72px]" : "md:w-[260px]"}
 				`}
 			>
-				{/* Logo */}
-				<div className="flex h-14 shrink-0 items-center justify-between px-4 sm:h-16 sm:px-6">
-					<div className="flex items-center gap-3 min-w-0">
+				{/* Logo Header */}
+				<div className={`flex h-14 shrink-0 items-center sm:h-16 transition-all duration-300 ${collapsed ? "md:justify-center px-4" : "justify-between px-4 sm:px-6"}`}>
+					<div className={`flex items-center gap-3 min-w-0 transition-all duration-300 ${collapsed ? "md:opacity-0 md:w-0 md:hidden" : "opacity-100"}`}>
 						<div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center text-onPrimary font-bold shrink-0">
 							{isPrivilegedRole(role) ? "A" : "S"}
 						</div>
-						<span
-							className={`font-bold text-lg tracking-tight whitespace-nowrap transition-all duration-300 ${
-								collapsed
-									? "md:opacity-0 md:w-0 md:overflow-hidden"
-									: "opacity-100"
-							}`}
-						>
+						<span className="font-bold text-lg tracking-tight whitespace-nowrap">
 							ResourceX
 						</span>
 					</div>
-					<button
-						onClick={() => setMobileSidebarOpen(false)}
-						className="md:hidden rounded-lg p-1.5 text-textSecondary hover:bg-surfaceVariant transition-colors"
-					>
-						<X className="h-5 w-5" />
-					</button>
+					<div className="flex items-center">
+						<button
+							onClick={() => setMobileSidebarOpen(false)}
+							className="md:hidden rounded-lg p-1.5 text-textSecondary hover:bg-surfaceVariant transition-colors"
+						>
+							<X className="h-5 w-5" />
+						</button>
+						<SidebarToggle collapsed={collapsed} onClick={() => setCollapsed((p) => !p)} />
+					</div>
 				</div>
 
 				{/* Nav — scrolls independently; overflow-x: visible so tooltips escape */}
@@ -202,15 +200,6 @@ export default function AppShell({
 							onClick={() => setMobileSidebarOpen(true)}
 							aria-label="Open sidebar"
 							className="rounded-lg p-2 text-textSecondary transition-colors hover:bg-surfaceVariant md:hidden"
-						>
-							<Menu className="h-5 w-5" />
-						</button>
-
-						{/* Desktop collapse toggle */}
-						<button
-							onClick={() => setCollapsed((p) => !p)}
-							aria-label="Toggle sidebar"
-							className="hidden rounded-lg p-2 text-textSecondary transition-colors hover:bg-surfaceVariant md:block"
 						>
 							<Menu className="h-5 w-5" />
 						</button>
