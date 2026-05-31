@@ -94,7 +94,7 @@ export default function AppShell({
 				`}
 			>
 				{/* Logo Header */}
-				<div className={`flex h-14 shrink-0 items-center sm:h-16 transition-all duration-300 ${collapsed ? "md:justify-center px-4" : "justify-between px-4 sm:px-6"}`}>
+				<div className={`flex h-14 shrink-0 items-center sm:h-16 transition-all duration-300 justify-between px-4 sm:px-6 ${collapsed ? "md:justify-center md:px-4" : ""}`}>
 					<div className={`flex items-center gap-3 min-w-0 transition-all duration-300 ${collapsed ? "md:opacity-0 md:w-0 md:hidden" : "opacity-100"}`}>
 						<div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center text-onPrimary font-bold shrink-0">
 							{isPrivilegedRole(role) ? "A" : "S"}
