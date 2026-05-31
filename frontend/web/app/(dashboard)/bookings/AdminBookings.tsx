@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import api from "@/lib/api";
 import { extractErrorMessage, logErrorDetails } from "@/lib/errorUtils";
+import { formatShortDate } from "@/lib/dateUtils";
 import { DataTable } from "@/components/ui/DataTable";
 
 type FilterType =
@@ -112,7 +113,7 @@ function formatDate(value: string) {
 	if (!value) return "-";
 	const date = new Date(value);
 	if (Number.isNaN(date.getTime())) return "-";
-	return date.toLocaleDateString();
+	return formatShortDate(date);
 }
 
 export default function AdminBookingsPage() {
@@ -222,7 +223,7 @@ export default function AdminBookingsPage() {
 	}
 
 	return (
-		<div className="mx-auto max-w-7xl space-y-6 px-3 pb-6 sm:px-0 sm:pb-0">
+		<div className="w-full space-y-6 px-3 pb-6 sm:px-0 sm:pb-0">
 			<div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
 				<div className="min-w-0">
 					<h1 className="text-xl font-bold text-textPrimary sm:text-2xl">

@@ -5,14 +5,10 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useTheme } from "@/context/ThemeContext";
 import { useAuth } from "@/context/AuthContext";
-import { Sun, Moon, Menu, LogOut, User, X } from "lucide-react";
+import { Sun, Moon, Menu, LogOut, X } from "lucide-react";
 import SidebarToggle from "./SidebarToggle";
-
-const PRIVILEGED_ROLES = ["admin", "moderator", "super_admin"] as const;
-
-function isPrivilegedRole(role: string) {
-	return PRIVILEGED_ROLES.includes(role as (typeof PRIVILEGED_ROLES)[number]);
-}
+import NotifBell from "@/components/misc/NotifBell";
+import SafeImage from "@/components/ui/SafeImage";
 
 interface TooltipState {
 	label: string;
@@ -22,11 +18,10 @@ interface TooltipState {
 export default function AppShell({
 	children,
 	navItems,
-	role,
 }: {
 	children: React.ReactNode;
 	navItems: any[];
-	role: "admin" | "student" | "moderator" | "super_admin";
+	role?: "admin" | "student" | "moderator" | "super_admin";
 }) {
 	const pathname = usePathname();
 	const { theme, toggleTheme } = useTheme();
@@ -34,6 +29,8 @@ export default function AppShell({
 	const [collapsed, setCollapsed] = useState(true);
 	const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
 	const [tooltip, setTooltip] = useState<TooltipState | null>(null);
+
+	const isMessagingRoute = pathname.startsWith("/inbox") || pathname.startsWith("/messages");
 
 	const isActive = (href: string) =>
 		pathname === href || pathname.startsWith(href + "/");
@@ -95,14 +92,16 @@ export default function AppShell({
 			>
 				{/* Logo Header */}
 				<div className={`flex h-14 shrink-0 items-center sm:h-16 transition-all duration-300 justify-between px-4 sm:px-6 ${collapsed ? "md:justify-center md:px-4" : ""}`}>
-					<div className={`flex items-center gap-3 min-w-0 transition-all duration-300 ${collapsed ? "md:opacity-0 md:w-0 md:hidden" : "opacity-100"}`}>
-						<div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center text-onPrimary font-bold shrink-0">
-							{isPrivilegedRole(role) ? "A" : "S"}
+					<Link
+						href="/dashboard"
+						className={`flex items-center gap-2.5 min-w-0 transition-all duration-300 ${collapsed ? "md:opacity-0 md:w-0 md:hidden" : "opacity-100"}`}>
+						<div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary text-sm font-black text-onPrimary">
+							RX
 						</div>
-						<span className="font-bold text-lg tracking-tight whitespace-nowrap">
+						<span className="whitespace-nowrap text-lg font-black tracking-tight text-textPrimary">
 							ResourceX
 						</span>
-					</div>
+					</Link>
 					<div className="flex items-center">
 						<button
 							onClick={() => setMobileSidebarOpen(false)}
@@ -222,14 +221,26 @@ export default function AppShell({
 							)}
 						</button>
 
+						<NotifBell />
+
 						<div className="mx-1 h-6 w-px bg-divider sm:mx-2" />
 
 						<Link
 							href="/profile"
 							className="flex items-center gap-2 pl-1 sm:pl-2 group"
 						>
-							<div className="flex h-9 w-9 items-center justify-center rounded-full border border-primary/20 bg-primary/10 text-primary transition-all group-hover:ring-4 ring-primary/10">
-								<User className="h-5 w-5" />
+							<div className="relative flex h-9 w-9 items-center justify-center overflow-hidden rounded-full border border-primary/20 bg-primary/10 text-sm font-bold text-primary transition-all group-hover:ring-4 ring-primary/10">
+								{user?.avatarUrl ? (
+									<SafeImage
+										src={user.avatarUrl}
+										alt={user.name ?? "Profile"}
+										fill
+										className="object-cover"
+										sizes="36px"
+									/>
+								) : (
+									(user?.name?.charAt(0).toUpperCase() ?? "?")
+								)}
 							</div>
 							{user && (
 								<span className="hidden max-w-[8rem] truncate text-sm font-medium text-textSecondary lg:inline">
@@ -241,8 +252,16 @@ export default function AppShell({
 				</header>
 
 				{/* PAGE CONTENT — the only scrolling region */}
-				<main className="flex-1 overflow-y-auto bg-background px-3 py-4 sm:px-4 sm:py-6 md:px-6">
-					<div className="mx-auto w-full max-w-7xl">{children}</div>
+				<main className={`flex-1 bg-background flex flex-col ${isMessagingRoute ? "overflow-hidden" : "overflow-y-auto"}`}>
+					{isMessagingRoute ? (
+						children
+					) : (
+						<div className="flex min-h-full flex-col">
+							<div className="flex-1 px-3 py-4 sm:px-4 sm:py-6 md:px-6 flex flex-col">
+								<div className="mx-auto w-full max-w-7xl flex-1 flex flex-col">{children}</div>
+							</div>
+						</div>
+					)}
 				</main>
 			</div>
 		</div>

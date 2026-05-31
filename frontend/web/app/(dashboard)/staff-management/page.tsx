@@ -17,6 +17,7 @@ import {
 import { useAuth } from "@/context/AuthContext";
 import api from "@/lib/api";
 import { DataTable, ColumnDef } from "@/components/ui/DataTable";
+import { ConfirmModal } from "@/components/ui/ConfirmModal";
 
 type StaffRole = "ADMIN" | "MODERATOR" | "SUPER_ADMIN";
 
@@ -72,6 +73,10 @@ export default function StaffManagementPage() {
 	const [totalStaff, setTotalStaff] = useState(0);
 	const [showPassword, setShowPassword] = useState(false);
 	const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+	const [confirmTarget, setConfirmTarget] = useState<{
+		type: "remove" | "demote";
+		member: StaffMember;
+	} | null>(null);
 
 	const passwordChecks = useMemo(
 		() => [
@@ -199,15 +204,12 @@ export default function StaffManagementPage() {
 		}
 	};
 
-	const handleRemoveStaff = async (member: StaffMember) => {
-		if (
-			!window.confirm(
-				`Delete ${member.role === "ADMIN" ? "admin" : member.role === "MODERATOR" ? "moderator" : "super admin"} account for ${member.name}?`,
-			)
-		) {
-			return;
-		}
+	// Opens the confirmation modal — actual work runs in executeRemoveStaff
+	const handleRemoveStaff = (member: StaffMember) => {
+		setConfirmTarget({ type: "remove", member });
+	};
 
+	const executeRemoveStaff = async (member: StaffMember) => {
 		setError(null);
 		setSuccess(null);
 		setRemovingId(member.id);
@@ -243,11 +245,12 @@ export default function StaffManagementPage() {
 		}
 	};
 
-	const handleDemoteStaff = async (member: StaffMember) => {
-		if (!window.confirm(`Demote ${member.name} from admin to moderator?`)) {
-			return;
-		}
+	// Opens the confirmation modal — actual work runs in executeDemoteStaff
+	const handleDemoteStaff = (member: StaffMember) => {
+		setConfirmTarget({ type: "demote", member });
+	};
 
+	const executeDemoteStaff = async (member: StaffMember) => {
 		setError(null);
 		setSuccess(null);
 		setActionId(member.id);
@@ -265,13 +268,50 @@ export default function StaffManagementPage() {
 		}
 	};
 
+	const handleConfirmAction = async () => {
+		if (!confirmTarget) return;
+		const { type, member } = confirmTarget;
+		setConfirmTarget(null);
+		if (type === "remove") {
+			await executeRemoveStaff(member);
+		} else {
+			await executeDemoteStaff(member);
+		}
+	};
+
 	const handleRefresh = async () => {
 		setIsRefreshing(true);
 		await loadStaff(pageIndex);
 	};
 
 	return (
-		<div className="mx-auto max-w-7xl space-y-6 px-3 pb-16 sm:space-y-8 sm:px-6 lg:px-8">
+		<div className="w-full space-y-6 px-3 pb-16 sm:space-y-8 sm:px-6 lg:px-8">
+			<ConfirmModal
+				isOpen={confirmTarget !== null}
+				isDestructive={confirmTarget?.type === "remove"}
+				title={
+					confirmTarget?.type === "remove"
+						? "Delete Staff Account"
+						: "Demote to Moderator"
+				}
+				message={
+					confirmTarget?.type === "remove"
+						? `Permanently delete the ${roleLabel[confirmTarget.member.role]} account for ${confirmTarget.member.name}? This cannot be undone.`
+						: confirmTarget
+							? `Demote ${confirmTarget.member.name} from Admin to Moderator? They will lose admin-level access immediately.`
+							: ""
+				}
+				confirmText={confirmTarget?.type === "remove" ? "Delete" : "Demote"}
+				cancelText="Cancel"
+				isLoading={
+					confirmTarget
+						? removingId === confirmTarget.member.id ||
+							actionId === confirmTarget.member.id
+						: false
+				}
+				onConfirm={handleConfirmAction}
+				onCancel={() => setConfirmTarget(null)}
+			/>
 			<div className="space-y-8">
 				<section className="rounded-3xl border border-borderLight bg-surface p-6 shadow-sm">
 					<div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">

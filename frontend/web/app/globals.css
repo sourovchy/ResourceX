@@ -52,10 +52,19 @@
 
   /* Borders */
   --color-border: #e8e5de;
-  --color-borderLight: #f0ede8;
+  --color-borderLight: #e5e2db;
   --color-outline: #b5b1aa;
   --color-outlineVariant: #d4d1ca;
-  --color-divider: #ece9e2;
+  --color-divider: #e5e2db;
+
+  /* Messaging surfaces — distinct hierarchy for the inbox workspace */
+  --color-chatPanel: #f3f1ec;      /* conversation list rail (surface-2)   */
+  --color-chatBase: #faf9f7;       /* chat workspace / message area (surface-0) */
+  --color-chatElevated: #ffffff;   /* chat header + composer (elevated)    */
+  --color-chatHover: #ede9e1;      /* conversation hover                   */
+  --color-chatSelected: #fdf0ec;   /* selected conversation (primary tint) */
+  --color-chatIncoming: #ffffff;   /* incoming message bubble              */
+  --color-chatBorder: #e5e2db;     /* subtle messaging dividers            */
 
   /* Animation */
   --duration-fast: 150ms;
@@ -118,10 +127,19 @@
 
   /* Borders */
   --color-border: #2e2b27;
-  --color-borderLight: #242119;
+  --color-borderLight: #2a271f;
   --color-outline: #4a4641;
   --color-outlineVariant: #3d3a35;
-  --color-divider: #2e2b27;
+  --color-divider: #332f29;
+
+  /* Messaging surfaces — distinct hierarchy for the inbox workspace */
+  --color-chatPanel: #1c1a17;      /* conversation list rail (surface-2)   */
+  --color-chatBase: #141210;       /* chat workspace / message area (surface-0) */
+  --color-chatElevated: #242119;   /* chat header + composer (elevated)    */
+  --color-chatHover: #242119;      /* conversation hover                   */
+  --color-chatSelected: #3d2118;   /* selected conversation (primary tint) */
+  --color-chatIncoming: #242119;   /* incoming message bubble              */
+  --color-chatBorder: #2a271f;     /* subtle messaging dividers            */
 }
 
 /* ─── Base ──────────────────────────────────────────────────────── */

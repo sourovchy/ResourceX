@@ -74,6 +74,18 @@ public class DisputeServiceImpl implements DisputeService {
                 "Dispute created for booking " + booking.getBookingId()
         );
 
+        // Notify the other booking party that a dispute was raised against this booking
+        Long renterId = booking.getRenter().getUserId();
+        Long ownerId = booking.getItem().getOwner().getUserId();
+        Long counterpartyId = user.getUserId().equals(renterId) ? ownerId : renterId;
+        notificationService.createDisputeNotification(
+                counterpartyId,
+                saved.getDisputeId(),
+                "Dispute Raised",
+                user.getName() + " raised a dispute on booking #" + booking.getBookingId() + ".",
+                user.getUserId()
+        );
+
         // If you add description to the entity, map it here too.
         return DisputeMapper.toResponse(saved);
     }
@@ -172,6 +184,18 @@ public class DisputeServiceImpl implements DisputeService {
                 saved.getDisputeId(),
                 AuditLog.AuditOutcome.SUCCESS,
                 "Dispute resolved with status " + status.name()
+        );
+
+        // Notify the user who raised the dispute of the outcome
+        notificationService.createDisputeNotification(
+                saved.getRaisedBy().getUserId(),
+                saved.getDisputeId(),
+                "Dispute " + status.name(),
+                "Your dispute on booking #" + saved.getBooking().getBookingId()
+                        + " was updated to " + status.name() + "."
+                        + (saved.getResolution() != null && !saved.getResolution().isBlank()
+                                ? " Resolution: " + saved.getResolution() : ""),
+                resolveCurrentUser().getUserId()
         );
 
         return DisputeMapper.toResponse(saved);

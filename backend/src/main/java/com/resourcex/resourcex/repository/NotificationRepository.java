@@ -1,6 +1,8 @@
 package com.resourcex.resourcex.repository;
 
 import com.resourcex.resourcex.entity.Notification;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -18,6 +20,11 @@ public interface NotificationRepository extends JpaRepository<Notification, Long
      * Get all notifications for a user ordered by creation time (newest first)
      */
     List<Notification> findByUserUserIdOrderByCreatedAtDesc(Long userId);
+
+    /**
+     * Paginated notifications for a user (newest first)
+     */
+    Page<Notification> findByUserUserIdOrderByCreatedAtDesc(Long userId, Pageable pageable);
 
     /**
      * Get unread notifications for a user

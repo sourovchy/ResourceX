@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 
 import api from "@/lib/api";
+import { formatShortDate } from "@/lib/dateUtils";
 
 type ItemStatus =
 	| "AVAILABLE"
@@ -121,7 +122,7 @@ function formatDate(value?: string) {
 		return "-";
 	}
 
-	return date.toLocaleDateString();
+	return formatShortDate(date);
 }
 
 export default function AdminItemDetailPage() {
@@ -224,7 +225,7 @@ export default function AdminItemDetailPage() {
 	const ownerInitial = item.owner?.name?.[0]?.toUpperCase() ?? "U";
 
 	return (
-		<div className="mx-auto max-w-4xl space-y-5 px-3 pb-20 sm:space-y-6 sm:px-0">
+		<div className="w-full space-y-5 px-3 pb-20 sm:space-y-6 sm:px-0">
 			
 
 			{error && (

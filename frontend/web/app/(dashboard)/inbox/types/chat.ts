@@ -4,10 +4,12 @@ export interface Conversation {
 	participantOneUserId: number;
 	participantOneName: string;
 	participantOneEmail: string;
+	participantOneIsStaff?: boolean;
 
 	participantTwoUserId: number;
 	participantTwoName: string;
 	participantTwoEmail: string;
+	participantTwoIsStaff?: boolean;
 
 	bookingId?: number | null;
 	disputeId?: number | null;
@@ -53,4 +55,13 @@ export interface ConversationRequest {
 
 export interface MessageRequest {
 	content: string;
+}
+
+export interface BlockStatus {
+	/** The current user has blocked the other user. */
+	blockedByMe: boolean;
+	/** The other user has blocked the current user. */
+	blockedByThem: boolean;
+	/** A block exists in either direction — the conversation is read-only. */
+	blocked: boolean;
 }

@@ -1,4 +1,5 @@
 import {
+	BlockStatus,
 	Conversation,
 	ConversationRequest,
 	Message,
@@ -8,6 +9,7 @@ import api from "@/lib/api";
 
 const CONVERSATION_BASE_URL = "/conversations";
 const MESSAGE_BASE_URL = "/messages";
+const BLOCK_BASE_URL = "/blocks";
 
 export const chatService = {
 	getConversations: async (): Promise<Conversation[]> => {
@@ -95,5 +97,24 @@ export const chatService = {
 			console.error("Failed to load unread count", error);
 			return 0;
 		}
+	},
+
+	getBlockStatus: async (userId: number): Promise<BlockStatus> => {
+		const { data } = await api.get<BlockStatus>(
+			`${BLOCK_BASE_URL}/status/${userId}`,
+		);
+		return data;
+	},
+
+	blockUser: async (userId: number): Promise<BlockStatus> => {
+		const { data } = await api.post<BlockStatus>(`${BLOCK_BASE_URL}/${userId}`);
+		return data;
+	},
+
+	unblockUser: async (userId: number): Promise<BlockStatus> => {
+		const { data } = await api.delete<BlockStatus>(
+			`${BLOCK_BASE_URL}/${userId}`,
+		);
+		return data;
 	},
 };

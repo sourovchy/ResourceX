@@ -2,7 +2,7 @@
 "use client";
 
 import { useState } from "react";
-import { Send } from "lucide-react";
+import { Send, Ban } from "lucide-react";
 
 interface MessageInputProps {
 	onSend: (text: string) => void;
@@ -12,9 +12,14 @@ interface MessageInputProps {
 export default function MessageInput({ onSend, blocked }: MessageInputProps) {
 	const [input, setInput] = useState("");
 
-	// Backend messaging currently does not support chat blocking.
+	// Conversation is read-only when a block exists in either direction.
 	if (blocked) {
-		return null;
+		return (
+			<div className="flex shrink-0 items-center justify-center gap-2 border-t border-[var(--color-chatBorder)] bg-[var(--color-chatElevated)] p-4 text-xs font-medium text-textSecondary sm:text-sm">
+				<Ban className="h-4 w-4 shrink-0 text-error" />
+				Messaging is unavailable. This conversation is read-only.
+			</div>
+		);
 	}
 
 	const handleSubmit = (e: React.FormEvent) => {
@@ -27,20 +32,21 @@ export default function MessageInput({ onSend, blocked }: MessageInputProps) {
 	return (
 		<form
 			onSubmit={handleSubmit}
-			className="flex shrink-0 items-center gap-2 border-t border-borderLight bg-surface p-2.5 sm:gap-3 sm:p-4">
+			className="flex shrink-0 items-end gap-2 border-t border-[var(--color-chatBorder)] bg-[var(--color-chatElevated)] p-3 sm:gap-3 sm:p-4">
 			<input
 				type="text"
 				maxLength={4000}
 				value={input}
 				onChange={(e) => setInput(e.target.value)}
-				placeholder="Write a message..."
-				className="flex-1 rounded-full border border-borderLight bg-surfaceVariant px-3 py-2.5 text-xs text-textPrimary transition-all placeholder:text-textTertiary focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary sm:px-5 sm:py-3 sm:text-sm"
+				placeholder="Write a message…"
+				className="h-11 flex-1 rounded-full border border-[var(--color-chatBorder)] bg-[var(--color-chatBase)] px-4 text-sm text-textPrimary transition-all placeholder:text-textTertiary focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30 sm:px-5"
 			/>
 			<button
 				type="submit"
 				disabled={!input.trim()}
-				className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary text-white transition-colors hover:bg-primaryDark disabled:cursor-not-allowed disabled:opacity-40 sm:h-12 sm:w-12">
-				<Send className="ml-0.5 h-4 w-4 sm:h-5 sm:w-5" />
+				aria-label="Send message"
+				className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-primary text-white shadow-sm transition-colors hover:bg-primaryDark disabled:cursor-not-allowed disabled:opacity-40">
+				<Send className="ml-0.5 h-5 w-5" />
 			</button>
 		</form>
 	);

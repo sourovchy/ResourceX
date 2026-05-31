@@ -83,7 +83,7 @@ export default function WishlistPage() {
 	}
 
 	return (
-		<div className="mx-auto max-w-6xl space-y-5 px-3 pb-20 sm:space-y-6 sm:px-0">
+		<div className="w-full space-y-5 px-3 pb-20 sm:space-y-6 sm:px-0">
 			<div className="flex flex-col gap-4 rounded-2xl border border-borderLight bg-surface p-4 shadow-sm md:flex-row md:items-center md:justify-between sm:p-6">
 				<div>
 					<h1 className="flex items-center gap-2 text-xl font-bold tracking-tight text-textPrimary sm:text-2xl">
@@ -139,9 +139,18 @@ export default function WishlistPage() {
 									<h3 className="mt-1 line-clamp-2 font-semibold text-textPrimary">
 										{item.title}
 									</h3>
-									<p className="mt-1 text-sm text-textSecondary">
-										by {item.owner?.name ?? "Campus Provider"}
-									</p>
+									{item.owner?.userId ? (
+										<Link
+											href={`/profile/${item.owner.userId}`}
+											onClick={(e) => e.stopPropagation()}
+											className="mt-1 block truncate text-sm text-textSecondary transition-colors hover:text-primary">
+											by {item.owner.name ?? "Campus Provider"}
+										</Link>
+									) : (
+										<p className="mt-1 text-sm text-textSecondary">
+											by {item.owner?.name ?? "Campus Provider"}
+										</p>
+									)}
 
 									<div className="mt-3 flex items-center justify-between">
 										<p className="font-extrabold text-primary">

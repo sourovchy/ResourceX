@@ -8,6 +8,10 @@ import com.resourcex.resourcex.service.AuthService;
 import com.resourcex.resourcex.service.NotificationService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -43,6 +47,17 @@ public class NotificationController {
     public ResponseEntity<NotificationResponse> getNotificationById(@PathVariable Long notificationId) {
         NotificationResponse response = notificationService.getNotificationById(notificationId);
         return ResponseEntity.ok(response);
+    }
+
+    /**
+     * Get the current user's notifications, paginated and newest-first.
+     */
+    @GetMapping("/me")
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<Page<NotificationResponse>> getMyNotificationsPaged(
+            @PageableDefault(size = 15, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable) {
+        Long userId = authService.getCurrentUser().getUser().getUserId();
+        return ResponseEntity.ok(notificationService.getNotificationsByUserId(userId, pageable));
     }
 
     /**

@@ -51,9 +51,11 @@ export default function MyPostsPage() {
 				api.get<Booking[]>("/bookings/owner"),
 			]);
 			const itemsData = itemsRes.data;
-			setPosts(
-				Array.isArray(itemsData) ? itemsData : (itemsData as { content: Item[] }).content ?? [],
-			);
+			const allItems = Array.isArray(itemsData)
+				? itemsData
+				: (itemsData as { content: Item[] }).content ?? [];
+			// Never show DELETED items in the owner's view
+			setPosts(allItems.filter((i) => i.status !== "DELETED"));
 			setRequests(requestRes.data ?? []);
 			setError("");
 		} catch {
@@ -80,18 +82,11 @@ export default function MyPostsPage() {
 		if (!deleteTarget) return;
 		setDeleting(true);
 		try {
-			if (deleteTarget.imageUrls?.length) {
-				await Promise.allSettled(
-					deleteTarget.imageUrls.map((url) => {
-						const storedName = url.split("/").pop();
-						return storedName ? api.delete(`/files/${storedName}`) : Promise.resolve();
-					}),
-				);
-			}
 			await api.delete(`/items/${deleteTarget.itemId}`);
+			// Remove immediately from local state — no re-fetch needed
+			setPosts((prev) => prev.filter((p) => p.itemId !== deleteTarget.itemId));
 			setDeleteTarget(null);
 			toast("Listing deleted successfully.");
-			await fetchPosts();
 		} catch {
 			toast("Could not delete this listing. It may have active bookings.", "error");
 			setDeleteTarget(null);
@@ -110,7 +105,7 @@ export default function MyPostsPage() {
 	}
 
 	return (
-		<div className="mx-auto max-w-6xl space-y-5 px-3 pb-16 sm:px-4 sm:pb-20 lg:px-0">
+		<div className="w-full space-y-5 px-3 pb-16 sm:px-4 sm:pb-20 lg:px-0">
 			<div className="flex flex-col items-start justify-between gap-3 sm:flex-row sm:items-center sm:gap-4">
 				<div>
 					<h1 className="text-xl font-bold tracking-tight text-textPrimary sm:text-2xl">My Posts</h1>
@@ -143,7 +138,7 @@ export default function MyPostsPage() {
 					</Link>
 				</div>
 			) : (
-				<div className="grid grid-cols-1 gap-4 sm:gap-5 md:grid-cols-2 lg:grid-cols-3 lg:gap-6">
+				<div className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-5 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 lg:gap-6">
 					{posts.map((post) => {
 						const requestCount = pendingRequestsByItem[post.itemId] ?? 0;
 						return (

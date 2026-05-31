@@ -103,7 +103,9 @@ public class Notification {
         DISPUTE,
         PENALTY,
         TRUST,
-        ADMIN
+        ADMIN,
+        MESSAGE,
+        REVIEW
     }
 
     public enum RelatedEntityType {
@@ -112,6 +114,8 @@ public class Notification {
         PENALTY,
         TRUST,
         ITEM,
-        ADMIN
+        ADMIN,
+        MESSAGE,
+        REVIEW
     }
 }

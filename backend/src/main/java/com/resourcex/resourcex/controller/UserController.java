@@ -2,6 +2,7 @@ package com.resourcex.resourcex.controller;
 
 import com.resourcex.resourcex.dto.request.UpdateUserRequest;
 import com.resourcex.resourcex.dto.response.UserResponse;
+import com.resourcex.resourcex.dto.response.UserSearchResponse;
 import com.resourcex.resourcex.service.UserService;
 import jakarta.validation.Valid;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -31,6 +32,18 @@ public class UserController {
     @GetMapping("/me")
     public UserResponse getCurrentUser() {
         return userService.getCurrentUser();
+    }
+
+    /**
+     * Search active users to start a conversation. Available to any authenticated user.
+     */
+    @GetMapping("/search")
+    @PreAuthorize("isAuthenticated()")
+    public List<UserSearchResponse> searchUsers(
+            @RequestParam("q") String query,
+            @RequestParam(value = "limit", defaultValue = "10") int limit
+    ) {
+        return userService.searchUsers(query, limit);
     }
 
     @GetMapping("/{userId}")

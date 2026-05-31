@@ -342,10 +342,10 @@ CREATE INDEX idx_audit_actor_id ON audit_logs(actor_id);
 CREATE TABLE notifications (
     notification_id      BIGINT AUTO_INCREMENT PRIMARY KEY,
     user_id              BIGINT NOT NULL,
-    notification_type    ENUM('BOOKING', 'DISPUTE', 'PENALTY', 'TRUST', 'ADMIN') NOT NULL,
+    notification_type    ENUM('BOOKING', 'DISPUTE', 'PENALTY', 'TRUST', 'ADMIN', 'MESSAGE', 'REVIEW') NOT NULL,
     title                VARCHAR(255) NOT NULL,
     message              TEXT NOT NULL,
-    related_entity_type  ENUM('BOOKING', 'DISPUTE', 'PENALTY', 'TRUST', 'ITEM', 'ADMIN') NOT NULL,
+    related_entity_type  ENUM('BOOKING', 'DISPUTE', 'PENALTY', 'TRUST', 'ITEM', 'ADMIN', 'MESSAGE', 'REVIEW') NOT NULL,
     related_entity_id    BIGINT DEFAULT NULL,
     is_read              BOOLEAN NOT NULL DEFAULT FALSE,
     created_by_user_id   BIGINT DEFAULT NULL,
@@ -415,6 +415,24 @@ CREATE INDEX idx_messages_sender_user_id ON messages(sender_user_id);
 CREATE INDEX idx_messages_receiver_user_id ON messages(receiver_user_id);
 CREATE INDEX idx_messages_is_read ON messages(is_read);
 CREATE INDEX idx_messages_created_at ON messages(created_at);
+
+-- User blocking: a directed block (blocker -> blocked).
+-- A block in EITHER direction prevents messaging between the pair.
+-- (Flyway: V6__user_blocks.sql)
+CREATE TABLE user_blocks (
+    user_block_id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    blocker_id    BIGINT   NOT NULL,
+    blocked_id    BIGINT   NOT NULL,
+    created_at    DATETIME NOT NULL,
+    UNIQUE KEY uc_user_block_pair (blocker_id, blocked_id),
+    CONSTRAINT fk_user_block_blocker
+        FOREIGN KEY (blocker_id) REFERENCES users(user_id) ON DELETE CASCADE,
+    CONSTRAINT fk_user_block_blocked
+        FOREIGN KEY (blocked_id) REFERENCES users(user_id) ON DELETE CASCADE
+) ENGINE=InnoDB;
+
+CREATE INDEX idx_user_block_blocker ON user_blocks(blocker_id);
+CREATE INDEX idx_user_block_blocked ON user_blocks(blocked_id);
 
 -- =========================================================
 -- 10. FILE STORAGE

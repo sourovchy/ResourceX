@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 
 import api from "@/lib/api";
+import { formatShortDate } from "@/lib/dateUtils";
 
 type FilterType =
 	| "ALL"
@@ -125,7 +126,7 @@ function formatDate(value?: string) {
 		return "N/A";
 	}
 
-	return date.toLocaleDateString();
+	return formatShortDate(date);
 }
 
 function getStatusClass(status: ItemStatus) {
@@ -241,7 +242,7 @@ export default function AdminItemsPage() {
 	}
 
 	return (
-		<div className="mx-auto max-w-7xl space-y-5 px-3 pb-20 sm:space-y-6 sm:px-0">
+		<div className="w-full space-y-5 px-3 pb-20 sm:space-y-6 sm:px-0">
 			<div className="flex flex-col gap-4 rounded-2xl border border-borderLight bg-surface p-4 shadow-sm sm:p-6 md:flex-row md:items-center md:justify-between">
 				<div className="min-w-0">
 					<h1 className="text-xl font-bold text-textPrimary sm:text-2xl">

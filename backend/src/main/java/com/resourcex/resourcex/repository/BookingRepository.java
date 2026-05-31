@@ -3,6 +3,7 @@ package com.resourcex.resourcex.repository;
 import com.resourcex.resourcex.entity.Booking;
 import com.resourcex.resourcex.entity.Item;
 import com.resourcex.resourcex.entity.User;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -13,6 +14,13 @@ import java.util.List;
 
 @Repository
 public interface BookingRepository extends JpaRepository<Booking, Long> {
+
+    /**
+     * Most-booked items (for analytics). Returns rows of [itemTitle (String), bookingCount (Long)].
+     */
+    @Query("SELECT b.item.title, COUNT(b) FROM Booking b "
+            + "GROUP BY b.item.itemId, b.item.title ORDER BY COUNT(b) DESC")
+    List<Object[]> findTopBookedItems(Pageable pageable);
 
     List<Booking> findByRenter(User renter);
 

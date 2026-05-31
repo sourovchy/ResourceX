@@ -93,6 +93,7 @@ public class BookingServiceImpl implements BookingService {
                 .endDate(request.getEndDate())
                 .totalPrice(totalPrice)
                 .status(Booking.BookingStatus.PENDING)
+                .bookingMessage(request.getBookingMessage())
                 .build();
 
         Booking saved = bookingRepository.save(booking);
@@ -105,6 +106,15 @@ public class BookingServiceImpl implements BookingService {
                 saved.getBookingId(),
                 AuditLog.AuditOutcome.SUCCESS,
                 "Booking created for item " + item.getItemId()
+        );
+
+        // Notify the item owner of the new request
+        notificationService.createBookingNotification(
+                item.getOwner().getUserId(),
+                saved.getBookingId(),
+                "New Booking Request",
+                renter.getName() + " requested to rent \"" + item.getTitle() + "\".",
+                renter.getUserId()
         );
 
         return BookingMapper.toResponse(saved);
@@ -186,6 +196,15 @@ public class BookingServiceImpl implements BookingService {
                 "Booking approved by owner"
         );
 
+        // Notify the renter that their request was approved
+        notificationService.createBookingNotification(
+                saved.getRenter().getUserId(),
+                saved.getBookingId(),
+                "Booking Approved",
+                "Your booking for \"" + saved.getItem().getTitle() + "\" was approved. Coordinate payment and pickup with the owner.",
+                saved.getItem().getOwner().getUserId()
+        );
+
         return BookingMapper.toResponse(saved);
     }
 
@@ -219,6 +238,16 @@ public class BookingServiceImpl implements BookingService {
                 "Booking rejected by owner"
         );
 
+        // Notify the renter that their request was rejected
+        notificationService.createBookingNotification(
+                saved.getRenter().getUserId(),
+                saved.getBookingId(),
+                "Booking Rejected",
+                "Your booking for \"" + saved.getItem().getTitle() + "\" was rejected."
+                        + (reason != null && !reason.isBlank() ? " Reason: " + reason : ""),
+                saved.getItem().getOwner().getUserId()
+        );
+
         return BookingMapper.toResponse(saved);
     }
 
@@ -249,6 +278,19 @@ public class BookingServiceImpl implements BookingService {
                 saved.getBookingId(),
                 AuditLog.AuditOutcome.SUCCESS,
                 "Booking cancelled"
+        );
+
+        // Notify the counterparty (whoever did not cancel)
+        User canceller = resolveCurrentUser();
+        Long ownerId = saved.getItem().getOwner().getUserId();
+        Long renterId = saved.getRenter().getUserId();
+        Long recipientId = canceller.getUserId().equals(renterId) ? ownerId : renterId;
+        notificationService.createBookingNotification(
+                recipientId,
+                saved.getBookingId(),
+                "Booking Cancelled",
+                "The booking for \"" + saved.getItem().getTitle() + "\" was cancelled.",
+                canceller.getUserId()
         );
 
         return BookingMapper.toResponse(saved);
@@ -314,6 +356,15 @@ public class BookingServiceImpl implements BookingService {
                 saved.getBookingId(),
                 AuditLog.AuditOutcome.SUCCESS,
                 "Booking marked as completed"
+        );
+
+        // Notify the renter that the rental is complete and a review can be left
+        notificationService.createBookingNotification(
+                saved.getRenter().getUserId(),
+                saved.getBookingId(),
+                "Rental Completed",
+                "Your rental of \"" + saved.getItem().getTitle() + "\" is complete. You can now leave a review.",
+                saved.getItem().getOwner().getUserId()
         );
 
         return BookingMapper.toResponse(saved);

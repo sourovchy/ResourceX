@@ -1,8 +1,11 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Info, MoreVertical, MessageSquare } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { Info, MessageSquare, ChevronLeft, ShieldCheck } from "lucide-react";
 import { Conversation, Message } from "@/types/chat";
+import type { BlockStatus } from "../types/chat";
+import { chatService } from "../services/chatService";
 import MessageBubble from "./MessageBubble";
 import MessageInput from "./MessageInput";
 import UserInfoModal from "./UserInfoModal";
@@ -11,18 +14,23 @@ interface ChatWindowProps {
 	conversation: Conversation | null;
 	messages: Message[];
 	currentUserId?: number;
+	isCurrentUserStaff?: boolean;
 	onSend: (text: string) => void;
+	onBack: () => void;
 }
 
 export default function ChatWindow({
 	conversation,
 	messages,
 	currentUserId,
+	isCurrentUserStaff,
 	onSend,
+	onBack,
 }: ChatWindowProps) {
+	const router = useRouter();
 	const bottomRef = useRef<HTMLDivElement>(null);
 	const [showInfo, setShowInfo] = useState(false);
-	const [showMenu, setShowMenu] = useState(false);
+	const [blockStatus, setBlockStatus] = useState<BlockStatus | null>(null);
 
 	const otherParticipant = useMemo(() => {
 		if (!conversation) return null;
@@ -32,6 +40,7 @@ export default function ChatWindow({
 				userId: conversation.participantTwoUserId,
 				name: conversation.participantTwoName,
 				email: conversation.participantTwoEmail,
+				isStaff: conversation.participantTwoIsStaff,
 			};
 		}
 
@@ -39,6 +48,7 @@ export default function ChatWindow({
 			userId: conversation.participantOneUserId,
 			name: conversation.participantOneName,
 			email: conversation.participantOneEmail,
+			isStaff: conversation.participantOneIsStaff,
 		};
 	}, [conversation, currentUserId]);
 
@@ -54,18 +64,31 @@ export default function ChatWindow({
 		bottomRef.current?.scrollIntoView({ behavior: "smooth" });
 	}, [messages]);
 
-	// Close menu on outside click
+	// Load block status whenever the conversation partner changes
+	const otherUserId = otherParticipant?.userId;
 	useEffect(() => {
-		if (!showMenu) return;
-		const handler = () => setShowMenu(false);
-		document.addEventListener("click", handler);
-		return () => document.removeEventListener("click", handler);
-	}, [showMenu]);
+		if (!otherUserId) {
+			setBlockStatus(null);
+			return;
+		}
+		let active = true;
+		chatService
+			.getBlockStatus(otherUserId)
+			.then((status) => {
+				if (active) setBlockStatus(status);
+			})
+			.catch(() => {
+				if (active) setBlockStatus(null);
+			});
+		return () => {
+			active = false;
+		};
+	}, [otherUserId]);
 
 	if (!conversation || !otherParticipant) {
 		return (
-			<div className="flex-1 flex flex-col items-center justify-center text-textSecondary bg-background/30 gap-4">
-				<div className="w-16 h-16 rounded-2xl bg-surfaceVariant flex items-center justify-center">
+			<div className="hidden flex-1 flex-col items-center justify-center gap-4 bg-[var(--color-chatBase)] text-textSecondary md:flex">
+				<div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-[var(--color-chatElevated)] border border-[var(--color-chatBorder)]">
 					<MessageSquare className="w-8 h-8 text-outline" />
 				</div>
 				<div className="text-center">
@@ -85,28 +108,56 @@ export default function ChatWindow({
 		: "U";
 
 	return (
-		<div className="flex min-w-0 flex-1 flex-col bg-background/30">
+		<div className="flex min-w-0 flex-1 flex-col bg-[var(--color-chatBase)] h-full">
 			{/* Header */}
-			<div className="flex h-14 shrink-0 items-center justify-between border-b border-borderLight bg-surface px-3 sm:h-16 sm:px-6">
-				<div className="flex min-w-0 items-center gap-2 sm:gap-3">
+			<div className="flex h-14 shrink-0 items-center justify-between border-b border-[var(--color-chatBorder)] bg-[var(--color-chatElevated)] px-3 shadow-sm sm:h-16 sm:px-6">
+				<div className="flex items-center gap-1 sm:gap-2 min-w-0">
+					<button
+						onClick={onBack}
+						className="md:hidden p-1.5 -ml-1.5 text-textSecondary hover:text-primary transition-colors hover:bg-surfaceVariant rounded-lg"
+						title="Back to conversations">
+						<ChevronLeft className="w-6 h-6" />
+					</button>
+					<button
+						onClick={() => {
+							if (!otherParticipant.isStaff) {
+								router.push(isCurrentUserStaff ? `/users/${otherParticipant.userId}` : `/profile/${otherParticipant.userId}`);
+							}
+						}}
+						className={`group flex min-w-0 items-center gap-2 text-left sm:gap-3 ${otherParticipant.isStaff ? "cursor-default" : ""}`}
+						title={otherParticipant.isStaff ? "Staff Member" : "View profile"}>
 					<div className="relative">
-						<div className="flex h-9 w-9 items-center justify-center rounded-full bg-primary text-base font-bold text-white sm:h-10 sm:w-10 sm:text-lg">
-							{participantInitial}
-						</div>
+						{otherParticipant.isStaff ? (
+							<div className="flex h-9 w-9 items-center justify-center rounded-full bg-dashboardBlueTint text-base font-bold text-dashboardBlue sm:h-10 sm:w-10 sm:text-lg">
+								<ShieldCheck className="h-5 w-5" />
+							</div>
+						) : (
+							<div className="flex h-9 w-9 items-center justify-center rounded-full bg-primary text-base font-bold text-white transition-opacity group-hover:opacity-80 sm:h-10 sm:w-10 sm:text-lg">
+								{participantInitial}
+							</div>
+						)}
 					</div>
-					<div className="min-w-0">
-						<h3 className="truncate text-sm font-bold leading-none text-textPrimary">
-							{otherParticipant.name}
-						</h3>
-						<div className="mt-1 flex flex-wrap items-center gap-1 text-xs text-textSecondary">
-							{otherParticipant.email}
-							{conversation.unreadCount > 0 && (
-								<span className="ml-2 text-primary font-semibold">
-									{conversation.unreadCount} unread
-								</span>
+					<div className="min-w-0 flex flex-col justify-center">
+						<div className="flex items-center gap-2">
+							<h3 className={`truncate text-sm font-bold leading-none text-textPrimary ${!otherParticipant.isStaff ? "transition-colors group-hover:text-primary" : ""}`}>
+								{otherParticipant.name}
+							</h3>
+							{otherParticipant.isStaff && (
+								<ShieldCheck className="h-3.5 w-3.5 shrink-0 text-dashboardBlue" />
 							)}
 						</div>
+						{!otherParticipant.isStaff && (
+							<div className="mt-0.5 truncate text-[11px] font-medium text-textSecondary">
+								{otherParticipant.email}
+							</div>
+						)}
+						{otherParticipant.isStaff && (
+							<div className="mt-0.5 truncate text-[11px] font-bold text-dashboardBlue uppercase tracking-wider">
+								Platform Staff
+							</div>
+						)}
 					</div>
+				</button>
 				</div>
 
 				{/* Actions */}
@@ -117,33 +168,18 @@ export default function ChatWindow({
 						title="Conversation Info">
 						<Info className="w-5 h-5" />
 					</button>
-
-					{/* More menu */}
-					<div className="relative">
-						<button
-							onClick={(e) => {
-								e.stopPropagation();
-								setShowMenu((v) => !v);
-							}}
-							className="p-2 text-textSecondary hover:text-primary transition-colors hover:bg-surfaceVariant rounded-lg">
-							<MoreVertical className="w-5 h-5" />
-						</button>
-						{showMenu && (
-							<div className="absolute right-0 top-full mt-1 w-44 bg-surface border border-borderLight rounded-xl shadow-lg z-30 overflow-hidden">
-								<div className="px-4 py-3 text-sm text-textSecondary">
-									Booking/Dispute actions are handled from the backend context.
-								</div>
-							</div>
-						)}
-					</div>
 				</div>
 			</div>
 
 			{/* Messages Area */}
-			<div className="flex-1 space-y-4 overflow-y-auto p-3 sm:p-4 md:p-6">
-				<div className="mb-4 text-center text-[10px] font-semibold uppercase tracking-wider text-textTertiary sm:mb-6 sm:text-xs">
-					{contextLabel}
-				</div>
+			<div className="flex-1 overflow-y-auto px-3 py-3 sm:px-4 md:px-6">
+				{(conversation.bookingId || conversation.disputeId) && (
+					<div className="mb-3 flex justify-center">
+						<span className="rounded-full bg-[var(--color-chatElevated)] border border-[var(--color-chatBorder)] px-3 py-1 text-[10px] font-semibold uppercase tracking-wider text-textTertiary sm:text-xs">
+							{contextLabel}
+						</span>
+					</div>
+				)}
 
 				{messages.length === 0 ? (
 					<div className="flex flex-col items-center justify-center py-16 text-textSecondary gap-3">
@@ -151,22 +187,48 @@ export default function ChatWindow({
 						<p className="text-sm">No messages yet. Say hi!</p>
 					</div>
 				) : (
-					messages.map((msg) => <MessageBubble key={msg.messageId} message={msg} />)
+					<div className="flex flex-col">
+						{messages.map((msg, index) => {
+							const prevMsg = index > 0 ? messages[index - 1] : null;
+							const nextMsg = index < messages.length - 1 ? messages[index + 1] : null;
+
+							const isSameSenderAsPrev = prevMsg && prevMsg.senderUserId === msg.senderUserId;
+							const isSameSenderAsNext = nextMsg && nextMsg.senderUserId === msg.senderUserId;
+
+							const timeDiffPrev = prevMsg ? new Date(msg.createdAt).getTime() - new Date(prevMsg.createdAt).getTime() : 0;
+							const timeDiffNext = nextMsg ? new Date(nextMsg.createdAt).getTime() - new Date(msg.createdAt).getTime() : 0;
+
+							// Group if within 5 minutes (300,000 ms)
+							const isFirstInGroup = !isSameSenderAsPrev || timeDiffPrev > 300000;
+							const isLastInGroup = !isSameSenderAsNext || timeDiffNext > 300000;
+
+							return (
+								<MessageBubble
+									key={msg.messageId}
+									message={msg}
+									currentUserId={currentUserId}
+									isFirstInGroup={isFirstInGroup}
+									isLastInGroup={isLastInGroup}
+								/>
+							);
+						})}
+					</div>
 				)}
 				<div ref={bottomRef} />
 			</div>
 
 			{/* Input */}
-			<MessageInput onSend={onSend} blocked={false} />
+			<MessageInput onSend={onSend} blocked={!!blockStatus?.blocked} />
 
 			{/* User Info Modal */}
 			{showInfo && (
 				<UserInfoModal
 					user={otherParticipant}
 					itemTitle={contextLabel}
-					isBlocked={false}
+					blockStatus={blockStatus}
+					isCurrentUserStaff={isCurrentUserStaff}
 					onClose={() => setShowInfo(false)}
-					onToggleBlock={() => undefined}
+					onBlockChange={setBlockStatus}
 				/>
 			)}
 		</div>

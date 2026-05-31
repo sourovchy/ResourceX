@@ -6,12 +6,15 @@ import com.resourcex.resourcex.entity.Conversation;
 import com.resourcex.resourcex.entity.Message;
 import com.resourcex.resourcex.entity.User;
 import com.resourcex.resourcex.exception.BadRequestException;
+import com.resourcex.resourcex.exception.ForbiddenException;
 import com.resourcex.resourcex.exception.ResourceNotFoundException;
 import com.resourcex.resourcex.mapper.MessageMapper;
 import com.resourcex.resourcex.repository.ConversationRepository;
 import com.resourcex.resourcex.repository.MessageRepository;
+import com.resourcex.resourcex.repository.UserBlockRepository;
 import com.resourcex.resourcex.repository.UserRepository;
 import com.resourcex.resourcex.service.MessageService;
+import com.resourcex.resourcex.service.NotificationService;
 import com.resourcex.resourcex.validator.MessageValidator;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import lombok.RequiredArgsConstructor;
@@ -28,9 +31,11 @@ public class MessageServiceImpl implements MessageService {
     private final MessageRepository messageRepository;
     private final ConversationRepository conversationRepository;
     private final UserRepository userRepository;
+    private final UserBlockRepository userBlockRepository;
     private final MessageMapper messageMapper;
     private final MessageValidator messageValidator;
     private final SimpMessagingTemplate messagingTemplate;
+    private final NotificationService notificationService;
 
     @Override
     @Transactional
@@ -41,6 +46,12 @@ public class MessageServiceImpl implements MessageService {
         Conversation conversation = getConversationForUser(conversationId, currentUser.getUserId());
 
         User receiver = getOtherParticipant(conversation, currentUser.getUserId());
+
+        // Blocking: existing conversations become read-only if either party blocked the other
+        if (userBlockRepository.existsBlockBetween(currentUser.getUserId(), receiver.getUserId())) {
+            throw new ForbiddenException(
+                    "This conversation is read-only because one of you has blocked the other.");
+        }
 
         Message message = Message.builder()
                 .conversation(conversation)
@@ -56,6 +67,19 @@ public class MessageServiceImpl implements MessageService {
 
         MessageResponse response = messageMapper.toResponse(savedMessage);
         messagingTemplate.convertAndSend("/queue/messages/" + receiver.getUserId(), response);
+
+        // Persist a notification for the recipient (deep-links to the conversation)
+        String preview = savedMessage.getContent();
+        if (preview.length() > 120) {
+            preview = preview.substring(0, 117) + "…";
+        }
+        notificationService.createMessageNotification(
+                receiver.getUserId(),
+                conversation.getConversationId(),
+                "New message from " + currentUser.getName(),
+                preview,
+                currentUser.getUserId()
+        );
 
         return response;
     }

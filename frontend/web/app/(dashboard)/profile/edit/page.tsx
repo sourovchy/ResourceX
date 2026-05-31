@@ -340,7 +340,7 @@ export default function EditProfilePage() {
 	}
 
 	return (
-		<div className="mx-auto max-w-3xl space-y-8 px-4 pb-20 sm:px-6 lg:px-8">
+		<div className="w-full space-y-8 px-4 pb-20 sm:px-6 lg:px-8">
 			<div className="space-y-2">
 				
 				<h1 className="text-2xl font-bold tracking-tight text-textPrimary sm:text-3xl">

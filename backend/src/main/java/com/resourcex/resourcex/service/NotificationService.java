@@ -3,6 +3,8 @@ package com.resourcex.resourcex.service;
 import com.resourcex.resourcex.dto.request.NotificationRequest;
 import com.resourcex.resourcex.dto.response.NotificationResponse;
 import com.resourcex.resourcex.entity.Notification;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 
 import java.util.List;
 
@@ -12,6 +14,11 @@ public interface NotificationService {
      * Create a new notification
      */
     NotificationResponse createNotification(NotificationRequest request);
+
+    /**
+     * Get notifications for a user, paginated and ordered newest-first.
+     */
+    Page<NotificationResponse> getNotificationsByUserId(Long userId, Pageable pageable);
 
     /**
      * Get notification by ID
@@ -116,6 +123,27 @@ public interface NotificationService {
     NotificationResponse createTrustNotification(
             Long userId,
             Long trustEventId,
+            String title,
+            String message,
+            Long createdByUserId);
+
+    /**
+     * Create notification for a new chat message.
+     * relatedEntityId is the conversation id (used for deep-linking to the inbox).
+     */
+    NotificationResponse createMessageNotification(
+            Long userId,
+            Long conversationId,
+            String title,
+            String message,
+            Long createdByUserId);
+
+    /**
+     * Create notification for a submitted review.
+     */
+    NotificationResponse createReviewNotification(
+            Long userId,
+            Long reviewId,
             String title,
             String message,
             Long createdByUserId);

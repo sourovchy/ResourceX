@@ -165,6 +165,15 @@ public class ItemServiceImpl implements ItemService {
     }
 
     @Override
+    @Transactional(readOnly = true)
+    public Page<ItemResponse> getUserItems(Long userId, Pageable pageable) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+        return itemRepository.findByOwnerAndStatusNot(user, Item.ItemStatus.DELETED, pageable)
+                .map(ItemMapper::toResponse);
+    }
+
+    @Override
     @Transactional
     public void deleteItem(Long itemId) {
         Item item = itemRepository.findById(itemId)

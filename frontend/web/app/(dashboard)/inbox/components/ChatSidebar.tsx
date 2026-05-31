@@ -1,10 +1,11 @@
-
 "use client";
 
+import { useState } from "react";
 import { Conversation } from "@/types/chat";
 import SearchBar from "./SearchBar";
 import ConversationList from "./ConversationList";
-import { MessageSquare } from "lucide-react";
+import NewConversationModal from "./NewConversationModal";
+import { MessageSquare, PenSquare } from "lucide-react";
 
 interface ChatSidebarProps {
 	conversations: Conversation[];
@@ -14,6 +15,19 @@ interface ChatSidebarProps {
 	loading?: boolean;
 	onConversationSelect: (conversationId: number) => void;
 	onSearchChange: (value: string) => void;
+	onConversationCreated: (conversationId: number) => void;
+}
+
+function ConversationSkeleton() {
+	return (
+		<div className="flex animate-pulse items-center gap-3 p-3">
+			<div className="h-11 w-11 shrink-0 rounded-full bg-[var(--color-chatHover)]" />
+			<div className="flex-1 space-y-2">
+				<div className="h-3 w-1/2 rounded bg-[var(--color-chatHover)]" />
+				<div className="h-2.5 w-3/4 rounded bg-[var(--color-chatHover)]" />
+			</div>
+		</div>
+	);
 }
 
 export default function ChatSidebar({
@@ -24,51 +38,82 @@ export default function ChatSidebar({
 	loading = false,
 	onConversationSelect,
 	onSearchChange,
+	onConversationCreated,
 }: ChatSidebarProps) {
+	const [newOpen, setNewOpen] = useState(false);
+
 	return (
-		<aside className="flex min-h-0 w-full flex-col border-b border-borderLight bg-surface lg:w-[360px] xl:w-[380px] lg:border-b-0 lg:border-r">
+		<aside className="flex h-full w-full flex-col bg-[var(--color-chatPanel)]">
 			{/* Header */}
-			<div className="flex h-14 shrink-0 items-center justify-between border-b border-borderLight px-3 sm:h-16 sm:px-4">
-				<div>
-					<h2 className="font-bold text-textPrimary text-base">Messages</h2>
-					<p className="text-xs text-textSecondary mt-0.5">
-						{conversations.length} conversation{conversations.length === 1 ? "" : "s"}
-					</p>
+			<div className="flex h-14 shrink-0 items-center justify-between px-4 sm:h-16 sm:px-5">
+				<div className="min-w-0">
+					<h2 className="text-lg font-bold leading-tight text-textPrimary">Chats</h2>
+					{!loading && conversations.length > 0 && (
+						<p className="text-[11px] text-textTertiary">
+							{conversations.length} conversation
+							{conversations.length === 1 ? "" : "s"}
+						</p>
+					)}
 				</div>
+				<button
+					onClick={() => setNewOpen(true)}
+					className="flex h-9 w-9 items-center justify-center rounded-full text-primary transition-colors hover:bg-[var(--color-chatHover)]"
+					title="New message"
+					aria-label="New message">
+					<PenSquare className="h-5 w-5" />
+				</button>
 			</div>
 
 			{/* Search */}
-			<div className="shrink-0 border-b border-borderLight p-3 sm:p-4">
+			<div className="shrink-0 border-b border-[var(--color-chatBorder)] px-4 pb-3 sm:px-5 sm:pb-4">
 				<SearchBar value={searchQuery} onChange={onSearchChange} />
 			</div>
 
 			{/* List */}
-			<div className="min-h-0 flex-1 overflow-y-auto">
+			<div className="min-h-0 flex-1 overflow-y-auto px-1.5 py-2">
 				{loading ? (
-					<div className="px-4 py-10 text-center text-textSecondary text-sm">
-						Loading conversations...
+					<div className="space-y-1">
+						{Array.from({ length: 6 }).map((_, i) => (
+							<ConversationSkeleton key={i} />
+						))}
 					</div>
 				) : conversations.length === 0 ? (
-					<div className="px-4 py-12 flex flex-col items-center justify-center text-center text-textSecondary">
-						<div className="w-14 h-14 rounded-2xl bg-surfaceVariant flex items-center justify-center mb-3">
-							<MessageSquare className="w-7 h-7 text-outline" />
+					<div className="flex flex-col items-center justify-center px-4 py-12 text-center text-textSecondary">
+						<div className="mb-3 flex h-14 w-14 items-center justify-center rounded-2xl bg-[var(--color-chatHover)]">
+							<MessageSquare className="h-7 w-7 text-outline" />
 						</div>
-						<p className="font-semibold text-textPrimary">No conversations found</p>
-						<p className="text-xs mt-1 max-w-[220px]">
-							Start a conversation from a booking or dispute, or search again.
+						<p className="font-semibold text-textPrimary">
+							{searchQuery ? "No matches found" : "No conversations yet"}
 						</p>
+						<p className="mt-1 max-w-[220px] text-xs">
+							{searchQuery
+								? "Try a different name or keyword."
+								: "Start a new chat, or message someone from an item, booking, or dispute."}
+						</p>
+						{!searchQuery && (
+							<button
+								onClick={() => setNewOpen(true)}
+								className="mt-4 flex items-center gap-2 rounded-xl bg-primary px-4 py-2 text-sm font-bold text-white transition-colors hover:bg-primaryDark">
+								<PenSquare className="h-4 w-4" />
+								New message
+							</button>
+						)}
 					</div>
 				) : (
 					<ConversationList
 						conversations={conversations}
 						selectedId={selectedConversationId}
-						searchQuery={searchQuery}
 						currentUserId={currentUserId}
 						onSelect={onConversationSelect}
-						onSearchChange={onSearchChange}
 					/>
 				)}
 			</div>
+
+			<NewConversationModal
+				isOpen={newOpen}
+				onClose={() => setNewOpen(false)}
+				onCreated={onConversationCreated}
+			/>
 		</aside>
 	);
 }

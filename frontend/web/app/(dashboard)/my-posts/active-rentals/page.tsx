@@ -3,184 +3,249 @@
 import React, { useEffect, useState } from "react";
 import Link from "next/link";
 import {
-	Clock,
-	Shield,
+	AlertCircle,
+	CalendarDays,
 	CheckCircle,
-	AlertOctagon,
-    Loader2,
-    AlertCircle,
+	Loader2,
+	MessageSquare,
+	Phone,
+	Shield,
 } from "lucide-react";
 import api from "@/lib/api";
-import { BookingResponse } from "@/types/booking";
+import { useToast } from "@/context/ToastContext";
+import { ConfirmModal } from "@/components/ui/ConfirmModal";
+import { formatDateRange, formatShortDate } from "@/lib/dateUtils";
+import { extractErrorMessage } from "@/lib/errorUtils";
+import MessageModal from "@/components/misc/MessageModal";
+
+type ActiveBooking = {
+	bookingId: number;
+	startDate: string;
+	endDate: string;
+	status: string;
+	totalPrice: number;
+	item: {
+		itemId: number;
+		title: string;
+		dailyRate: number;
+	};
+	renter: {
+		userId: number;
+		name: string;
+		email: string;
+		studentProfile?: {
+			phone?: string | null;
+			trustScore?: number | null;
+			department?: string | null;
+			university?: string | null;
+		} | null;
+	};
+};
 
 export default function ActiveRentalsPage() {
-    const [bookings, setBookings] = useState<BookingResponse[]>([]);
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState("");
+	const { toast } = useToast();
+	const [bookings, setBookings] = useState<ActiveBooking[]>([]);
+	const [loading, setLoading] = useState(true);
+	const [error, setError] = useState("");
+	const [completeTarget, setCompleteTarget] = useState<number | null>(null);
+	const [completing, setCompleting] = useState(false);
+	const [messageTarget, setMessageTarget] = useState<{ userId: number; name: string } | null>(null);
 
-    useEffect(() => {
-        let active = true;
+	const load = async () => {
+		try {
+			setLoading(true);
+			setError("");
+			const res = await api.get("/bookings/owner");
+			const all: ActiveBooking[] = Array.isArray(res.data) ? res.data : [];
+			// Only APPROVED bookings are "active" rentals
+			setBookings(all.filter((b) => b.status === "APPROVED"));
+		} catch (err) {
+			setError(extractErrorMessage(err));
+		} finally {
+			setLoading(false);
+		}
+	};
 
-        async function fetchRentals() {
-            try {
-                // Owner's bookings where they rented out items
-                const response = await api.get<BookingResponse[]>("/bookings/owner");
-                if (!active) return;
-                
-                // Filter for rentals that are either approved (awaiting handover) or active
-                const activeRentals = (response.data || []).filter(
-                    b => b.status === "ACTIVE" || b.status === "APPROVED"
-                );
-                
-                setBookings(activeRentals);
-            } catch (err) {
-                if (active) setError("Failed to load active rentals. Please try again.");
-            } finally {
-                if (active) setLoading(false);
-            }
-        }
+	useEffect(() => { load(); }, []);
 
-        void fetchRentals();
+	const markCompleted = async () => {
+		if (!completeTarget) return;
+		setCompleting(true);
+		try {
+			await api.patch(`/bookings/${completeTarget}/complete`);
+			toast("Rental marked as completed.");
+			setCompleteTarget(null);
+			await load();
+		} catch (err) {
+			toast(extractErrorMessage(err), "error");
+		} finally {
+			setCompleting(false);
+		}
+	};
 
-        return () => { active = false; };
-    }, []);
+	const today = new Date().toISOString().split("T")[0];
 
 	return (
-		<div className="mx-auto max-w-4xl space-y-5 px-3 pb-16 sm:px-4 sm:pb-20 lg:px-0">
-			{/* HEADER */}
+		<div className="w-full space-y-5 px-3 pb-16 sm:px-4 sm:pb-20 lg:px-0">
 			<div>
 				<h1 className="text-xl font-bold text-textPrimary sm:text-2xl">
 					Active Rentals
 				</h1>
-				<p className="text-sm text-textSecondary sm:text-base">
-					Manage items currently rented out to others.
+				<p className="text-sm text-textSecondary">
+					Items you have approved and are currently rented out.
 				</p>
 			</div>
 
-			{/* LOADING STATE */}
-            {loading && (
-                <div className="flex min-h-[40vh] flex-col items-center justify-center gap-3 text-textSecondary">
-                    <Loader2 className="h-6 w-6 animate-spin text-primary" />
-                    <span className="text-sm font-medium">Loading rentals...</span>
-                </div>
-            )}
-
-            {/* ERROR STATE */}
-            {error && (
-                <div className="flex items-center gap-3 rounded-xl border border-error/40 bg-errorLight px-4 py-3 text-sm font-medium text-error animate-slide-down">
-                    <AlertCircle className="h-4 w-4 shrink-0" />
-                    {error}
-                </div>
-            )}
-
-			{/* EMPTY STATE */}
-			{!loading && !error && bookings.length === 0 && (
-				<div className="rounded-2xl border border-borderLight bg-surface py-16 text-center sm:py-20 animate-fade-in">
-					<p className="text-sm text-textSecondary sm:text-base">
-						No active rentals right now.
-					</p>
+			{loading && (
+				<div className="flex min-h-[40vh] flex-col items-center justify-center gap-3 text-textSecondary">
+					<Loader2 className="h-7 w-7 animate-spin text-primary" />
+					<span className="text-sm font-medium">Loading rentals…</span>
 				</div>
 			)}
 
-			{/* LIST */}
+			{!loading && error && (
+				<div className="flex items-center gap-3 rounded-xl border border-error/40 bg-errorLight px-4 py-3 text-sm font-medium text-error">
+					<AlertCircle className="h-4 w-4 shrink-0" />
+					{error}
+				</div>
+			)}
+
+			{!loading && !error && bookings.length === 0 && (
+				<div className="rounded-2xl border border-borderLight bg-surface py-16 text-center">
+					<p className="text-sm text-textSecondary">
+						No active rentals right now.
+					</p>
+					<Link
+						href="/my-posts/requests"
+						className="mt-4 inline-block text-sm font-semibold text-primary hover:underline">
+						View pending requests →
+					</Link>
+				</div>
+			)}
+
 			{!loading && !error && bookings.length > 0 && (
-			<div className="space-y-3 sm:space-y-4 animate-fade-in stagger-children">
-				{bookings.map((booking) => (
-					<div
-						key={booking.bookingId}
-						className="space-y-4 rounded-2xl border border-borderLight bg-surface p-4 shadow-sm sm:p-6">
+				<div className="space-y-4">
+					{bookings.map((booking) => {
+						const started = booking.startDate <= today;
+						const overdue  = booking.endDate < today;
+						const phase = overdue
+							? "Overdue"
+							: started
+							? "In Progress"
+							: "Awaiting Handover";
+						const phaseClass = overdue
+							? "bg-errorLight text-errorDark"
+							: started
+							? "bg-successLight text-successDark"
+							: "bg-warningLight text-warningDark";
 
-						{/* HEADER */}
-						<div className="flex flex-col gap-2 border-b border-borderLight pb-4 sm:flex-row sm:items-center sm:justify-between">
-							<div>
-								<h3 className="text-base font-bold text-textPrimary sm:text-lg">
-									{booking.item?.title || "Unknown Item"}
-								</h3>
-
-								{booking.status === "ACTIVE" && (
-									<div className="mt-0.5 flex items-center gap-1.5 text-sm font-bold text-primary">
-										<Clock className="h-4 w-4" />
-										Return Deadline: {booking.endDate}
-									</div>
-								)}
-
-								{booking.status === "APPROVED" && (
-									<div className="mt-0.5 flex items-center gap-1.5 text-sm font-bold text-primary">
-										<Clock className="h-4 w-4" />
-										Start Date: {booking.startDate}
-									</div>
-								)}
-							</div>
-
+						return (
 							<div
-								className={`self-start rounded-lg px-3 py-1.5 text-sm font-bold whitespace-nowrap ${
-									booking.status === "ACTIVE"
-										? "bg-successLight text-successDark"
-										: "bg-warningLight text-warningDark"
-								}`}>
-								{booking.status === "ACTIVE"
-									? "Currently with Renter"
-									: "Awaiting Handover"}
-							</div>
-						</div>
-
-						{/* RENTER */}
-						<div className="flex flex-col gap-3 rounded-xl bg-surfaceVariant p-3 sm:flex-row sm:items-center sm:justify-between sm:p-4">
-							<div>
-								<div className="text-sm font-bold text-textPrimary">
-									Renter: {booking.renter?.name || "Unknown Renter"}
+								key={booking.bookingId}
+								className="space-y-4 rounded-2xl border border-borderLight bg-surface p-4 shadow-sm sm:p-5">
+								{/* Header */}
+								<div className="flex flex-col gap-2 border-b border-borderLight pb-4 sm:flex-row sm:items-center sm:justify-between">
+									<div className="min-w-0">
+										<h3 className="font-bold text-textPrimary">
+											{booking.item?.title}
+										</h3>
+										<div className="mt-0.5 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-xs text-textSecondary">
+											<span className="flex items-center gap-1">
+												<CalendarDays className="h-3.5 w-3.5" />
+												{formatDateRange(booking.startDate, booking.endDate)}
+											</span>
+											<span className="font-semibold text-textPrimary">
+												৳&thinsp;{Number(booking.totalPrice).toLocaleString()}
+											</span>
+										</div>
+									</div>
+									<span className={`self-start whitespace-nowrap rounded-lg px-2.5 py-1 text-xs font-bold ${phaseClass}`}>
+										{phase}
+									</span>
 								</div>
-								<div className="text-xs text-textSecondary sm:text-sm">
-									Phone: {booking.renter?.studentProfile?.phone || "N/A"}
+
+								{/* Renter info */}
+								<div className="flex flex-col gap-2 rounded-xl bg-surfaceVariant p-3 sm:flex-row sm:items-center sm:justify-between sm:p-4">
+									<div>
+										<p className="text-sm font-bold text-textPrimary">
+											{booking.renter?.name}
+										</p>
+										{booking.renter?.studentProfile?.phone && (
+											<a
+												href={`tel:${booking.renter.studentProfile.phone}`}
+												className="mt-0.5 flex items-center gap-1 text-xs text-textSecondary hover:text-primary">
+												<Phone className="h-3 w-3" />
+												{booking.renter.studentProfile.phone}
+											</a>
+										)}
+										{booking.renter?.studentProfile?.department && (
+											<p className="mt-0.5 text-xs text-textSecondary">
+												{booking.renter.studentProfile.department}
+											</p>
+										)}
+									</div>
+									{booking.renter?.studentProfile?.trustScore != null && (
+										<span className="flex items-center gap-1 self-start rounded-md bg-successLight px-2 py-1 text-xs font-bold text-successDark">
+											<Shield className="h-3 w-3" />
+											Trust {booking.renter.studentProfile.trustScore}
+										</span>
+									)}
+								</div>
+
+								{/* Actions */}
+								<div className="flex flex-col gap-3 border-t border-borderLight pt-3 sm:flex-row">
+									<button
+										onClick={() => setCompleteTarget(booking.bookingId)}
+										className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-primary px-4 py-2.5 text-sm font-bold text-white transition-colors hover:bg-primaryDark">
+										<CheckCircle className="h-4 w-4" />
+										{started ? "Mark as Returned" : "Confirm Handover"}
+									</button>
+
+									{booking.renter?.userId && (
+										<button
+											onClick={() =>
+												setMessageTarget({
+													userId: booking.renter.userId,
+													name: booking.renter.name ?? "Renter",
+												})
+											}
+											className="flex flex-1 items-center justify-center gap-2 rounded-xl border border-borderLight bg-surface px-4 py-2.5 text-sm font-semibold text-textSecondary transition-colors hover:border-primary hover:bg-primaryLight hover:text-primary">
+											<MessageSquare className="h-4 w-4" />
+											Message Renter
+										</button>
+									)}
+
+									<Link
+										href={`/disputes?bookingId=${booking.bookingId}`}
+										className="flex flex-1 items-center justify-center gap-2 rounded-xl border border-borderLight bg-surface px-4 py-2.5 text-sm font-semibold text-textSecondary transition-colors hover:bg-surfaceVariant">
+										Raise Dispute
+									</Link>
 								</div>
 							</div>
+						);
+					})}
+				</div>
+			)}
 
-							<div className="flex items-center gap-1 rounded-md bg-successLight px-2 py-1 text-xs font-bold text-success">
-								<Shield className="w-3.5 h-3.5" /> Trust {booking.renter?.studentProfile?.trustScore ?? "N/A"}
-							</div>
-						</div>
+			<ConfirmModal
+				isOpen={completeTarget !== null}
+				title="Mark Rental as Completed"
+				message="Confirm the item has been returned in good condition. This sets the booking to COMPLETED, makes the item available again, releases the deposit, and lets the renter leave a review. This cannot be undone."
+				confirmText="Confirm Return"
+				cancelText="Cancel"
+				isLoading={completing}
+				onConfirm={markCompleted}
+				onCancel={() => setCompleteTarget(null)}
+			/>
 
-						{/* ACTIONS */}
-						{booking.status === "ACTIVE" && (
-							<div className="grid grid-cols-1 gap-3 border-t border-borderLight pt-4 sm:grid-cols-2 lg:grid-cols-4">
-								<Link
-									href={`/my-posts/condition-report/${booking.bookingId}?phase=AFTER`}
-									className="rounded-xl border border-borderLight bg-surface px-4 py-2.5 text-center text-xs font-bold text-textSecondary transition hover:bg-borderLight">
-									Condition Report
-								</Link>
-
-								<button className="flex items-center justify-center gap-1 rounded-xl bg-primary px-4 py-2.5 text-xs font-bold text-white transition hover:bg-primaryDark">
-									<CheckCircle className="h-3.5 w-3.5" />
-									Mark Returned
-								</button>
-
-								<Link
-									href={`/my-posts/penalty/${booking.bookingId}`}
-									className="col-span-1 flex items-center justify-center gap-1 rounded-xl bg-errorLight px-4 py-2.5 text-xs font-bold text-error lg:col-span-2 transition hover:bg-errorLight/80">
-									<AlertOctagon className="h-3.5 w-3.5" />
-									Report Damage / Penalty
-								</Link>
-							</div>
-						)}
-
-						{booking.status === "APPROVED" && (
-							<div className="grid grid-cols-1 gap-3 border-t border-borderLight pt-4 md:grid-cols-2">
-								<Link
-									href={`/my-posts/condition-report/${booking.bookingId}?phase=BEFORE`}
-									className="rounded-xl border border-borderLight bg-surface px-4 py-2.5 text-center text-xs font-bold text-textSecondary transition hover:bg-borderLight">
-									Pre-handover Report
-								</Link>
-
-								<button className="flex items-center justify-center gap-1 rounded-xl bg-primary px-4 py-2.5 text-xs font-bold text-white transition hover:bg-primaryDark">
-									<CheckCircle className="h-3.5 w-3.5" />
-									Confirm Handover
-								</button>
-							</div>
-						)}
-					</div>
-				))}
-			</div>
-            )}
+			{messageTarget && (
+				<MessageModal
+					isOpen={true}
+					targetUserId={messageTarget.userId}
+					targetName={messageTarget.name}
+					onClose={() => setMessageTarget(null)}
+				/>
+			)}
 		</div>
 	);
 }

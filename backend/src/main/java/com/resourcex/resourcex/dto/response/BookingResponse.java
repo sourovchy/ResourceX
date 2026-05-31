@@ -27,6 +27,8 @@ public class BookingResponse {
 
     private String rejectionReason;
 
+    private String bookingMessage;
+
     private BigDecimal totalPrice;
 
     private LocalDateTime createdAt;

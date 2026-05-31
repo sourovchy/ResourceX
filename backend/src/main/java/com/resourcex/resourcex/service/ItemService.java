@@ -21,4 +21,6 @@ public interface ItemService {
     Page<ItemResponse> getMyItems(Pageable pageable);
 
     void deleteItem(Long itemId);
+
+    Page<ItemResponse> getUserItems(Long userId, Pageable pageable);
 }

@@ -5,6 +5,7 @@ import com.resourcex.resourcex.dto.request.MessageRequest;
 import com.resourcex.resourcex.dto.response.ConversationResponse;
 import com.resourcex.resourcex.entity.*;
 import com.resourcex.resourcex.exception.BadRequestException;
+import com.resourcex.resourcex.exception.ForbiddenException;
 import com.resourcex.resourcex.exception.ResourceNotFoundException;
 import com.resourcex.resourcex.repository.*;
 import com.resourcex.resourcex.mapper.ConversationMapper;
@@ -28,6 +29,7 @@ public class ConversationServiceImpl implements ConversationService {
         private final UserRepository userRepository;
         private final BookingRepository bookingRepository;
         private final DisputeRepository disputeRepository;
+        private final UserBlockRepository userBlockRepository;
         private final ConversationMapper conversationMapper;
         private final ConversationValidator conversationValidator;
         private final MessageValidator messageValidator;
@@ -42,6 +44,12 @@ public class ConversationServiceImpl implements ConversationService {
                                 .orElseThrow(() -> new ResourceNotFoundException("Other user not found"));
 
                 conversationValidator.validateUsers(currentUser, otherUser);
+
+                // Blocking: a block in either direction prevents starting/continuing a conversation
+                if (userBlockRepository.existsBlockBetween(currentUser.getUserId(), otherUser.getUserId())) {
+                        throw new ForbiddenException(
+                                        "You cannot message this user because one of you has blocked the other.");
+                }
 
                 final Booking booking = request.getBookingId() != null
                                 ? bookingRepository.findById(request.getBookingId())

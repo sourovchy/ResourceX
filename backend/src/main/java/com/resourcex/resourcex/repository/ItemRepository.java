@@ -17,6 +17,16 @@ import java.util.Optional;
 @Repository
 public interface ItemRepository extends JpaRepository<Item, Long> {
 
+  /**
+   * Item counts grouped by category name (for analytics), most populous first.
+   * `category` is a {@code @ManyToOne Category} association, so we LEFT JOIN it
+   * (items without a category fall into the "Uncategorized" bucket).
+   * Returns rows of [categoryLabel (String), count (Long)].
+   */
+  @Query("SELECT COALESCE(c.name, 'Uncategorized'), COUNT(i) FROM Item i "
+          + "LEFT JOIN i.category c GROUP BY c.name ORDER BY COUNT(i) DESC")
+  List<Object[]> countItemsByCategory();
+
   List<Item> findByOwner(User owner);
 
   Page<Item> findByOwnerAndStatusNot(User owner, Item.ItemStatus status, Pageable pageable);

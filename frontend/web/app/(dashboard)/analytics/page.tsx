@@ -257,8 +257,8 @@ export default function AdminAnalyticsPage() {
 	const summary = analytics?.summary;
 
 	const topItems = analytics?.topItems ?? [];
-	const monthlyRevenue = analytics?.monthlyRevenue ?? [];
-	const lateReturns = analytics?.lateReturns ?? [];
+	const penalties = analytics?.penalties ?? [];
+	const disputes = analytics?.disputes ?? [];
 	const bookingRatio = analytics?.bookingRatio ?? [];
 	const categoryDistribution = analytics?.categoryDistribution ?? [];
 
@@ -271,31 +271,31 @@ export default function AdminAnalyticsPage() {
 			iconClass: "bg-success",
 		},
 		{
-			label: "Avg Rental / Day",
-			value: formatCurrency(summary?.averageRentalPerDay),
+			label: "Total Bookings",
+			value: (summary?.totalBookings ?? 0).toLocaleString(),
 			valueClass: "text-primary",
 			accentClass: "bg-primary/10",
 			iconClass: "bg-primary",
 		},
 		{
-			label: "Late Return Rate",
-			value: `${summary?.lateReturnRate ?? 0}%`,
+			label: "Total Users",
+			value: (summary?.totalUsers ?? 0).toLocaleString(),
+			valueClass: "text-accent",
+			accentClass: "bg-accent/10",
+			iconClass: "bg-accent",
+		},
+		{
+			label: "Listed Items",
+			value: (summary?.totalItems ?? 0).toLocaleString(),
 			valueClass: "text-warning",
 			accentClass: "bg-warning/10",
 			iconClass: "bg-warning",
-		},
-		{
-			label: "Dispute Rate",
-			value: `${summary?.disputeRate ?? 0}%`,
-			valueClass: "text-error",
-			accentClass: "bg-error/10",
-			iconClass: "bg-error",
 		},
 	];
 
 	const chartConfigs = [
 		{
-			title: "Top 5 Most Rented Items",
+			title: "Most Booked Items",
 			icon: <BarChart3 className="h-4 w-4 text-primary" />,
 			content: (
 				<BarChart
@@ -306,41 +306,40 @@ export default function AdminAnalyticsPage() {
 			),
 		},
 		{
-			title: "Monthly Rental Revenue (৳)",
-			icon: <TrendingUp className="h-4 w-4 text-success" />,
-			content: (
-				<BarChart
-					data={monthlyRevenue}
-					maxVal={Math.max(...monthlyRevenue.map((d) => d.value), 1)}
-					color="bg-success"
-				/>
-			),
-		},
-		{
-			title: "Late Return Stats by User",
-			icon: <Clock className="h-4 w-4 text-warning" />,
-			content: (
-				<HBarChart
-					data={lateReturns}
-					maxVal={Math.max(...lateReturns.map((d) => d.value), 1)}
-				/>
-			),
-		},
-		{
 			title: "Booking Status Distribution",
 			icon: <CheckCircle2 className="h-4 w-4 text-accent" />,
 			content: <DonutChart slices={bookingRatio} />,
 		},
 		{
-			title: "Category Distribution",
+			title: "Items by Category",
 			icon: <PieChart className="h-4 w-4 text-textSecondary" />,
 			content: <DonutChart slices={categoryDistribution} />,
+		},
+		{
+			title: "Penalties (Applied vs Waived)",
+			icon: <Clock className="h-4 w-4 text-warning" />,
+			content: (
+				<HBarChart
+					data={penalties}
+					maxVal={Math.max(...penalties.map((d) => d.value), 1)}
+				/>
+			),
+		},
+		{
+			title: "Disputes (Open vs Resolved)",
+			icon: <TrendingUp className="h-4 w-4 text-success" />,
+			content: (
+				<HBarChart
+					data={disputes}
+					maxVal={Math.max(...disputes.map((d) => d.value), 1)}
+				/>
+			),
 		},
 	];
 
 	if (loading) {
 		return (
-			<div className="mx-auto max-w-7xl space-y-6 px-4 pb-20 sm:px-6 lg:px-8">
+			<div className="w-full space-y-6 px-4 pb-20 sm:px-6 lg:px-8">
 				<div className="flex min-h-[60vh] flex-col items-center justify-center gap-3 text-textSecondary">
 					<Loader2 className="h-6 w-6 animate-spin text-primary" />
 					<span className="text-sm font-medium">Loading analytics data…</span>
@@ -350,7 +349,7 @@ export default function AdminAnalyticsPage() {
 	}
 
 	return (
-		<div className="mx-auto max-w-7xl space-y-6 px-4 pb-20 sm:px-6 lg:px-8">
+		<div className="w-full space-y-6 px-4 pb-20 sm:px-6 lg:px-8">
 			{/* Header – matches admin pattern */}
 			<div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
 				<div>

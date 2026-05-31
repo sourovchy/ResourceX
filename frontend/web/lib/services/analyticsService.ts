@@ -3,103 +3,131 @@ import api from "../api";
 export interface AnalyticsResponse {
   summary: {
     totalRevenue: number;
-    averageRentalPerDay: number;
-    lateReturnRate: number;
-    disputeRate: number;
+    totalBookings: number;
+    totalUsers: number;
+    totalItems: number;
   };
   topItems: { label: string; value: number }[];
-  monthlyRevenue: { label: string; value: number }[];
-  lateReturns: { label: string; value: number; color: string }[];
   bookingRatio: { label: string; pct: number; color: string }[];
   categoryDistribution: { label: string; pct: number; color: string }[];
+  penalties: { label: string; value: number; color: string }[];
+  disputes: { label: string; value: number; color: string }[];
+}
+
+type LabelValue = { label: string; value: number };
+
+// Backend `metrics` map (all real DB aggregates)
+interface BackendMetrics {
+  totalUsers: number;
+  totalItems: number;
+  totalBookings: number;
+  activeBookings: number;
+  completedBookings: number;
+  cancelledBookings: number;
+  totalDisputes: number;
+  openDisputes: number;
+  resolvedDisputes: number;
+  totalPenalties: number;
+  appliedPenalties: number;
+  waivedPenalties: number;
+  totalTrustEvents: number;
+  revenue: number;
+}
+
+const CATEGORY_COLORS = [
+  "bg-primary",
+  "bg-success",
+  "bg-warning",
+  "bg-accent",
+  "bg-error",
+  "bg-textTertiary",
+  "bg-blue-500",
+];
+
+function toNumber(value: unknown): number {
+  const n = Number(value);
+  return Number.isFinite(n) ? n : 0;
+}
+
+function normalizeLabelValues(raw: unknown): LabelValue[] {
+  if (!Array.isArray(raw)) return [];
+  return raw.map((r: any) => ({
+    label: String(r?.label ?? "Unknown"),
+    value: toNumber(r?.value),
+  }));
 }
 
 export const analyticsService = {
   getAnalytics: async (): Promise<AnalyticsResponse> => {
     const response = await api.get<{
-      metrics: {
-        totalUsers: number;
-        totalItems: number;
-        totalBookings: number;
-        activeBookings: number;
-        completedBookings: number;
-        cancelledBookings: number;
-        totalDisputes: number;
-        openDisputes: number;
-        resolvedDisputes: number;
-        totalPenalties: number;
-        appliedPenalties: number;
-        waivedPenalties: number;
-        totalTrustEvents: number;
-        revenue: number;
+      metrics: Partial<BackendMetrics>;
+      charts: {
+        topItems?: unknown;
+        categoryDistribution?: unknown;
       };
-      charts: any;
-      trends: any;
     }>("/analytics");
 
-    const metrics = response.data.metrics || {
-      totalUsers: 0,
-      totalItems: 0,
-      totalBookings: 0,
-      activeBookings: 0,
-      completedBookings: 0,
-      cancelledBookings: 0,
-      totalDisputes: 0,
-      openDisputes: 0,
-      resolvedDisputes: 0,
-      totalPenalties: 0,
-      appliedPenalties: 0,
-      waivedPenalties: 0,
-      totalTrustEvents: 0,
-      revenue: 0,
+    const m = (response.data.metrics ?? {}) as Partial<BackendMetrics>;
+    const charts = response.data.charts ?? {};
+
+    const metrics: BackendMetrics = {
+      totalUsers: toNumber(m.totalUsers),
+      totalItems: toNumber(m.totalItems),
+      totalBookings: toNumber(m.totalBookings),
+      activeBookings: toNumber(m.activeBookings),
+      completedBookings: toNumber(m.completedBookings),
+      cancelledBookings: toNumber(m.cancelledBookings),
+      totalDisputes: toNumber(m.totalDisputes),
+      openDisputes: toNumber(m.openDisputes),
+      resolvedDisputes: toNumber(m.resolvedDisputes),
+      totalPenalties: toNumber(m.totalPenalties),
+      appliedPenalties: toNumber(m.appliedPenalties),
+      waivedPenalties: toNumber(m.waivedPenalties),
+      totalTrustEvents: toNumber(m.totalTrustEvents),
+      revenue: toNumber(m.revenue),
     };
 
-    const totalBookings = Math.max(metrics.totalBookings, 1);
-    const totalStatusBookings = Math.max(
+    // Booking status distribution (real)
+    const statusTotal = Math.max(
       metrics.activeBookings + metrics.completedBookings + metrics.cancelledBookings,
-      1
+      1,
     );
-
     const bookingRatio = [
-      {
-        label: "Active",
-        pct: Math.round((metrics.activeBookings / totalStatusBookings) * 100),
-        color: "bg-primary",
-      },
-      {
-        label: "Completed",
-        pct: Math.round((metrics.completedBookings / totalStatusBookings) * 100),
-        color: "bg-success",
-      },
-      {
-        label: "Cancelled",
-        pct: Math.round((metrics.cancelledBookings / totalStatusBookings) * 100),
-        color: "bg-error",
-      },
+      { label: "Active", pct: Math.round((metrics.activeBookings / statusTotal) * 100), color: "bg-primary" },
+      { label: "Completed", pct: Math.round((metrics.completedBookings / statusTotal) * 100), color: "bg-success" },
+      { label: "Cancelled", pct: Math.round((metrics.cancelledBookings / statusTotal) * 100), color: "bg-error" },
     ];
+
+    // Category distribution (real, from backend charts)
+    const categoryCounts = normalizeLabelValues(charts.categoryDistribution);
+    const categoryTotal = Math.max(
+      categoryCounts.reduce((sum, c) => sum + c.value, 0),
+      1,
+    );
+    const categoryDistribution = categoryCounts.map((c, i) => ({
+      label: c.label,
+      pct: Math.round((c.value / categoryTotal) * 100),
+      color: CATEGORY_COLORS[i % CATEGORY_COLORS.length],
+    }));
 
     return {
       summary: {
-        totalRevenue: metrics.revenue || 0,
-        averageRentalPerDay: Math.round((metrics.revenue || 0) / totalBookings),
-        lateReturnRate: Math.round((metrics.appliedPenalties / totalBookings) * 100),
-        disputeRate: Math.round((metrics.totalDisputes / totalBookings) * 100),
+        totalRevenue: metrics.revenue,
+        totalBookings: metrics.totalBookings,
+        totalUsers: metrics.totalUsers,
+        totalItems: metrics.totalItems,
       },
-      topItems: [
-        { label: "Items Listed", value: metrics.totalItems },
-        { label: "Total Bookings", value: metrics.totalBookings },
-        { label: "Total Disputes", value: metrics.totalDisputes },
-      ],
-      monthlyRevenue: [
-        { label: "Revenue", value: metrics.revenue || 0 }
-      ],
-      lateReturns: [
-        { label: "Applied Penalties", value: metrics.appliedPenalties, color: "bg-error" },
-        { label: "Waived Penalties", value: metrics.waivedPenalties, color: "bg-success" },
-      ],
+      // Real top items by booking count (from backend charts)
+      topItems: normalizeLabelValues(charts.topItems),
       bookingRatio,
-      categoryDistribution: [
-        { label: "All Items", pct: 100, color: "bg-accent" }
+      categoryDistribution,
+      penalties: [
+        { label: "Applied", value: metrics.appliedPenalties, color: "bg-error" },
+        { label: "Waived", value: metrics.waivedPenalties, color: "bg-success" },
+      ],
+      disputes: [
+        { label: "Open", value: metrics.openDisputes, color: "bg-warning" },
+        { label: "Resolved", value: metrics.resolvedDisputes, color: "bg-success" },
       ],
     };
   },

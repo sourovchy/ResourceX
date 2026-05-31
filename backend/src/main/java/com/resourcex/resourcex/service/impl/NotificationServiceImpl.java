@@ -11,6 +11,8 @@ import com.resourcex.resourcex.repository.NotificationRepository;
 import com.resourcex.resourcex.repository.UserRepository;
 import com.resourcex.resourcex.service.NotificationService;
 import com.resourcex.resourcex.validator.NotificationValidator;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -108,6 +110,17 @@ public class NotificationServiceImpl implements NotificationService {
         return notifications.stream()
                 .map(notificationMapper::toResponse)
                 .collect(Collectors.toList());
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Page<NotificationResponse> getNotificationsByUserId(Long userId, Pageable pageable) {
+        userRepository.findById(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+
+        return notificationRepository
+                .findByUserUserIdOrderByCreatedAtDesc(userId, pageable)
+                .map(notificationMapper::toResponse);
     }
 
     @Override
@@ -382,6 +395,50 @@ public class NotificationServiceImpl implements NotificationService {
                 .message(message)
                 .relatedEntityType(Notification.RelatedEntityType.TRUST)
                 .relatedEntityId(trustEventId)
+                .createdByUserId(createdByUserId)
+                .build();
+
+        return createNotification(request);
+    }
+
+    @Override
+    public NotificationResponse createMessageNotification(
+            Long userId,
+            Long conversationId,
+            String title,
+            String message,
+            Long createdByUserId) {
+        log.info("Creating message notification for user: {}, conversation: {}", userId, conversationId);
+
+        NotificationRequest request = NotificationRequest.builder()
+                .userId(userId)
+                .notificationType(Notification.NotificationType.MESSAGE)
+                .title(title)
+                .message(message)
+                .relatedEntityType(Notification.RelatedEntityType.MESSAGE)
+                .relatedEntityId(conversationId)
+                .createdByUserId(createdByUserId)
+                .build();
+
+        return createNotification(request);
+    }
+
+    @Override
+    public NotificationResponse createReviewNotification(
+            Long userId,
+            Long reviewId,
+            String title,
+            String message,
+            Long createdByUserId) {
+        log.info("Creating review notification for user: {}, review: {}", userId, reviewId);
+
+        NotificationRequest request = NotificationRequest.builder()
+                .userId(userId)
+                .notificationType(Notification.NotificationType.REVIEW)
+                .title(title)
+                .message(message)
+                .relatedEntityType(Notification.RelatedEntityType.REVIEW)
+                .relatedEntityId(reviewId)
                 .createdByUserId(createdByUserId)
                 .build();
 

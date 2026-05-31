@@ -17,6 +17,7 @@ import {
 } from "lucide-react";
 
 import api from "@/lib/api";
+import { formatShortDate } from "@/lib/dateUtils";
 
 type PenaltyStatus =
 	| "PENDING"
@@ -162,7 +163,7 @@ function formatDate(
 		return "-";
 	}
 
-	return date.toLocaleDateString();
+	return formatShortDate(date);
 }
 
 export default function AdminPenaltiesPage() {
@@ -359,7 +360,7 @@ export default function AdminPenaltiesPage() {
 	}
 
 	return (
-		<div className="mx-auto max-w-5xl space-y-6 px-4 sm:px-6 lg:px-8">
+		<div className="w-full space-y-6 px-4 sm:px-6 lg:px-8">
 			<div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
 				<div>
 					<h1 className="text-2xl font-bold text-textPrimary">

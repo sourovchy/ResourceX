@@ -10,6 +10,7 @@ export type AuthUser = {
 	name: string;
 	email: string;
 	status?: string;
+	avatarUrl?: string | null;
 	roles?: UserRole[];
 	studentProfile?: StudentProfile | null;
 };

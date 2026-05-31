@@ -1,401 +1,603 @@
 "use client";
 
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import {
 	AlertCircle,
+	AlertTriangle,
+	BookOpen,
+	Building2,
+	CalendarDays,
 	Check,
 	CheckCircle2,
+	ChevronDown,
+	ChevronUp,
 	Clock,
+	GraduationCap,
 	Loader2,
+	Mail,
 	MessageSquare,
+	Package,
+	Phone,
 	Shield,
+	User,
 	X,
 } from "lucide-react";
 import api from "@/lib/api";
+import { extractErrorMessage } from "@/lib/errorUtils";
+import { formatDateRange } from "@/lib/dateUtils";
+import SafeImage from "@/components/ui/SafeImage";
+import MessageModal from "@/components/misc/MessageModal";
 
-type RequestStatus = "Pending" | "Approved" | "Rejected";
+// ── Backend-aligned types ─────────────────────────────────────────────────────
 
-type RequestItem = {
-	id: string;
-	postId: string;
-	item: string;
-	renterName: string;
-	trustScore: number;
-	dates: string;
-	message: string;
-	status: RequestStatus;
-	rejectionReason?: string;
-	createdAt?: string;
+type StudentProfile = {
+	studentId: string | null;
+	phone: string | null;
+	university: string | null;
+	department: string | null;
+	trustScore: number | null;
 };
 
-type RawRequest = {
-	id?: string | number;
-	requestId?: string | number;
-	bookingId?: string | number;
-	postId?: string | number;
-	itemId?: string | number;
-	itemTitle?: string;
-	title?: string;
-	item?: {
-		title?: string;
-	};
-	renterName?: string;
-	renter?: {
-		name?: string;
-		fullName?: string;
-	};
-	trustScore?: number;
-	reviewerScore?: number;
-	message?: string;
-	bookingMessage?: string;
-	dates?: string;
-	startDate?: string;
-	endDate?: string;
-	status?: string;
-	rejectionReason?: string;
-	createdAt?: string;
-	[item: string]: unknown;
+type RenterProfile = {
+	userId: number;
+	name: string;
+	email: string;
+	avatarUrl: string | null;
+	studentProfile: StudentProfile | null;
 };
 
-const toRequestStatus = (value: unknown): RequestStatus => {
-	const normalized = String(value ?? "").toUpperCase();
-	if (normalized === "APPROVED" || normalized === "ACCEPTED") return "Approved";
-	if (normalized === "REJECTED" || normalized === "DECLINED") return "Rejected";
-	return "Pending";
+type ItemSummary = {
+	itemId: number;
+	title: string;
+	dailyRate: number | null;
+	deposit: number | null;
+	imageUrls: string[];
+	category: string | null;
+	status: string;
 };
 
-const unwrapRequests = (payload: unknown): RawRequest[] =>
-	Array.isArray(payload) ? (payload as RawRequest[]) : [];
-
-const toSafeNumber = (value: unknown, fallback = 0) => {
-	const n = Number(value);
-	return Number.isFinite(n) ? n : fallback;
+type BookingResponse = {
+	bookingId: number;
+	item: ItemSummary;
+	renter: RenterProfile;
+	startDate: string;
+	endDate: string;
+	status: string;
+	totalPrice: number | null;
+	bookingMessage: string | null;
+	rejectionReason: string | null;
+	createdAt: string;
 };
 
-const formatDates = (request: RawRequest) => {
-	if (request.dates) return String(request.dates);
-	if (request.startDate || request.endDate) {
-		const start = request.startDate ? new Date(String(request.startDate)) : null;
-		const end = request.endDate ? new Date(String(request.endDate)) : null;
-		const options: Intl.DateTimeFormatOptions = { month: "short", day: "numeric" };
-		const startLabel = start && !Number.isNaN(start.getTime()) ? start.toLocaleDateString(undefined, options) : "Start";
-		const endLabel = end && !Number.isNaN(end.getTime()) ? end.toLocaleDateString(undefined, options) : "End";
-		return `${startLabel} - ${endLabel}`;
-	}
-	return "Requested rental";
+// ── Helpers ──────────────────────────────────────────────────────────────────
+
+type StatusFilter = "PENDING" | "APPROVED" | "REJECTED" | "ALL";
+
+const STATUS_LABELS: Record<string, { label: string; classes: string }> = {
+	PENDING:   { label: "Pending",  classes: "bg-warningLight text-warningDark" },
+	APPROVED:  { label: "Approved", classes: "bg-successLight text-successDark" },
+	COMPLETED: { label: "Completed", classes: "bg-successLight text-successDark" },
+	REJECTED:  { label: "Rejected", classes: "bg-errorLight text-error" },
+	CANCELLED: { label: "Cancelled", classes: "bg-outlineVariant text-textSecondary" },
 };
 
-const mapRequest = (request: RawRequest): RequestItem => ({
-	id: String(request.id ?? request.requestId ?? request.bookingId ?? `${request.postId ?? "request"}-${request.createdAt ?? Date.now()}`),
-	postId: String(request.postId ?? request.itemId ?? ""),
-	item: request.itemTitle || request.title || request.item?.title || "Untitled item",
-	renterName:
-		request.renterName || request.renter?.name || request.renter?.fullName || "Unknown renter",
-	trustScore: toSafeNumber(request.trustScore ?? request.reviewerScore, 0),
-	dates: formatDates(request),
-	message: request.message || request.bookingMessage || "No message provided.",
-	status: toRequestStatus(request.status),
-	rejectionReason: request.rejectionReason ? String(request.rejectionReason) : undefined,
-	createdAt: request.createdAt ? String(request.createdAt) : undefined,
-});
-
-async function fetchOwnerBookings(postId: string | null): Promise<RequestItem[]> {
-	const res = await api.get("/bookings/owner");
-	const all = unwrapRequests(res.data).map(mapRequest);
-	return postId ? all.filter((r) => r.postId === postId) : all;
+function statusLabel(raw: string) {
+	return STATUS_LABELS[raw?.toUpperCase()] ?? { label: raw, classes: "bg-outlineVariant text-textSecondary" };
 }
+
+function trustColor(score: number | null): string {
+	if (score == null) return "bg-outlineVariant text-textSecondary";
+	if (score >= 90) return "bg-successLight text-successDark";
+	if (score >= 75) return "bg-primaryLight text-primaryDark";
+	if (score >= 60) return "bg-warningLight text-warningDark";
+	if (score >= 40) return "bg-errorLight/60 text-errorDark";
+	return "bg-errorLight text-error";
+}
+
+function trustLabel(score: number | null): string {
+	if (score == null) return "No score";
+	if (score >= 90) return "Excellent";
+	if (score >= 75) return "Good";
+	if (score >= 60) return "Fair";
+	if (score >= 40) return "Warning";
+	return "Suspended";
+}
+
+// ── Main page ─────────────────────────────────────────────────────────────────
 
 export default function RequestsPage() {
 	const searchParams = useSearchParams();
-	const postId = searchParams.get("postId");
+	const postId = searchParams.get("postId"); // item ID filter from "my-posts" page
 
-	const [requests, setRequests] = useState<RequestItem[]>([]);
+	const [bookings, setBookings] = useState<BookingResponse[]>([]);
 	const [loading, setLoading] = useState(true);
-	const [error, setError] = useState("");
-	const [filter, setFilter] = useState<RequestStatus | "All">("Pending");
-	const [successMessage, setSuccessMessage] = useState("");
+	const [pageError, setPageError] = useState<string | null>(null);
+	const [actionError, setActionError] = useState<string | null>(null);
+	const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
+	const [filter, setFilter] = useState<StatusFilter>("PENDING");
+
+	// Reject modal state
 	const [rejectModalOpen, setRejectModalOpen] = useState(false);
-	const [selectedRequestId, setSelectedRequestId] = useState<string | null>(null);
+	const [selectedBookingId, setSelectedBookingId] = useState<number | null>(null);
 	const [rejectionReason, setRejectionReason] = useState("");
-	const [busyRequestId, setBusyRequestId] = useState<string | null>(null);
+	const [busyId, setBusyId] = useState<number | null>(null);
+	const [messageTarget, setMessageTarget] = useState<{ userId: number; name: string } | null>(null);
 
+	// ── Data fetch ──────────────────────────────────────────────────────────
+	useEffect(() => {
+		let active = true;
+		setLoading(true);
+		setPageError(null);
+
+		api.get<BookingResponse[]>("/bookings/owner")
+			.then((res) => {
+				if (!active) return;
+				const all = Array.isArray(res.data) ? res.data : [];
+				setBookings(all);
+			})
+			.catch((err) => {
+				if (!active) return;
+				setPageError(extractErrorMessage(err));
+			})
+			.finally(() => {
+				if (active) setLoading(false);
+			});
+
+		return () => { active = false; };
+	}, []);
+
+	// ── Derived lists ───────────────────────────────────────────────────────
+	const scoped = useMemo(() => {
+		if (!postId) return bookings;
+		return bookings.filter((b) => String(b.item?.itemId) === postId);
+	}, [bookings, postId]);
+
+	const filtered = useMemo(() => {
+		if (filter === "ALL") return scoped;
+		return scoped.filter((b) => b.status?.toUpperCase() === filter);
+	}, [scoped, filter]);
+
+	const counts = useMemo(() => ({
+		PENDING:  scoped.filter((b) => b.status?.toUpperCase() === "PENDING").length,
+		APPROVED: scoped.filter((b) => b.status?.toUpperCase() === "APPROVED").length,
+		REJECTED: scoped.filter((b) => b.status?.toUpperCase() === "REJECTED").length,
+		ALL:      scoped.length,
+	}), [scoped]);
+
+	// ── Actions ─────────────────────────────────────────────────────────────
 	const showSuccess = (msg: string) => {
 		setSuccessMessage(msg);
-		setTimeout(() => setSuccessMessage(""), 4000);
+		setTimeout(() => setSuccessMessage(null), 5000);
 	};
 
-	useEffect(() => {
-		const load = async () => {
-			setLoading(true);
-			setError("");
-
-			try {
-				const liveRequests = await fetchOwnerBookings(postId);
-				setRequests(liveRequests);
-			} catch (err: any) {
-				console.error("Failed to load requests", err);
-				setError(err?.response?.data?.message || err.message || "Failed to load booking requests.");
-				setRequests([]);
-			} finally {
-				setLoading(false);
-			}
-		};
-
-		load();
-	}, [postId]);
-
-	const postFiltered = useMemo(() => {
-		return postId ? requests.filter((r) => r.postId === postId) : requests;
-	}, [postId, requests]);
-
-	const filteredReqs = useMemo(() => {
-		return filter === "All" ? postFiltered : postFiltered.filter((r) => r.status === filter);
-	}, [filter, postFiltered]);
-
-	const counts = useMemo(() => {
-		const scope = postFiltered;
-		return {
-			Pending: scope.filter((r) => r.status === "Pending").length,
-			Approved: scope.filter((r) => r.status === "Approved").length,
-			Rejected: scope.filter((r) => r.status === "Rejected").length,
-			All: scope.length,
-		};
-	}, [postFiltered]);
-
-	const approveRequest = async (id: string) => {
-		setBusyRequestId(id);
-		setError("");
+	const approve = async (bookingId: number) => {
+		setBusyId(bookingId);
+		setActionError(null);
 		try {
-			await api.patch(`/bookings/${id}/approve`);
-			setRequests((prev) =>
-				prev.map((r) =>
-					r.id === id ? { ...r, status: "Approved", rejectionReason: undefined } : r,
+			await api.patch(`/bookings/${bookingId}/approve`);
+			setBookings((prev) =>
+				prev.map((b) =>
+					b.bookingId === bookingId
+						? { ...b, status: "APPROVED" }
+						: b,
 				),
 			);
-			showSuccess("Booking approved successfully.");
-		} catch (err: any) {
-			console.error("Approve failed", err);
-			setError(err?.response?.data?.message || err.message || "Failed to approve request.");
+			showSuccess("Booking approved. The renter will be notified.");
+		} catch (err) {
+			setActionError(extractErrorMessage(err));
 		} finally {
-			setBusyRequestId(null);
+			setBusyId(null);
 		}
 	};
 
-	const openRejectModal = (id: string) => {
-		setSelectedRequestId(id);
+	const openRejectModal = (bookingId: number) => {
+		setSelectedBookingId(bookingId);
 		setRejectionReason("");
 		setRejectModalOpen(true);
 	};
 
 	const closeRejectModal = () => {
 		setRejectModalOpen(false);
-		setSelectedRequestId(null);
+		setSelectedBookingId(null);
 		setRejectionReason("");
 	};
 
 	const confirmReject = async () => {
-		if (!selectedRequestId) return;
-
+		if (!selectedBookingId) return;
 		const reason = rejectionReason.trim();
 		if (!reason) return;
 
-		setBusyRequestId(selectedRequestId);
-		setError("");
-
+		setBusyId(selectedBookingId);
+		setActionError(null);
 		try {
-			await api.patch(`/bookings/${selectedRequestId}/reject`, { reason });
-			setRequests((prev) =>
-				prev.map((r) =>
-					r.id === selectedRequestId
-						? { ...r, status: "Rejected", rejectionReason: reason }
-						: r,
+			await api.patch(`/bookings/${selectedBookingId}/reject`, { reason });
+			setBookings((prev) =>
+				prev.map((b) =>
+					b.bookingId === selectedBookingId
+						? { ...b, status: "REJECTED", rejectionReason: reason }
+						: b,
 				),
 			);
 			closeRejectModal();
-			showSuccess("Booking rejected and reason saved.");
-		} catch (err: any) {
-			console.error("Reject failed", err);
-			setError(err?.response?.data?.message || err.message || "Failed to reject request.");
+			showSuccess("Booking rejected. The renter has been notified.");
+		} catch (err) {
+			setActionError(extractErrorMessage(err));
 		} finally {
-			setBusyRequestId(null);
+			setBusyId(null);
 		}
 	};
 
+	// ── Loading state ───────────────────────────────────────────────────────
 	if (loading) {
 		return (
-			<div className="mx-auto flex max-w-4xl flex-col items-center justify-center space-y-3 px-3 py-16 text-center sm:px-4 sm:py-20">
-				<Loader2 className="h-8 w-8 animate-spin text-primary sm:h-10 sm:w-10" />
-				<p className="text-sm font-medium text-textSecondary sm:text-base">Loading booking requests...</p>
+			<div className="mx-auto flex max-w-4xl flex-col items-center justify-center gap-3 px-4 py-20 text-center">
+				<Loader2 className="h-10 w-10 animate-spin text-primary" />
+				<p className="text-sm font-medium text-textSecondary">
+					Loading booking requests…
+				</p>
 			</div>
 		);
 	}
 
-	return (
-		<div className="mx-auto max-w-4xl space-y-5 px-3 pb-16 sm:px-4 sm:pb-20 lg:px-0">
-			
+	// ── Page error ──────────────────────────────────────────────────────────
+	if (pageError) {
+		return (
+			<div className="mx-auto max-w-lg px-4 py-20 text-center">
+				<AlertTriangle className="mx-auto mb-3 h-10 w-10 text-error" />
+				<p className="font-semibold text-textPrimary">Failed to load requests</p>
+				<p className="mt-1 text-sm text-textSecondary">{pageError}</p>
+			</div>
+		);
+	}
 
-			<div className="space-y-1">
+	// ── Main render ─────────────────────────────────────────────────────────
+	return (
+		<div className="w-full space-y-5 px-3 pb-20 sm:px-4 lg:px-0">
+			{/* Header */}
+			<div className="space-y-0.5">
 				<h1 className="text-xl font-bold tracking-tight text-textPrimary sm:text-2xl">
 					Booking Requests
 				</h1>
-				<p className="text-sm text-textSecondary sm:text-base">
-					Review renter requests, approve the right booking, or reject with a reason.
+				<p className="text-sm text-textSecondary">
+					{postId
+						? "Requests for this listing — approve the right renter or reject with a reason."
+						: "All booking requests across your listings."}
 				</p>
 			</div>
 
-			{error && <div className="rounded-xl bg-errorLight p-4 text-sm font-semibold text-error">{error}</div>}
-
+			{/* Action feedback */}
+			{actionError && (
+				<div className="flex items-start gap-3 rounded-xl border border-error bg-errorLight/30 p-4 text-sm text-errorDark">
+					<AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
+					<span>{actionError}</span>
+				</div>
+			)}
 			{successMessage && (
 				<div className="flex items-center gap-2 rounded-xl bg-successLight p-4 text-sm font-semibold text-success">
-					<CheckCircle2 className="h-4 w-4 shrink-0" /> {successMessage}
+					<CheckCircle2 className="h-4 w-4 shrink-0" />
+					{successMessage}
 				</div>
 			)}
 
-			<div className="flex flex-wrap gap-2 border-b border-borderLight">
-				{(["Pending", "Approved", "Rejected", "All"] as const).map((tab) => (
+			{/* Status tabs */}
+			<div className="flex flex-wrap gap-0 border-b border-borderLight">
+				{(
+					[
+						{ key: "PENDING",  label: "Pending" },
+						{ key: "APPROVED", label: "Approved" },
+						{ key: "REJECTED", label: "Rejected" },
+						{ key: "ALL",      label: "All" },
+					] as const
+				).map(({ key, label }) => (
 					<button
-						key={tab}
-						onClick={() => setFilter(tab)}
-						className={`rounded-t-xl px-4 py-3 text-sm font-semibold transition-colors ${
-							filter === tab
-								? "border-b-2 border-primary text-primary"
+						key={key}
+						onClick={() => setFilter(key)}
+						className={`relative px-4 py-3 text-sm font-semibold transition-colors ${
+							filter === key
+								? "text-primary after:absolute after:inset-x-0 after:bottom-0 after:h-0.5 after:bg-primary"
 								: "text-textSecondary hover:text-textPrimary"
 						}`}>
-						{tab} ({counts[tab]})
+						{label}
+						<span
+							className={`ml-1.5 rounded-full px-1.5 py-0.5 text-xs font-bold ${
+								filter === key
+									? "bg-primary text-white"
+									: "bg-surfaceVariant text-textSecondary"
+							}`}>
+							{counts[key]}
+						</span>
 					</button>
 				))}
 			</div>
 
+			{/* Empty state */}
+			{filtered.length === 0 && (
+				<div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-borderLight bg-surface px-6 py-16 text-center">
+					<BookOpen className="mb-3 h-10 w-10 text-outlineVariant" />
+					<p className="font-semibold text-textPrimary">No {filter === "ALL" ? "" : filter.toLowerCase() + " "}requests</p>
+					<p className="mt-1 text-sm text-textSecondary">
+						{filter === "PENDING"
+							? "No one has requested a booking yet."
+							: `There are no ${filter.toLowerCase()} bookings${postId ? " for this item" : ""}.`}
+					</p>
+				</div>
+			)}
+
+			{/* Request cards */}
 			<div className="space-y-4">
-				{filteredReqs.map((req) => {
-					const isBusy = busyRequestId === req.id;
+				{filtered.map((booking) => {
+					const isBusy = busyId === booking.bookingId;
+					const renter = booking.renter;
+					const profile = renter?.studentProfile;
+					const trust = profile?.trustScore ?? null;
+					const sl = statusLabel(booking.status);
+					const isPending = booking.status?.toUpperCase() === "PENDING";
+					const isRejected = booking.status?.toUpperCase() === "REJECTED";
 
 					return (
-						<div key={req.id} className="space-y-4 rounded-2xl border border-borderLight bg-surface p-4 shadow-sm sm:p-5">
-							<div className="flex flex-col gap-2 border-b border-borderLight pb-4 sm:flex-row sm:items-center sm:justify-between">
-								<div className="min-w-0">
-									<h3 className="truncate text-lg font-bold text-textPrimary">
-										{req.item}
+						<div
+							key={booking.bookingId}
+							className="overflow-hidden rounded-2xl border border-borderLight bg-surface shadow-sm">
+
+							{/* ── Card header: item + dates + status ── */}
+							<div className="flex flex-col gap-2 border-b border-borderLight bg-surfaceVariant/40 px-4 py-3 sm:flex-row sm:items-center sm:justify-between sm:px-5">
+								<div className="min-w-0 flex-1">
+									<h3 className="truncate font-bold text-textPrimary">
+										{booking.item?.title ?? "Item"}
 									</h3>
-									<div className="mt-0.5 flex items-center gap-1.5 text-sm font-bold text-primary">
-										<Clock className="h-4 w-4" /> {req.dates}
+									<div className="mt-0.5 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-xs text-textSecondary">
+										<span className="flex items-center gap-1">
+											<CalendarDays className="h-3.5 w-3.5" />
+											{formatDateRange(booking.startDate, booking.endDate)}
+										</span>
+										{booking.totalPrice != null && (
+											<span className="font-semibold text-textPrimary">
+												৳&thinsp;{Number(booking.totalPrice).toFixed(2)} total
+											</span>
+										)}
 									</div>
 								</div>
-
 								<div
-									className={`self-start rounded-lg px-2.5 py-1 text-xs font-bold whitespace-nowrap ${
-										req.status === "Pending"
-											? "bg-warningLight text-warningDark"
-											: req.status === "Approved"
-												? "bg-successLight text-successDark"
-												: "bg-errorLight text-error"
-									}`}>
-									{req.status}
+									className={`self-start whitespace-nowrap rounded-lg px-2.5 py-1 text-xs font-bold ${sl.classes}`}>
+									{sl.label}
 								</div>
 							</div>
 
-							<div className="space-y-3 rounded-xl bg-surfaceVariant p-4">
-								<div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-									<div className="text-sm font-bold text-textPrimary">
-										Requested by: {req.renterName}
-									</div>
+							<div className="space-y-4 p-4 sm:p-5">
+								{/* ── Renter profile ── */}
+								<div className="flex items-start gap-3 sm:gap-4">
+									{/* Avatar */}
+									<Link
+										href={`/profile/${renter?.userId}`}
+										className="relative h-12 w-12 shrink-0 overflow-hidden rounded-full border-2 border-borderLight sm:h-14 sm:w-14">
+										<SafeImage
+											src={renter?.avatarUrl ?? null}
+											alt={renter?.name ?? "Renter"}
+											fill
+											className="object-cover"
+											sizes="56px"
+										/>
+									</Link>
 
-									<div className="flex items-center gap-1 self-start rounded-md bg-successLight px-2 py-0.5 text-xs font-bold text-success">
-										<Shield className="h-3.5 w-3.5" /> Trust {req.trustScore}
+									<div className="min-w-0 flex-1">
+										{/* Name + trust */}
+										<div className="flex flex-wrap items-center gap-2">
+											<Link
+												href={`/profile/${renter?.userId}`}
+												className="font-bold text-textPrimary hover:text-primary">
+												{renter?.name ?? "Unknown renter"}
+											</Link>
+											{trust != null && (
+												<span
+													className={`flex items-center gap-1 rounded-md px-2 py-0.5 text-xs font-bold ${trustColor(trust)}`}>
+													<Shield className="h-3 w-3" />
+													{trust} · {trustLabel(trust)}
+												</span>
+											)}
+										</div>
+
+										{/* University / dept */}
+										{(profile?.university || profile?.department) && (
+											<div className="mt-0.5 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-xs text-textSecondary">
+												{profile.university && (
+													<span className="flex items-center gap-1">
+														<Building2 className="h-3.5 w-3.5" />
+														{profile.university}
+													</span>
+												)}
+												{profile.department && (
+													<span className="flex items-center gap-1">
+														<GraduationCap className="h-3.5 w-3.5" />
+														{profile.department}
+													</span>
+												)}
+											</div>
+										)}
 									</div>
 								</div>
 
-								<div className="flex items-start gap-2 border-t border-borderLight pt-2 text-sm text-textSecondary">
-									<MessageSquare className="mt-0.5 h-4 w-4 shrink-0" />
-									<p className="italic">&quot;{req.message}&quot;</p>
-								</div>
+								{/* ── Private contact details ── */}
+								{(profile?.studentId || renter?.email || profile?.phone) && (
+									<div className="flex flex-wrap items-center gap-x-4 gap-y-2 pt-3 mt-3 border-t border-borderLight text-xs">
+										{profile?.studentId && (
+											<span className="flex items-center gap-1.5 text-textSecondary">
+												<User className="h-3.5 w-3.5 shrink-0" />
+												<span>
+													<span className="mr-1 font-semibold text-textPrimary">ID:</span>
+													{profile.studentId}
+												</span>
+											</span>
+										)}
+										{renter?.email && (
+											<span className="flex items-center gap-1.5 text-textSecondary">
+												<Mail className="h-3.5 w-3.5 shrink-0" />
+												<a
+													href={`mailto:${renter.email}`}
+													className="truncate hover:text-primary hover:underline">
+													{renter.email}
+												</a>
+											</span>
+										)}
+										{profile?.phone && (
+											<span className="flex items-center gap-1.5 text-textSecondary">
+												<Phone className="h-3.5 w-3.5 shrink-0" />
+												<a
+													href={`tel:${profile.phone}`}
+													className="hover:text-primary hover:underline">
+													{profile.phone}
+												</a>
+											</span>
+										)}
+									</div>
+								)}
 
-								{req.status === "Rejected" && req.rejectionReason && (
-									<div className="flex gap-2 rounded-xl border border-error/20 bg-errorLight/40 p-3 text-sm text-error">
-										<AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
+								{/* ── Booking message ── */}
+								{booking.bookingMessage && (
+									<div className="flex items-start gap-2.5 rounded-xl bg-surfaceVariant p-3.5 text-sm mt-4">
+										<MessageSquare className="mt-0.5 h-4 w-4 shrink-0 text-textSecondary" />
 										<div>
-											<p className="font-bold">Rejection reason</p>
-											<p>{req.rejectionReason}</p>
+											<p className="mb-0.5 text-xs font-semibold uppercase tracking-wider text-textSecondary">
+												Message from renter
+											</p>
+											<p className="text-textPrimary">&ldquo;{booking.bookingMessage}&rdquo;</p>
 										</div>
 									</div>
 								)}
-							</div>
 
-							{req.status === "Pending" && (
-								<div className="flex flex-col gap-3 sm:flex-row">
-									<button
-										onClick={() => approveRequest(req.id)}
-										disabled={isBusy}
-										className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-primary py-3 font-bold text-white transition-colors hover:bg-primaryDark disabled:cursor-not-allowed disabled:opacity-60">
-										{isBusy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
-										Approve
-									</button>
-									<button
-										onClick={() => openRejectModal(req.id)}
-										disabled={isBusy}
-										className="flex flex-1 items-center justify-center gap-2 rounded-xl border border-error bg-surface py-3 font-bold text-error transition-colors hover:bg-errorLight disabled:cursor-not-allowed disabled:opacity-60">
-										<X className="h-4 w-4" /> Reject
-									</button>
-								</div>
-							)}
+								{/* ── Rejection reason ── */}
+								{isRejected && booking.rejectionReason && (
+									<div className="flex gap-2.5 pt-2 text-sm text-error mt-4 border-t border-borderLight">
+										<AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
+										<div>
+											<p className="font-bold">Rejection reason</p>
+											<p className="mt-0.5 text-errorDark">{booking.rejectionReason}</p>
+										</div>
+									</div>
+								)}
+
+								{/* ── Actions ── */}
+								{(isPending || renter?.userId) && (
+									<div className="flex flex-col gap-2 pt-4 mt-4 border-t border-borderLight sm:flex-row sm:items-center">
+										{isPending && (
+											<>
+												<button
+													onClick={() => approve(booking.bookingId)}
+													disabled={isBusy}
+													className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-primary py-2.5 text-sm font-bold text-white transition-colors hover:bg-primaryDark disabled:cursor-not-allowed disabled:opacity-60">
+													{isBusy ? (
+														<Loader2 className="h-4 w-4 animate-spin" />
+													) : (
+														<Check className="h-4 w-4" />
+													)}
+													Approve
+												</button>
+												<button
+													onClick={() => openRejectModal(booking.bookingId)}
+													disabled={isBusy}
+													className="flex flex-1 items-center justify-center gap-2 rounded-xl border border-error bg-surface py-2.5 text-sm font-bold text-error transition-colors hover:bg-errorLight disabled:cursor-not-allowed disabled:opacity-60">
+													<X className="h-4 w-4" />
+													Reject
+												</button>
+											</>
+										)}
+										
+										{renter?.userId && (
+											<button
+												onClick={() =>
+													setMessageTarget({ userId: renter.userId, name: renter.name ?? "Renter" })
+												}
+												className="flex items-center justify-center gap-2 rounded-xl border border-borderLight bg-surface px-4 py-2.5 text-sm font-semibold text-textSecondary transition-colors hover:border-primary hover:bg-primaryLight hover:text-primary sm:w-auto w-full">
+												<MessageSquare className="h-4 w-4" />
+												Message Renter
+											</button>
+										)}
+									</div>
+								)}
+							</div>
 						</div>
 					);
 				})}
 			</div>
 
-			{filteredReqs.length === 0 && (
-				<div className="rounded-2xl border border-borderLight bg-surface p-8 text-center text-textSecondary">
-					No {filter.toLowerCase()} requests{postId && " for this item"}.
-				</div>
+			{/* ── Message modal ── */}
+			{messageTarget && (
+				<MessageModal
+					isOpen={true}
+					targetUserId={messageTarget.userId}
+					targetName={messageTarget.name}
+					onClose={() => setMessageTarget(null)}
+				/>
 			)}
 
+			{/* ── Reject modal ── */}
 			{rejectModalOpen && (
-				<div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4">
+				<div
+					className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4"
+					role="dialog"
+					aria-modal="true"
+					aria-labelledby="reject-modal-title">
 					<div className="w-full max-w-lg space-y-5 rounded-2xl border border-borderLight bg-surface p-5 shadow-xl sm:p-6">
 						<div className="flex items-start justify-between gap-4">
 							<div>
-								<h2 className="text-xl font-bold text-textPrimary">Reject Request</h2>
+								<h2
+									id="reject-modal-title"
+									className="text-lg font-bold text-textPrimary">
+									Reject Booking Request
+								</h2>
 								<p className="mt-1 text-sm text-textSecondary">
-									Provide a reason so the renter understands why it was rejected.
+									Provide a clear reason so the renter understands why it was
+									rejected.
 								</p>
 							</div>
-
-							<button type="button" onClick={closeRejectModal} className="text-textSecondary hover:text-textPrimary">
+							<button
+								type="button"
+								onClick={closeRejectModal}
+								aria-label="Close modal"
+								className="rounded-lg p-1 text-textSecondary hover:bg-surfaceVariant hover:text-textPrimary">
 								<X className="h-5 w-5" />
 							</button>
 						</div>
 
-						<div className="space-y-2">
-							<label className="text-sm font-bold text-textPrimary">Rejection Reason</label>
+						<div className="space-y-1.5">
+							<label
+								htmlFor="rejection-reason"
+								className="text-sm font-bold text-textPrimary">
+								Reason <span className="text-error">*</span>
+							</label>
 							<textarea
+								id="rejection-reason"
 								value={rejectionReason}
 								onChange={(e) => setRejectionReason(e.target.value)}
 								rows={4}
-								placeholder="Example: The item is already booked for these dates."
-								className="w-full resize-none rounded-xl border border-borderLight bg-surface px-4 py-3 text-sm text-textPrimary transition focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
+								maxLength={1000}
+								placeholder="e.g. The item is already reserved for these dates."
+								className="w-full resize-none rounded-xl border border-borderLight bg-surface px-4 py-3 text-sm text-textPrimary placeholder-textSecondary outline-none transition focus:border-primary focus:ring-1 focus:ring-primary"
 							/>
+							<p className="text-right text-xs text-textSecondary">
+								{rejectionReason.length}/1000
+							</p>
 						</div>
 
 						<div className="flex gap-3">
 							<button
 								type="button"
 								onClick={closeRejectModal}
-								className="flex-1 rounded-xl border border-borderLight py-3 font-bold text-textPrimary transition-colors hover:bg-surfaceVariant">
+								className="flex-1 rounded-xl border border-borderLight py-3 text-sm font-bold text-textPrimary transition-colors hover:bg-surfaceVariant">
 								Cancel
 							</button>
 							<button
 								type="button"
 								onClick={confirmReject}
-								disabled={!rejectionReason.trim() || !!busyRequestId}
-								className={`flex-1 rounded-xl py-3 font-bold transition-colors ${
-									rejectionReason.trim() && !busyRequestId
-										? "bg-error text-white hover:opacity-90"
-										: "cursor-not-allowed bg-outlineVariant text-textSecondary"
-								}`}>
-								{busyRequestId ? <Loader2 className="mx-auto h-4 w-4 animate-spin" /> : "Confirm Reject"}
+								disabled={!rejectionReason.trim() || busyId !== null}
+								className="flex-1 rounded-xl py-3 text-sm font-bold text-white transition-colors enabled:bg-error enabled:hover:opacity-90 disabled:cursor-not-allowed disabled:bg-outlineVariant disabled:text-textSecondary">
+								{busyId !== null ? (
+									<Loader2 className="mx-auto h-4 w-4 animate-spin" />
+								) : (
+									"Confirm Reject"
+								)}
 							</button>
 						</div>
 					</div>

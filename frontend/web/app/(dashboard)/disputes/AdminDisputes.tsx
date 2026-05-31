@@ -3,6 +3,8 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { ShieldAlert, CheckCircle2, X, Loader2, RefreshCw } from "lucide-react";
 import api from "@/lib/api";
+import { formatShortDate } from "@/lib/dateUtils";
+import { PageEmpty } from "@/components/ui/PageEmpty";
 
 type DisputeStatus = "OPEN" | "RESOLVED";
 
@@ -91,7 +93,7 @@ function formatDate(value: string) {
 		return value;
 	}
 
-	return date.toLocaleDateString();
+	return formatShortDate(date);
 }
 
 export default function AdminDisputesPage() {
@@ -180,17 +182,8 @@ export default function AdminDisputesPage() {
 		}
 	};
 
-	if (loading) {
-		return (
-			<div className="flex min-h-[60vh] flex-col items-center justify-center gap-3 text-textSecondary">
-				<Loader2 className="h-6 w-6 animate-spin text-primary" />
-				<span className="text-sm font-medium">Loading disputes…</span>
-			</div>
-		);
-	}
-
 	return (
-		<div className="mx-auto max-w-7xl space-y-6 px-4 pb-20 sm:px-6 lg:px-8">
+		<div className="w-full space-y-6 px-4 pb-20 sm:px-6 lg:px-8">
 			{/* Header – consistent with admin pages */}
 			<div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
 				<div>
@@ -245,129 +238,137 @@ export default function AdminDisputesPage() {
 				))}
 			</div>
 
-			{/* Dispute Cards */}
-			<div className="space-y-4">
-				{filtered.map((d) => (
-					<div
-						key={d.id}
-						className={`overflow-hidden rounded-xl border bg-surface shadow-sm transition ${
-							d.status === "OPEN" ? "border-error/40" : "border-borderLight"
-						}`}>
-						<div className="p-5">
-							<div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-								<div className="min-w-0 flex-1">
-									<div className="flex flex-wrap items-center gap-2">
-										<span className="font-mono text-xs font-bold text-textTertiary">
-											D-{d.id}
-										</span>
-										<span className="font-mono text-xs text-textTertiary">
-											Booking: BK-{d.bookingId}
-										</span>
-										<span
-											className={`inline-flex rounded-full px-2.5 py-1 text-xs font-bold ${
-												d.status === "OPEN"
-													? "bg-errorLight text-error"
-													: "bg-successLight text-success"
-											}`}>
-											{d.status}
-										</span>
-									</div>
-
-									<div className="mt-2 flex flex-wrap items-center gap-1 text-sm">
-										<span className="font-semibold text-textPrimary">
-											{d.raisedBy}
-										</span>
-										<span className="text-textTertiary">vs</span>
-										<span className="font-semibold text-textPrimary">
-											{d.against}
-										</span>
-										<span className="ml-1 text-xs text-textTertiary">
-											· {formatDate(d.date)}
-										</span>
-									</div>
-
-									<p className="mt-2 leading-relaxed text-sm text-textSecondary">
-										{d.reason}
-									</p>
-
-									<div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-textTertiary">
-										<span className="font-bold">Evidence:</span>
-										<span className="break-all">{d.evidence}</span>
-									</div>
-
-									{d.resolution && (
-										<div className="mt-3 rounded-lg border border-success/20 bg-successLight px-4 py-2 text-xs text-success">
-											<span className="font-bold">Resolution:</span>{" "}
-											{d.resolution}
+			{/* Dispute Cards / Loading */}
+			{loading ? (
+				<div className="flex min-h-[40vh] flex-col items-center justify-center gap-3 text-textSecondary">
+					<Loader2 className="h-6 w-6 animate-spin text-primary" />
+					<span className="text-sm font-medium">Loading disputes…</span>
+				</div>
+			) : (
+				<div className="space-y-4">
+					{filtered.map((d) => (
+						<div
+							key={d.id}
+							className={`overflow-hidden rounded-xl border bg-surface shadow-sm transition ${
+								d.status === "OPEN" ? "border-error/40" : "border-borderLight"
+							}`}>
+							<div className="p-5">
+								<div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+									<div className="min-w-0 flex-1">
+										<div className="flex flex-wrap items-center gap-2">
+											<span className="font-mono text-xs font-bold text-textTertiary">
+												D-{d.id}
+											</span>
+											<span className="font-mono text-xs text-textTertiary">
+												Booking: BK-{d.bookingId}
+											</span>
+											<span
+												className={`inline-flex rounded-full px-2.5 py-1 text-xs font-bold ${
+													d.status === "OPEN"
+														? "bg-errorLight text-error"
+														: "bg-successLight text-success"
+												}`}>
+												{d.status}
+											</span>
 										</div>
+
+										<div className="mt-2 flex flex-wrap items-center gap-1 text-sm">
+											<span className="font-semibold text-textPrimary">
+												{d.raisedBy}
+											</span>
+											<span className="text-textTertiary">vs</span>
+											<span className="font-semibold text-textPrimary">
+												{d.against}
+											</span>
+											<span className="ml-1 text-xs text-textTertiary">
+												· {formatDate(d.date)}
+											</span>
+										</div>
+
+										<p className="mt-2 leading-relaxed text-sm text-textSecondary">
+											{d.reason}
+										</p>
+
+										<div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-textTertiary">
+											<span className="font-bold">Evidence:</span>
+											<span className="break-all">{d.evidence}</span>
+										</div>
+
+										{d.resolution && (
+											<div className="mt-3 rounded-lg border border-success/20 bg-successLight px-4 py-2 text-xs text-success">
+												<span className="font-bold">Resolution:</span>{" "}
+												{d.resolution}
+											</div>
+										)}
+									</div>
+
+									{d.status === "OPEN" && (
+										<button
+											onClick={() => setActiveDispute(d.id)}
+											className="inline-flex shrink-0 items-center justify-center gap-2 rounded-xl bg-primary px-4 py-2 text-sm font-bold text-white shadow transition hover:opacity-90">
+											<CheckCircle2 className="h-4 w-4" />
+											Resolve
+										</button>
 									)}
 								</div>
-
-								{d.status === "OPEN" && (
-									<button
-										onClick={() => setActiveDispute(d.id)}
-										className="inline-flex shrink-0 items-center justify-center gap-2 rounded-xl bg-primary px-4 py-2 text-sm font-bold text-onPrimary shadow transition hover:opacity-90">
-										<CheckCircle2 className="h-4 w-4" />
-										Resolve
-									</button>
-								)}
 							</div>
+
+							{/* Resolve Panel */}
+							{activeDispute === d.id && (
+								<div className="space-y-3 border-t border-borderLight bg-surfaceVariant/50 p-5">
+									<div className="flex items-center justify-between">
+										<h3 className="text-sm font-bold text-textPrimary">
+											Admin Decision
+										</h3>
+										<button
+											onClick={() => setActiveDispute(null)}
+											className="rounded p-1 hover:bg-surface">
+											<X className="h-4 w-4 text-textTertiary transition hover:text-textPrimary" />
+										</button>
+									</div>
+
+									<p className="text-xs text-textSecondary">
+										This decision will notify both parties.
+									</p>
+
+									<textarea
+										value={decision}
+										onChange={(e) => setDecision(e.target.value)}
+										rows={4}
+										placeholder="Write resolution decision..."
+										className="w-full resize-none rounded-xl border border-outlineVariant bg-surface px-3 py-2.5 text-sm text-textPrimary outline-none transition focus:border-primary focus:ring-1 focus:ring-primary"
+									/>
+
+									<div className="flex flex-wrap gap-3">
+										<button
+											onClick={() => {
+												setActiveDispute(null);
+												setDecision("");
+											}}
+											className="rounded-xl border border-outlineVariant px-4 py-2.5 text-sm font-semibold text-textSecondary transition hover:bg-surface">
+											Cancel
+										</button>
+										<button
+											onClick={submitResolution}
+											disabled={submitting}
+											className="rounded-xl bg-success px-5 py-2.5 text-sm font-bold text-white shadow transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60">
+											{submitting ? "Submitting…" : "Submit Decision & Resolve"}
+										</button>
+									</div>
+								</div>
+							)}
 						</div>
+					))}
 
-						{/* Resolve Panel */}
-						{activeDispute === d.id && (
-							<div className="space-y-3 border-t border-borderLight bg-surfaceVariant/50 p-5">
-								<div className="flex items-center justify-between">
-									<h3 className="text-sm font-bold text-textPrimary">
-										Admin Decision
-									</h3>
-									<button
-										onClick={() => setActiveDispute(null)}
-										className="rounded p-1 hover:bg-surface">
-										<X className="h-4 w-4 text-textTertiary transition hover:text-textPrimary" />
-									</button>
-								</div>
-
-								<p className="text-xs text-textSecondary">
-									This decision will notify both parties.
-								</p>
-
-								<textarea
-									value={decision}
-									onChange={(e) => setDecision(e.target.value)}
-									rows={4}
-									placeholder="Write resolution decision..."
-									className="w-full resize-none rounded-xl border border-outlineVariant bg-surface px-3 py-2.5 text-sm text-textPrimary outline-none transition focus:ring-2 focus:ring-primary"
-								/>
-
-								<div className="flex flex-wrap gap-3">
-									<button
-										onClick={() => {
-											setActiveDispute(null);
-											setDecision("");
-										}}
-										className="rounded-xl border border-outlineVariant px-4 py-2.5 text-sm font-semibold text-textSecondary transition hover:bg-surface">
-										Cancel
-									</button>
-									<button
-										onClick={submitResolution}
-										disabled={submitting}
-										className="rounded-xl bg-success px-5 py-2.5 text-sm font-bold text-white shadow transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60">
-										{submitting ? "Submitting…" : "Submit Decision & Resolve"}
-									</button>
-								</div>
-							</div>
-						)}
-					</div>
-				))}
-
-				{filtered.length === 0 && (
-					<div className="rounded-2xl border border-borderLight bg-surface py-16 text-center text-textTertiary">
-						<ShieldAlert className="mx-auto mb-2 h-8 w-8 opacity-30" />
-						No disputes in this category.
-					</div>
-				)}
-			</div>
+					{filtered.length === 0 && (
+						<PageEmpty
+							icon={ShieldAlert}
+							title="No disputes found"
+							description="There are currently no disputes matching this category."
+						/>
+					)}
+				</div>
+			)}
 		</div>
 	);
 }

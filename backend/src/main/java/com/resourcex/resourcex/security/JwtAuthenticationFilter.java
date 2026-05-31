@@ -56,8 +56,12 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
         String jwt = extractToken(request);
 
-        if (jwt == null || jwt.isBlank()) {
-            log.debug("No token found for path: {}", path);
+        // Treat a missing OR structurally-invalid token as "no token".
+        // A compact JWS has exactly two '.' separators; anything else (e.g. a
+        // stale/empty/garbage cookie) is not a JWT we should try to parse, so we
+        // skip it quietly instead of throwing a MalformedJwtException and logging a WARN.
+        if (jwt == null || jwt.isBlank() || !isWellFormedJwt(jwt)) {
+            log.debug("No valid bearer token for path: {}", path);
             filterChain.doFilter(request, response);
             return;
         }
@@ -88,9 +92,11 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 }
             }
         } catch (io.jsonwebtoken.ExpiredJwtException e) {
-            log.warn("Expired JWT for path: {}", path);
+            log.debug("Expired JWT for path: {}", path);
         } catch (io.jsonwebtoken.JwtException e) {
-            log.warn("Invalid JWT for path: {} — {}", path, e.getMessage());
+            // Malformed / bad-signature token — typically a stale or tampered cookie.
+            // Not actionable and not a server error, so log at DEBUG and stay unauthenticated.
+            log.debug("Invalid JWT for path: {} — {}", path, e.getMessage());
         } catch (Exception e) {
             log.error("Error processing JWT authentication for path: {}", path, e);
         }
@@ -98,21 +104,34 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         filterChain.doFilter(request, response);
     }
 
+    /** A compact JWS must contain exactly two '.' separators. */
+    private boolean isWellFormedJwt(String token) {
+        int dots = 0;
+        for (int i = 0; i < token.length(); i++) {
+            if (token.charAt(i) == '.') dots++;
+        }
+        return dots == 2;
+    }
+
     private String extractToken(HttpServletRequest request) {
         String authHeader = request.getHeader("Authorization");
         if (authHeader != null && authHeader.startsWith("Bearer ")) {
-            return authHeader.substring(7).trim();
+            return blankToNull(authHeader.substring(7).trim());
         }
 
         Cookie[] cookies = request.getCookies();
         if (cookies != null) {
             for (Cookie cookie : cookies) {
                 if (COOKIE_NAME.equals(cookie.getName())) {
-                    return cookie.getValue();
+                    return blankToNull(cookie.getValue());
                 }
             }
         }
 
         return null;
+    }
+
+    private String blankToNull(String value) {
+        return (value == null || value.isBlank()) ? null : value.trim();
     }
 }

@@ -4,6 +4,8 @@ import React, { useEffect, useState } from "react";
 import Link from "next/link";
 import api from "@/lib/api";
 import { useAuth } from "@/context/AuthContext";
+import SafeImage from "@/components/ui/SafeImage";
+import { formatShortDate } from "@/lib/dateUtils";
 import {
 	Mail,
 	CalendarDays,
@@ -15,16 +17,33 @@ import {
 	CheckCircle2,
 	Loader2,
 	MessageSquare,
+	Tag,
 } from "lucide-react";
 
-type Item = { itemId: number };
+type Item = {
+	itemId: number;
+	title?: string;
+	category?: string | null;
+	dailyRate?: number | null;
+	status?: string;
+	imageUrls?: string[];
+};
 type Booking = { bookingId: number; status: string };
 type Review = {
 	reviewId: number;
 	rating: number;
 	comment?: string;
+	createdAt?: string;
 	reviewer?: { name?: string };
 };
+
+// Some endpoints return Spring `Page<T>` objects (with a `content` array),
+// others return a plain list. Normalise both shapes to an array.
+function toList<T>(data: any): T[] {
+	if (Array.isArray(data)) return data;
+	if (Array.isArray(data?.content)) return data.content;
+	return [];
+}
 
 export default function ProfilePage() {
 	const { user } = useAuth();
@@ -38,38 +57,43 @@ export default function ProfilePage() {
 
 	useEffect(() => {
 		let active = true;
-		async function loadProfileStats() {
+		async function load() {
 			try {
+				// Resolve the current user — prefer auth context, fall back to /users/me.
+				let me: any = user;
+				if (!me) {
+					try {
+						const meRes = await api.get("/users/me");
+						if (!active) return;
+						me = meRes.data ?? null;
+						setFallbackUser(me);
+					} catch {
+						// auth context may handle redirects
+					}
+				}
+
+				const uid = me?.userId;
 				const [itemsRes, bookingsRes, reviewsRes] = await Promise.all([
-					api.get<Item[]>("/items/me"),
+					api.get("/items/me"),
 					api.get<Booking[]>("/bookings/me"),
-					api.get<Review[]>("/reviews"),
+					uid
+						? api.get<Review[]>(`/reviews/reviewee/${uid}`)
+						: Promise.resolve({ data: [] as Review[] }),
 				]);
 				if (!active) return;
-				setItems(itemsRes.data ?? []);
-				setBookings(bookingsRes.data ?? []);
-				setReviews(reviewsRes.data ?? []);
+				setItems(toList<Item>(itemsRes.data));
+				setBookings(toList<Booking>(bookingsRes.data));
+				setReviews(toList<Review>(reviewsRes.data));
 			} finally {
 				if (active) setLoading(false);
 			}
 		}
 
-		// If auth context did not populate user or studentProfile, try to fetch current user directly
-		async function loadFallbackUser() {
-			try {
-				const res = await api.get("/users/me");
-				if (!active) return;
-				setFallbackUser(res.data ?? null);
-			} catch (e) {
-				// ignore — auth context may handle redirects
-			}
-		}
-		loadProfileStats();
-		loadFallbackUser();
+		load();
 		return () => {
 			active = false;
 		};
-	}, []);
+	}, [user?.userId]);
 
 	if (loading) {
 		return (
@@ -87,6 +111,14 @@ export default function ProfilePage() {
 	const successfulReturns = safeBookings.filter(
 		(booking) => booking.status === "COMPLETED",
 	).length;
+	const activeListings = safeItems.filter(
+		(item) => item.status === "AVAILABLE",
+	);
+	const avgRating = safeReviews.length
+		? safeReviews.reduce((sum, r) => sum + (r.rating ?? 0), 0) /
+			safeReviews.length
+		: 0;
+
 	const studentProfile =
 		(user && user.studentProfile) ||
 		(fallbackUser && fallbackUser.studentProfile) ||
@@ -95,7 +127,7 @@ export default function ProfilePage() {
 	const trustScore = studentProfile?.trustScore ?? 0;
 
 	return (
-		<div className="mx-auto max-w-4xl space-y-6 px-4 pb-20 sm:px-6 lg:px-8">
+		<div className="w-full space-y-6 px-4 pb-20 sm:px-6 lg:px-8">
 			<h1 className="text-xl font-bold tracking-tight text-textPrimary sm:text-2xl">
 				Profile Overview
 			</h1>
@@ -114,6 +146,12 @@ export default function ProfilePage() {
 						</h2>
 						<p className="break-all text-sm font-medium text-textSecondary">
 							Student ID: {studentProfile?.studentId ?? "N/A"}
+						</p>
+
+						{/* Quick stat row */}
+						<p className="mt-2 text-xs font-semibold text-textSecondary">
+							{activeListings.length} listings · {successfulReturns} rentals
+							completed · {avgRating.toFixed(1)} avg rating
 						</p>
 
 						<div className="w-full border-t border-borderLight my-4" />
@@ -174,15 +212,74 @@ export default function ProfilePage() {
 						/>
 						<ProfileStat
 							icon={<Star className="w-6 h-6" />}
-							label="Reviews Rcvd"
-							value={safeReviews.length}
+							label="Avg Rating"
+							value={avgRating.toFixed(1)}
 						/>
+					</div>
+
+					{/* Active listings preview */}
+					<div className="space-y-4 rounded-lg border border-borderLight bg-surface p-4 sm:p-6">
+						<div className="mb-2 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+							<h2 className="text-lg font-bold text-textPrimary">
+								My Active Listings
+							</h2>
+							<Link
+								href="/my-posts"
+								className="text-sm font-bold text-primary hover:underline">
+								Manage All
+							</Link>
+						</div>
+
+						{activeListings.length === 0 ? (
+							<div className="py-8 text-sm text-textSecondary">
+								You have no active listings yet.{" "}
+								<Link
+									href="/my-posts/add"
+									className="font-bold text-primary hover:underline">
+									Create one
+								</Link>
+								.
+							</div>
+						) : (
+							<div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+								{activeListings.slice(0, 4).map((item) => (
+									<Link
+										key={item.itemId}
+										href={`/borrow/item/${item.itemId}`}
+										className="group flex flex-col gap-2 overflow-hidden rounded-xl border border-borderLight bg-surface p-2 transition-all hover:border-primary/40 hover:shadow-md">
+										<div className="relative aspect-[4/3] w-full overflow-hidden rounded-lg bg-surfaceVariant">
+											{item.imageUrls?.[0] ? (
+												<SafeImage
+													src={item.imageUrls[0]}
+													alt={item.title ?? "Listing"}
+													fill
+													className="object-cover transition-transform duration-300 group-hover:scale-105"
+													sizes="(max-width: 640px) 45vw, 22vw"
+												/>
+											) : (
+												<div className="flex h-full items-center justify-center">
+													<Tag className="h-6 w-6 text-outlineVariant" />
+												</div>
+											)}
+										</div>
+										<p className="line-clamp-2 text-xs font-bold leading-tight text-textPrimary group-hover:text-primary">
+											{item.title ?? "Untitled"}
+										</p>
+										{item.dailyRate != null && (
+											<p className="text-[11px] font-semibold text-primary">
+												৳&thinsp;{Number(item.dailyRate).toLocaleString()}/day
+											</p>
+										)}
+									</Link>
+								))}
+							</div>
+						)}
 					</div>
 
 					<div className="space-y-4 rounded-lg border border-borderLight bg-surface p-4 sm:p-6">
 						<div className="mb-2 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
 							<h2 className="text-lg font-bold text-textPrimary">
-								Recent Reviews
+								Reviews Received
 							</h2>
 							<Link
 								href="/profile/my-reviews"
@@ -194,7 +291,7 @@ export default function ProfilePage() {
 						<div className="divide-y divide-borderLight">
 							{safeReviews.length === 0 ? (
 								<div className="py-8 text-sm text-textSecondary">
-									No reviews available.
+									No reviews received yet.
 								</div>
 							) : (
 								safeReviews.slice(0, 3).map((review) => (
@@ -203,8 +300,13 @@ export default function ProfilePage() {
 											<div className="break-words text-sm font-bold text-textPrimary">
 												{review.reviewer?.name ?? "Reviewer"}
 											</div>
-											<div className="text-sm font-bold text-warning sm:text-right">
-												{review.rating}/5
+											<div className="flex items-center gap-2 text-sm font-bold text-warning sm:justify-end">
+												<span>{review.rating}/5</span>
+												{review.createdAt && (
+													<span className="text-xs font-medium text-textSecondary">
+														{formatShortDate(review.createdAt)}
+													</span>
+												)}
 											</div>
 										</div>
 										<p className="break-words text-sm text-textSecondary">
@@ -228,7 +330,7 @@ function ProfileStat({
 }: {
 	icon: React.ReactNode;
 	label: string;
-	value: number;
+	value: number | string;
 }) {
 	return (
 		<div className="flex items-center gap-4 rounded-lg border border-borderLight bg-surface p-4 sm:p-5">

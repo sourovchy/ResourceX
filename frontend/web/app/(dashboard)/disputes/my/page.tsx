@@ -53,7 +53,7 @@ export default function MyDisputesPage() {
 	}
 
 	return (
-		<div className="mx-auto max-w-5xl space-y-5 px-3 pb-20 sm:space-y-6 sm:px-0">
+		<div className="w-full space-y-5 px-3 pb-20 sm:space-y-6 sm:px-0">
 			<div>
 				<h1 className="text-xl font-bold tracking-tight text-textPrimary sm:text-2xl">
 					My Disputes &amp; Case History

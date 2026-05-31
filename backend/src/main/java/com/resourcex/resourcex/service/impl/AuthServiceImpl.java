@@ -111,6 +111,7 @@ public class AuthServiceImpl implements AuthService {
         );
 
         return AuthResponse.builder()
+                .success(true)
                 .message("Registration successful. Your request is pending review.")
                 .token(null)
                 .user(null)
@@ -166,8 +167,10 @@ public class AuthServiceImpl implements AuthService {
         );
 
         return AuthResponse.builder()
+                .success(true)
                 .message("Login successful")
                 .token(token)
+                .tokenType("Bearer")
                 .user(UserMapper.toResponse(
                         user,
                         userRoleRepository.findAllByUser(user),

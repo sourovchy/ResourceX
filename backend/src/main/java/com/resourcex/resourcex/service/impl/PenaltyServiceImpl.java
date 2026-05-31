@@ -7,6 +7,7 @@ import com.resourcex.resourcex.exception.ResourceNotFoundException;
 import com.resourcex.resourcex.mapper.PenaltyMapper;
 import com.resourcex.resourcex.repository.*;
 import com.resourcex.resourcex.service.AuditLogService;
+import com.resourcex.resourcex.service.NotificationService;
 import com.resourcex.resourcex.service.PenaltyService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -28,6 +29,7 @@ public class PenaltyServiceImpl implements PenaltyService {
     private final DisputeRepository disputeRepository;
     private final PenaltyMapper penaltyMapper;
     private final AuditLogService auditLogService;
+    private final NotificationService notificationService;
 
     @Override
     public PenaltyResponse createPenalty(PenaltyRequest request) {
@@ -70,6 +72,14 @@ public class PenaltyServiceImpl implements PenaltyService {
                 saved.getPenaltyId(),
                 AuditLog.AuditOutcome.SUCCESS,
                 "Penalty created for user " + user.getUserId()
+        );
+
+        notificationService.createPenaltyNotification(
+                user.getUserId(),
+                saved.getPenaltyId(),
+                "New Penalty Issued",
+                "A penalty of " + request.getAmount() + " has been issued. Reason: " + request.getReason(),
+                issuedBy.getUserId()
         );
 
         return penaltyMapper.toResponse(saved);
@@ -200,6 +210,14 @@ public class PenaltyServiceImpl implements PenaltyService {
                 "Penalty applied"
         );
 
+        notificationService.createPenaltyNotification(
+                penalty.getUser().getUserId(),
+                saved.getPenaltyId(),
+                "Penalty Applied",
+                "A penalty has been formally applied to your account.",
+                null
+        );
+
         return penaltyMapper.toResponse(saved);
     }
 
@@ -221,6 +239,14 @@ public class PenaltyServiceImpl implements PenaltyService {
                 saved.getPenaltyId(),
                 AuditLog.AuditOutcome.SUCCESS,
                 "Penalty waived"
+        );
+
+        notificationService.createPenaltyNotification(
+                penalty.getUser().getUserId(),
+                saved.getPenaltyId(),
+                "Penalty Waived",
+                "A penalty on your account has been waived.",
+                null
         );
 
         return penaltyMapper.toResponse(saved);

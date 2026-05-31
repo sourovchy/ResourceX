@@ -10,11 +10,12 @@ import {
 	XCircle,
 } from "lucide-react";
 import api from "@/lib/api";
+import { formatShortDate } from "@/lib/dateUtils";
 import type { BookingResponse } from "@/types/booking";
 
 function formatDate(date?: string) {
 	if (!date) return "—";
-	return new Date(date).toLocaleDateString();
+	return formatShortDate(date);
 }
 
 export default function HistoryPage() {
@@ -90,7 +91,7 @@ export default function HistoryPage() {
 	}
 
 	return (
-		<div className="mx-auto max-w-5xl space-y-5 px-3 pb-20 sm:space-y-6 sm:px-0">
+		<div className="w-full space-y-5 px-3 pb-20 sm:space-y-6 sm:px-0">
 			<div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
 				<div className="min-w-0">
 					<h1 className="text-xl font-bold text-textPrimary sm:text-2xl">

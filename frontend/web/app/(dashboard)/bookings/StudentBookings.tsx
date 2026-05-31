@@ -1,64 +1,56 @@
 "use client";
 
 import React, { useEffect, useMemo, useState } from "react";
-import SafeImage from "@/components/ui/SafeImage";
 import Link from "next/link";
+import SafeImage from "@/components/ui/SafeImage";
 import { AlertTriangle, ArrowRight, Clock, Loader2 } from "lucide-react";
 import api from "@/lib/api";
 import { ConfirmModal } from "@/components/ui/ConfirmModal";
 import { useToast } from "@/context/ToastContext";
 import { formatDateRange } from "@/lib/dateUtils";
+import { extractErrorMessage } from "@/lib/errorUtils";
 
-type BookingStatus =
-	| "PENDING"
-	| "APPROVED"
-	| "ACTIVE"
-	| "COMPLETED"
-	| "CANCELLED"
-	| "REJECTED";
-
+// Backend statuses: PENDING | APPROVED | COMPLETED | CANCELLED | REJECTED
 const STATUS_STYLES: Record<string, { label: string; className: string }> = {
-	PENDING: { label: "Pending", className: "bg-yellow-100 text-yellow-700" },
-	APPROVED: { label: "Approved", className: "bg-blue-100 text-blue-700" },
-	ACTIVE: { label: "Active", className: "bg-emerald-100 text-emerald-700" },
-	COMPLETED: { label: "Completed", className: "bg-successLight text-successDark border border-successLight" },
-	CANCELLED: { label: "Cancelled", className: "bg-errorLight text-errorDark border border-errorLight" },
-	REJECTED: { label: "Rejected", className: "bg-red-100 text-red-700" },
+	PENDING:   { label: "Awaiting Owner Response", className: "bg-warningLight text-warningDark" },
+	APPROVED:  { label: "Approved",  className: "bg-primaryLight text-primaryDark" },
+	COMPLETED: { label: "Completed", className: "bg-successLight text-successDark" },
+	CANCELLED: { label: "Cancelled", className: "bg-errorLight text-errorDark" },
+	REJECTED:  { label: "Rejected",  className: "bg-errorLight text-error" },
 };
 
-export default function MyBookingsPage() {
+const TABS = ["All", "Pending", "Approved", "Completed", "Cancelled"] as const;
+type Tab = (typeof TABS)[number];
+
+export default function StudentBookings() {
 	const { toast } = useToast();
 	const [bookings, setBookings] = useState<any[]>([]);
 	const [loading, setLoading] = useState(true);
 	const [error, setError] = useState<string | null>(null);
-	const [activeTab, setActiveTab] = useState("All");
+	const [activeTab, setActiveTab] = useState<Tab>("All");
 	const [actionLoading, setActionLoading] = useState<number | null>(null);
-
 	const [cancelTarget, setCancelTarget] = useState<number | null>(null);
 
-	const fetchBookings = async () => {
+	const load = async () => {
+		setLoading(true);
+		setError(null);
 		try {
-			setLoading(true);
-			const response = await api.get("/bookings/me");
-			setBookings(response.data || []);
-			setError(null);
-		} catch {
-			setError("Failed to load bookings");
+			const res = await api.get("/bookings/me");
+			setBookings(Array.isArray(res.data) ? res.data : []);
+		} catch (err) {
+			setError(extractErrorMessage(err));
 		} finally {
 			setLoading(false);
 		}
 	};
 
-	useEffect(() => {
-		fetchBookings();
-	}, []);
+	useEffect(() => { load(); }, []);
 
-	const filteredBookings = useMemo(() => {
+	const filtered = useMemo(() => {
 		if (activeTab === "All") return bookings;
-		return bookings.filter((b) => {
-			if (activeTab === "Active") return b.status === "ACTIVE" || b.status === "APPROVED";
-			return b.status === activeTab.toUpperCase();
-		});
+		const key = activeTab.toUpperCase();
+		// "Approved" tab shows APPROVED bookings only
+		return bookings.filter((b) => b.status === key);
 	}, [bookings, activeTab]);
 
 	const cancelBooking = async (bookingId: number) => {
@@ -66,23 +58,10 @@ export default function MyBookingsPage() {
 		setActionLoading(bookingId);
 		try {
 			await api.patch(`/bookings/${bookingId}/cancel`);
-			await fetchBookings();
-			toast("Booking cancelled successfully.");
-		} catch {
-			toast("Failed to cancel booking. Please try again.", "error");
-		} finally {
-			setActionLoading(null);
-		}
-	};
-
-	const confirmReturn = async (bookingId: number) => {
-		setActionLoading(bookingId);
-		try {
-			await api.patch(`/bookings/${bookingId}/complete`);
-			await fetchBookings();
-			toast("Return confirmed. Thank you!");
-		} catch {
-			toast("Failed to confirm return. Please try again.", "error");
+			await load();
+			toast("Booking request cancelled.");
+		} catch (err) {
+			toast(extractErrorMessage(err), "error");
 		} finally {
 			setActionLoading(null);
 		}
@@ -92,23 +71,22 @@ export default function MyBookingsPage() {
 		return (
 			<div className="flex min-h-[60vh] flex-col items-center justify-center gap-3 px-4 text-center">
 				<Loader2 className="h-10 w-10 animate-spin text-primary" />
-				<p className="text-sm font-medium text-textSecondary sm:text-base">
-					Loading your bookings...
-				</p>
+				<p className="text-sm font-medium text-textSecondary">Loading your bookings…</p>
 			</div>
 		);
 	}
 
 	return (
-		<div className="mx-auto max-w-4xl space-y-5 px-3 pb-6 sm:space-y-6 sm:px-0 sm:pb-0">
+		<div className="w-full space-y-5 px-3 pb-6 sm:space-y-6 sm:px-0 sm:pb-0">
 			<h1 className="text-xl font-bold text-textPrimary sm:text-2xl">My Bookings</h1>
 
+			{/* Tab bar */}
 			<div className="flex overflow-x-auto border-b border-borderLight [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-				{["All", "Active", "Pending", "Completed", "Cancelled"].map((tab) => (
+				{TABS.map((tab) => (
 					<button
 						key={tab}
 						onClick={() => setActiveTab(tab)}
-						className={`px-3 py-3 text-sm font-semibold whitespace-nowrap transition-colors sm:px-4 ${
+						className={`whitespace-nowrap px-3 py-3 text-sm font-semibold transition-colors sm:px-4 ${
 							activeTab === tab
 								? "border-b-2 border-primary text-primary"
 								: "text-textSecondary hover:text-textPrimary"
@@ -119,92 +97,94 @@ export default function MyBookingsPage() {
 			</div>
 
 			{error && (
-				<div className="rounded-xl bg-errorLight px-4 py-3 text-sm text-errorDark">{error}</div>
+				<div className="flex items-start gap-3 rounded-xl border border-error bg-errorLight/30 px-4 py-3 text-sm text-errorDark">
+					<AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
+					{error}
+				</div>
 			)}
 
-			{filteredBookings.length === 0 && (
-				<div className="px-4 py-16 text-center text-sm text-textSecondary sm:text-base">
+			{filtered.length === 0 && !error && (
+				<div className="rounded-2xl border border-borderLight bg-surface px-4 py-16 text-center text-sm text-textSecondary">
 					{activeTab === "All"
-						? "No bookings available."
-						: `No ${activeTab.toLowerCase()} bookings found`}
+						? "You have no bookings yet."
+						: `No ${activeTab.toLowerCase()} bookings.`}
 				</div>
 			)}
 
 			<div className="space-y-4 pb-2 sm:space-y-5">
-				{filteredBookings.map((booking) => {
-					const statusMeta = STATUS_STYLES[booking.status as BookingStatus] || {
-						label: booking.status,
-						className: "bg-gray-100 text-gray-700",
+				{filtered.map((booking) => {
+					const rawStatus = (booking.status ?? "PENDING").toUpperCase();
+					const meta = STATUS_STYLES[rawStatus] ?? {
+						label: rawStatus,
+						className: "bg-surfaceVariant text-textSecondary",
 					};
-					const dateRange = formatDateRange(booking.startDate, booking.endDate);
 					const isProcessing = actionLoading === booking.bookingId;
+					const isPending   = rawStatus === "PENDING";
+					const isApproved  = rawStatus === "APPROVED";
+					const isCompleted = rawStatus === "COMPLETED";
 
 					return (
 						<div
 							key={booking.bookingId}
-							className="flex flex-col gap-4 rounded-2xl border border-borderLight bg-surfaceVariant p-4 shadow-sm sm:flex-row sm:gap-5 sm:p-5">
+							className="flex flex-col gap-4 rounded-2xl border border-borderLight bg-surface p-4 shadow-sm sm:flex-row sm:gap-5 sm:p-5">
+							{/* Item image */}
 							<div className="relative h-40 w-full shrink-0 overflow-hidden rounded-xl sm:h-24 sm:w-24">
 								<SafeImage
 									src={booking.item?.imageUrls?.[0]}
-									alt={booking.item?.title || "Item"}
+									alt={booking.item?.title ?? "Item"}
 									fill
 									className="object-cover"
 								/>
 							</div>
 
-							<div className="flex-1">
-								<div className="mb-2 flex flex-wrap items-center gap-2 sm:gap-3">
-									<h2 className="min-w-0 break-words text-lg font-bold text-textPrimary">
-										{booking.item?.title || "Unknown Item"}
+							{/* Info */}
+							<div className="flex-1 min-w-0">
+								<div className="mb-2 flex flex-wrap items-center gap-2">
+									<h2 className="font-bold text-textPrimary">
+										{booking.item?.title ?? "Unknown Item"}
 									</h2>
-									<span
-										className={`rounded-md px-2.5 py-1 text-xs font-bold ${statusMeta.className}`}>
-										{statusMeta.label}
+									<span className={`rounded-md px-2.5 py-1 text-xs font-bold ${meta.className}`}>
+										{meta.label}
 									</span>
 								</div>
 
-								<div className="space-y-2 text-sm text-textSecondary">
-									<div className="flex items-start gap-2">
-										<Clock className="h-4 w-4 text-primary" />
-										<span>{dateRange}</span>
+								<div className="space-y-1.5 text-sm text-textSecondary">
+									<div className="flex items-center gap-2">
+										<Clock className="h-3.5 w-3.5 text-primary" />
+										{formatDateRange(booking.startDate, booking.endDate)}
 									</div>
 									<div>
 										From{" "}
 										<strong className="text-textPrimary">
-											{booking.item?.owner?.name || "Unknown Owner"}
+											{booking.item?.owner?.name ?? "Unknown Owner"}
 										</strong>
 									</div>
 									<div>
 										Total:{" "}
-										<strong className="text-primary">৳ {booking.totalPrice}</strong>
+										<strong className="text-primary">
+											৳&thinsp;{Number(booking.totalPrice).toLocaleString()}
+										</strong>
 									</div>
+									{booking.rejectionReason && rawStatus === "REJECTED" && (
+										<div className="mt-1 rounded-xl bg-errorLight/30 px-3 py-2 text-xs text-errorDark">
+											<strong>Reason:</strong> {booking.rejectionReason}
+										</div>
+									)}
 								</div>
 							</div>
 
+							{/* Actions */}
 							<div className="flex w-full flex-col gap-2 sm:w-auto">
-								{(booking.status === "ACTIVE" || booking.status === "APPROVED") && (
-									<button
-										disabled={isProcessing}
-										onClick={() => confirmReturn(booking.bookingId)}
-										className="w-full rounded-xl border border-successLight bg-successLight px-4 py-2 text-sm font-bold text-successDark transition-colors hover:bg-success hover:text-white disabled:opacity-50 sm:w-auto">
-										{isProcessing ? (
-											<span className="flex items-center justify-center gap-1.5">
-												<Loader2 className="h-3.5 w-3.5 animate-spin" /> Processing...
-											</span>
-										) : (
-											"Confirm Return"
-										)}
-									</button>
-								)}
-
-								{booking.status === "PENDING" && (
+								{/* Cancel — only while PENDING */}
+								{isPending && (
 									<button
 										disabled={isProcessing}
 										onClick={() => setCancelTarget(booking.bookingId)}
 										className="w-full rounded-xl border border-errorLight bg-errorLight px-4 py-2 text-sm font-bold text-errorDark transition-colors hover:bg-error hover:text-white disabled:opacity-50 sm:w-auto">
 										{isProcessing ? (
 											<span className="flex items-center justify-center gap-1.5">
-												<Loader2 className="h-3.5 w-3.5 animate-spin" /> Cancelling...
+												<Loader2 className="h-3.5 w-3.5 animate-spin" />
+												Cancelling…
 											</span>
 										) : (
 											"Cancel Request"
@@ -212,7 +192,8 @@ export default function MyBookingsPage() {
 									</button>
 								)}
 
-								{booking.status === "COMPLETED" && (
+								{/* Leave Review — only when COMPLETED */}
+								{isCompleted && (
 									<Link
 										href={`/borrow/review/${booking.bookingId}`}
 										className="flex items-center justify-center gap-1 rounded-xl border border-primaryLight bg-primaryLight px-4 py-2 text-sm font-bold text-primary transition-colors hover:bg-primary hover:text-white">
@@ -221,9 +202,10 @@ export default function MyBookingsPage() {
 									</Link>
 								)}
 
-								{(booking.status === "APPROVED" || booking.status === "COMPLETED") && (
+								{/* Raise Dispute — for approved or completed bookings */}
+								{(isApproved || isCompleted) && (
 									<Link
-										href={`/disputes/raise?bookingId=${booking.bookingId}`}
+										href={`/disputes?bookingId=${booking.bookingId}`}
 										className="flex items-center justify-center gap-1 rounded-xl border border-errorLight bg-errorLight px-4 py-2 text-sm font-bold text-errorDark transition-colors hover:bg-error hover:text-white">
 										<AlertTriangle className="h-3 w-3" />
 										Raise Dispute

@@ -16,10 +16,12 @@ public class ConversationResponse {
     private Long participantOneUserId;
     private String participantOneName;
     private String participantOneEmail;
+    private Boolean participantOneIsStaff;
 
     private Long participantTwoUserId;
     private String participantTwoName;
     private String participantTwoEmail;
+    private Boolean participantTwoIsStaff;
 
     private Long bookingId;
     private Long disputeId;

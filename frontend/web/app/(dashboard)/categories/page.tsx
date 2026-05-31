@@ -174,7 +174,7 @@ export default function AdminCategoriesPage() {
 	}
 
 	return (
-		<div className="mx-auto max-w-4xl space-y-5 px-3 pb-8 sm:space-y-6 sm:px-0 sm:pb-0">
+		<div className="w-full space-y-5 px-3 pb-8 sm:space-y-6 sm:px-0 sm:pb-0">
 			<div className="flex flex-col gap-4 rounded-2xl border border-borderLight bg-surface p-4 shadow-sm md:flex-row md:items-center md:justify-between sm:p-6">
 				<div className="min-w-0">
 					<h1 className="text-xl font-bold tracking-tight text-textPrimary sm:text-2xl">

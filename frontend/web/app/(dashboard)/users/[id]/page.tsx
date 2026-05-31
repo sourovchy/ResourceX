@@ -17,6 +17,7 @@ import {
 	User,
 	Phone,
 	Mail,
+	MessageSquare,
 	AlertTriangle,
 	ChevronLeft,
 } from "lucide-react";
@@ -24,6 +25,8 @@ import api from "@/lib/api";
 import { formatShortDate } from "@/lib/dateUtils";
 import { extractErrorMessage } from "@/lib/errorUtils";
 import { useToast } from "@/context/ToastContext";
+import { ConfirmModal } from "@/components/ui/ConfirmModal";
+import MessageModal from "@/components/misc/MessageModal";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -134,6 +137,8 @@ export default function AdminUserDetailPage() {
 	const [actionDone, setActionDone] = useState<string | null>(null);
 	const [secondaryLoading, setSecondaryLoading] = useState(false);
 	const [suspendModalOpen, setSuspendModalOpen] = useState(false);
+	const [permanentConfirmOpen, setPermanentConfirmOpen] = useState(false);
+	const [messageOpen, setMessageOpen] = useState(false);
 	const [suspensionType, setSuspensionType] = useState<SuspensionType>("ONE_DAY");
 	const [suspensionReason, setSuspensionReason] = useState("");
 
@@ -371,12 +376,15 @@ export default function AdminUserDetailPage() {
 			toast("Suspension reason is required.", "error");
 			return;
 		}
+		// Permanent suspension is irreversible — require an extra confirmation
 		if (suspensionType === "PERMANENT") {
-			const confirmed = window.confirm(
-				`⚠️ Permanently suspending ${user?.name} will schedule their account for deletion after 15 days. This cannot be undone. Continue?`
-			);
-			if (!confirmed) return;
+			setPermanentConfirmOpen(true);
+			return;
 		}
+		await executeSuspend();
+	};
+
+	const executeSuspend = async () => {
 		try {
 			await api.post(`/admin/block/${userId}`, {
 				suspensionType,
@@ -433,7 +441,7 @@ export default function AdminUserDetailPage() {
 
 	if (loading) {
 		return (
-			<div className="mx-auto max-w-5xl space-y-5 px-4 sm:space-y-6 sm:px-6 lg:px-0">
+			<div className="w-full space-y-5 px-4 sm:space-y-6 sm:px-6 lg:px-0">
 				<div className="h-6 w-40 animate-pulse rounded bg-surfaceVariant" />
 				<div className="h-40 animate-pulse rounded-2xl border border-borderLight bg-surface" />
 				<div className="grid gap-6 lg:grid-cols-2">
@@ -467,7 +475,7 @@ export default function AdminUserDetailPage() {
 	// ─── Main render ──────────────────────────────────────────────────────────
 
 	return (
-		<div className="mx-auto max-w-5xl space-y-5 px-4 sm:space-y-6 sm:px-6 lg:px-0">
+		<div className="w-full space-y-5 px-4 sm:space-y-6 sm:px-6 lg:px-0">
 			{/* Back navigation breadcrumb */}
 			<div className="flex items-center gap-2 text-sm">
 				<Link
@@ -628,6 +636,12 @@ export default function AdminUserDetailPage() {
 						</div>
 					) : (
 						<div className="mt-4 flex items-center gap-3">
+							<button
+								onClick={() => setMessageOpen(true)}
+								className="flex items-center gap-2 rounded-xl border border-borderLight bg-surface px-5 py-2.5 text-sm font-bold text-textPrimary transition hover:border-primary hover:bg-primaryLight/20 hover:text-primary">
+								<MessageSquare className="h-4 w-4" />
+								Message
+							</button>
 							{userStatus === "SUSPENDED" ? (
 								<button
 									onClick={handleReactivate}
@@ -995,6 +1009,29 @@ export default function AdminUserDetailPage() {
 						</div>
 					</div>
 				</div>
+			)}
+
+			<ConfirmModal
+				isOpen={permanentConfirmOpen}
+				isDestructive
+				title="Permanently Suspend Account"
+				message={`Permanently suspending ${user?.name ?? "this user"} schedules their account for deletion after 15 days. This cannot be undone. Continue?`}
+				confirmText="Permanently Suspend"
+				cancelText="Cancel"
+				onConfirm={() => {
+					setPermanentConfirmOpen(false);
+					void executeSuspend();
+				}}
+				onCancel={() => setPermanentConfirmOpen(false)}
+			/>
+
+			{!isPendingType && user && userId && (
+				<MessageModal
+					isOpen={messageOpen}
+					targetUserId={Number(userId)}
+					targetName={user.name}
+					onClose={() => setMessageOpen(false)}
+				/>
 			)}
 		</div>
 	);

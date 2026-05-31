@@ -6,11 +6,14 @@ import SockJS from "sockjs-client";
 import { Conversation, Message } from "../types/chat";
 import { chatService } from "../services/chatService";
 import { useAuth } from "@/context/AuthContext";
+import { useToast } from "@/context/ToastContext";
+import { extractErrorMessage } from "@/lib/errorUtils";
 
 const WS_ENDPOINT = (process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8082") + "/ws-endpoint";
 
 export function useChat() {
-	const { user } = useAuth();
+	const { user, canAccess } = useAuth();
+	const { toast } = useToast();
 	const [conversations, setConversations] = useState<Conversation[]>([]);
 	const [selectedId, setSelectedId] = useState<number | null>(null);
 	const [messages, setMessages] = useState<Record<number, Message[]>>({});
@@ -37,10 +40,6 @@ export function useChat() {
 				if (!isMounted) return;
 
 				setConversations(data);
-
-				if (data.length > 0 && selectedId === null) {
-					setSelectedId(data[0].conversationId);
-				}
 			} finally {
 				if (isMounted) setLoading(false);
 			}
@@ -51,7 +50,9 @@ export function useChat() {
 		return () => {
 			isMounted = false;
 		};
-	}, [selectedId]);
+		// Load once on mount — selecting a conversation must NOT refetch the list
+		// eslint-disable-next-line react-hooks/exhaustive-deps
+	}, []);
 
 	// WebSocket subscription for real-time messages
 	useEffect(() => {
@@ -107,10 +108,17 @@ export function useChat() {
 	);
 
 	const filteredConversations = useMemo(() => {
-		const query = searchQuery.trim().toLowerCase();
-		if (!query) return conversations;
+		// Sort by most recent activity (last message, else updated, else created)
+		const activityTime = (c: Conversation) =>
+			new Date(c.lastMessageAt ?? c.updatedAt ?? c.createdAt).getTime() || 0;
+		const sorted = [...conversations].sort(
+			(a, b) => activityTime(b) - activityTime(a),
+		);
 
-		return conversations.filter((conversation) => {
+		const query = searchQuery.trim().toLowerCase();
+		if (!query) return sorted;
+
+		return sorted.filter((conversation) => {
 			const haystack = [
 				conversation.participantOneName,
 				conversation.participantOneEmail,
@@ -132,19 +140,19 @@ export function useChat() {
 	const selectConversation = useCallback(async (id: number) => {
 		setSelectedId(id);
 
-		const existing = messages[id];
-		if (existing) {
-			setConversations((prev) =>
-				prev.map((c) => (c.conversationId === id ? { ...c, unreadCount: 0 } : c)),
-			);
-			return;
-		}
+		// Persist read-state to the backend (fire-and-forget, non-fatal)
+		void chatService.markConversationAsRead(id).catch(() => undefined);
 
-		const data = await chatService.getMessages(id);
-		setMessages((prev) => ({ ...prev, [id]: data }));
+		// Optimistically clear the unread badge locally
 		setConversations((prev) =>
 			prev.map((c) => (c.conversationId === id ? { ...c, unreadCount: 0 } : c)),
 		);
+
+		// Messages already cached — no refetch needed
+		if (messages[id]) return;
+
+		const data = await chatService.getMessages(id);
+		setMessages((prev) => ({ ...prev, [id]: data }));
 	}, [messages]);
 
 	const sendMessage = useCallback(
@@ -174,11 +182,14 @@ export function useChat() {
 							: c,
 					),
 				);
+			} catch (err) {
+				// Surface failures (e.g. blocked → 403) instead of failing silently
+				toast(extractErrorMessage(err), "error");
 			} finally {
 				setSending(false);
 			}
 		},
-		[selectedId],
+		[selectedId, toast],
 	);
 
 	const refreshConversations = useCallback(async () => {
@@ -191,6 +202,21 @@ export function useChat() {
 		}
 	}, []);
 
+	const deselectConversation = useCallback(() => {
+		setSelectedId(null);
+	}, []);
+
+	// Called after a brand-new conversation is created: refresh the list and open it
+	const openCreatedConversation = useCallback(
+		async (conversationId: number) => {
+			await refreshConversations();
+			await selectConversation(conversationId);
+		},
+		[refreshConversations, selectConversation],
+	);
+
+	const isCurrentUserStaff = canAccess("admin") || canAccess("super_admin") || canAccess("moderator");
+
 	return {
 		conversations,
 		filteredConversations,
@@ -201,10 +227,13 @@ export function useChat() {
 		loading,
 		sending,
 		currentUserId,
+		isCurrentUserStaff,
 		setSearchQuery,
 		setCurrentUserId,
 		selectConversation,
+		deselectConversation,
 		sendMessage,
 		refreshConversations,
+		openCreatedConversation,
 	};
 }

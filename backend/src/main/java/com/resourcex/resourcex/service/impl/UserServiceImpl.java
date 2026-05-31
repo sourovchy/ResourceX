@@ -2,6 +2,7 @@ package com.resourcex.resourcex.service.impl;
 
 import com.resourcex.resourcex.dto.request.UpdateUserRequest;
 import com.resourcex.resourcex.dto.response.UserResponse;
+import com.resourcex.resourcex.dto.response.UserSearchResponse;
 import com.resourcex.resourcex.entity.StudentProfile;
 import com.resourcex.resourcex.entity.User;
 import com.resourcex.resourcex.entity.UserRole;
@@ -21,6 +22,7 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 
 import java.util.List;
@@ -36,6 +38,34 @@ public class UserServiceImpl implements UserService {
     private final com.resourcex.resourcex.repository.UserRoleRepository userRoleRepository;
     private final com.resourcex.resourcex.service.FileStorageService fileStorageService;
     private final FileMetadataRepository fileMetadataRepository;
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<UserSearchResponse> searchUsers(String query, int limit) {
+        String q = query == null ? "" : query.trim();
+        if (q.length() < 2) {
+            return List.of();
+        }
+
+        User current = resolveCurrentUser();
+        int capped = Math.min(Math.max(limit, 1), 20);
+
+        return userRepository
+                .searchActiveUsers(q, current.getUserId(), PageRequest.of(0, capped))
+                .stream()
+                .map(u -> {
+                    StudentProfile sp = studentProfileRepository.findByUser(u).orElse(null);
+                    return UserSearchResponse.builder()
+                            .userId(u.getUserId())
+                            .name(u.getName())
+                            .email(u.getEmail())
+                            .avatarUrl(u.getAvatarUrl())
+                            .department(sp != null ? sp.getDepartment() : null)
+                            .trustScore(sp != null ? sp.getTrustScore() : null)
+                            .build();
+                })
+                .toList();
+    }
 
     @Override
     public UserResponse getCurrentUser() {

@@ -1,40 +1,38 @@
 "use client";
 
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import {
 	CheckCircle2,
 	AlertTriangle,
 	AlertOctagon,
-	DollarSign,
-	PackageOpen,
-	Inbox,
+	ShieldCheck,
+	MessageSquare,
+	Star,
+	Calendar,
 	Bell,
 	Check,
+	Loader2,
 } from "lucide-react";
 import api from "@/lib/api";
+import { formatShortDate } from "@/lib/dateUtils";
+import { PageEmpty } from "@/components/ui/PageEmpty";
+
+const PAGE_SIZE = 15;
 
 type NotificationItem = {
 	id: number;
-	type: string;
+	notificationType: string;
 	title: string;
 	message: string;
 	time: string;
 	isRead: boolean;
+	relatedEntityType?: string;
+	relatedEntityId?: number | null;
 };
-
-type NotificationApiResponse =
-	| {
-		notifications?: unknown;
-		data?: unknown;
-		content?: unknown;
-	}
-	| unknown;
-
-
 
 function formatRelativeTime(dateString?: string) {
 	if (!dateString) return "Recently";
-
 	const date = new Date(dateString);
 	const now = new Date();
 	const diffMs = now.getTime() - date.getTime();
@@ -46,178 +44,176 @@ function formatRelativeTime(dateString?: string) {
 	if (diffMinutes < 60) return `${diffMinutes} minute${diffMinutes > 1 ? "s" : ""} ago`;
 	if (diffHours < 24) return `${diffHours} hour${diffHours > 1 ? "s" : ""} ago`;
 	if (diffDays < 7) return `${diffDays} day${diffDays > 1 ? "s" : ""} ago`;
-
-	return date.toLocaleDateString();
+	return formatShortDate(date);
 }
 
 function normalizeNotification(raw: any): NotificationItem {
 	return {
-		id: Number(raw?.id ?? raw?.notificationId ?? Date.now()),
-		type: raw?.type ?? raw?.notificationType ?? "general",
+		id: Number(raw?.notificationId ?? raw?.id),
+		notificationType: String(raw?.notificationType ?? "ADMIN").toUpperCase(),
 		title: raw?.title ?? "Notification",
-		message: raw?.message ?? raw?.content ?? "",
-		time: formatRelativeTime(raw?.createdAt ?? raw?.time ?? raw?.date),
-		isRead: Boolean(raw?.isRead ?? raw?.read ?? false),
+		message: raw?.message ?? "",
+		time: formatRelativeTime(raw?.createdAt),
+		isRead: Boolean(raw?.isRead),
+		relatedEntityType: raw?.relatedEntityType
+			? String(raw.relatedEntityType).toUpperCase()
+			: undefined,
+		relatedEntityId: raw?.relatedEntityId ?? null,
 	};
 }
 
-function extractNotifications(payload: NotificationApiResponse) {
-	const root: any = payload && typeof payload === "object" ? payload : {};
-
-	const source =
-		root.notifications ?? root.data ?? root.content ?? payload;
-
-	if (!Array.isArray(source)) {
-		return [] as NotificationItem[];
+/** Map a notification to the in-app page it should open. */
+function targetHref(n: NotificationItem): string | null {
+	switch (n.relatedEntityType ?? n.notificationType) {
+		case "BOOKING":
+			return "/bookings";
+		case "MESSAGE":
+			return "/inbox";
+		case "DISPUTE":
+			return "/disputes";
+		case "REVIEW":
+			return "/profile/my-reviews";
+		case "ITEM":
+			return "/my-posts";
+		case "PENALTY":
+		case "TRUST":
+			return "/profile";
+		default:
+			return null;
 	}
-
-	return source.map((item: any) => normalizeNotification(item));
 }
 
 function getNotificationStyle(type: string) {
-	switch (type.toLowerCase()) {
-		case "return_reminder":
-			return {
-				icon: <AlertTriangle className="w-5 h-5 text-warningDark" />,
-				bgColor: "bg-warningLight",
-			};
-
-		case "booking_request":
-			return {
-				icon: <Inbox className="w-5 h-5 text-primary" />,
-				bgColor: "bg-primaryLight",
-			};
-
-		case "booking_approved":
-			return {
-				icon: <CheckCircle2 className="w-5 h-5 text-success" />,
-				bgColor: "bg-successLight",
-			};
-
-		case "deposit_released":
-			return {
-				icon: <DollarSign className="w-5 h-5 text-success" />,
-				bgColor: "bg-successLight",
-			};
-
-		case "item_approved":
-			return {
-				icon: <PackageOpen className="w-5 h-5 text-dashboardBlue" />,
-				bgColor: "bg-dashboardBlueTint",
-			};
-
-		case "penalty_applied":
-			return {
-				icon: <AlertOctagon className="w-5 h-5 text-error" />,
-				bgColor: "bg-errorLight",
-			};
-
+	switch (type.toUpperCase()) {
+		case "BOOKING":
+			return { icon: <Calendar className="h-5 w-5 text-primary" />, bgColor: "bg-primaryLight" };
+		case "MESSAGE":
+			return { icon: <MessageSquare className="h-5 w-5 text-primary" />, bgColor: "bg-primaryLight" };
+		case "DISPUTE":
+			return { icon: <AlertTriangle className="h-5 w-5 text-warningDark" />, bgColor: "bg-warningLight" };
+		case "REVIEW":
+			return { icon: <Star className="h-5 w-5 text-warningDark" />, bgColor: "bg-warningLight" };
+		case "PENALTY":
+			return { icon: <AlertOctagon className="h-5 w-5 text-error" />, bgColor: "bg-errorLight" };
+		case "TRUST":
+			return { icon: <ShieldCheck className="h-5 w-5 text-success" />, bgColor: "bg-successLight" };
 		default:
-			return {
-				icon: <Bell className="w-5 h-5 text-primary" />,
-				bgColor: "bg-primaryLight",
-			};
+			return { icon: <Bell className="h-5 w-5 text-primary" />, bgColor: "bg-primaryLight" };
 	}
 }
 
 export default function NotificationsPage() {
+	const router = useRouter();
 	const [notifications, setNotifications] = useState<NotificationItem[]>([]);
+	const [page, setPage] = useState(0);
+	const [hasMore, setHasMore] = useState(false);
 	const [loading, setLoading] = useState(true);
+	const [loadingMore, setLoadingMore] = useState(false);
 	const [error, setError] = useState<string | null>(null);
+	const [unreadCount, setUnreadCount] = useState(0);
+
+	const fetchUnreadCount = async () => {
+		try {
+			const res = await api.get<{ unreadCount: number }>(
+				"/notifications/user/unread-count",
+			);
+			setUnreadCount(res.data?.unreadCount ?? 0);
+		} catch {
+			// non-fatal
+		}
+	};
+
+	const loadPage = async (p: number) => {
+		const res = await api.get(`/notifications/me?page=${p}&size=${PAGE_SIZE}`);
+		const data = res.data ?? {};
+		const content: NotificationItem[] = Array.isArray(data.content)
+			? data.content.map(normalizeNotification)
+			: [];
+		setNotifications((prev) => (p === 0 ? content : [...prev, ...content]));
+		setHasMore(!(data.last ?? true));
+		setPage(p);
+	};
 
 	useEffect(() => {
 		let active = true;
-
-		const loadNotifications = async () => {
+		(async () => {
 			setLoading(true);
 			setError(null);
-
 			try {
-				let loadedNotifications: NotificationItem[] = [];
-
-				try {
-					const response = await api.get("/notifications/user/all");
-					const normalized = extractNotifications(response.data);
-
-					if (normalized.length > 0) {
-						loadedNotifications = normalized;
-					}
-				} catch {
-					// Handle error
-				}
-
-				if (!active) return;
-
-				setNotifications(loadedNotifications);
+				await loadPage(0);
+				if (active) await fetchUnreadCount();
 			} catch (err) {
-				if (!active) return;
-				setError(
-					err instanceof Error
-						? err.message
-						: "Failed to load notifications.",
-				);
+				if (active)
+					setError(err instanceof Error ? err.message : "Failed to load notifications.");
 			} finally {
-				if (active) {
-					setLoading(false);
-				}
+				if (active) setLoading(false);
 			}
-		};
-
-		void loadNotifications();
-
+		})();
 		return () => {
 			active = false;
 		};
 	}, []);
 
-	const unreadCount = useMemo(
-		() => notifications.filter((n) => !n.isRead).length,
-		[notifications],
-	);
-
-	const markAllRead = async () => {
-		setNotifications((prev) =>
-			prev.map((n) => ({ ...n, isRead: true })),
-		);
-
+	const loadMore = async () => {
+		setLoadingMore(true);
 		try {
-			await api.patch("/notifications/user/read-all");
+			await loadPage(page + 1);
 		} catch {
-			// Silent fail for optimistic UI.
+			// keep current list on failure
+		} finally {
+			setLoadingMore(false);
 		}
 	};
 
 	const markAsRead = async (id: number) => {
-		setNotifications((prev) =>
-			prev.map((n) =>
-				n.id === id ? { ...n, isRead: true } : n,
-			),
-		);
+		const target = notifications.find((n) => n.id === id);
+		if (target && !target.isRead) {
+			setNotifications((prev) =>
+				prev.map((n) => (n.id === id ? { ...n, isRead: true } : n)),
+			);
+			setUnreadCount((c) => Math.max(0, c - 1));
+			try {
+				await api.patch(`/notifications/${id}/read`);
+			} catch {
+				// optimistic — ignore
+			}
+		}
+	};
 
+	const handleClick = (n: NotificationItem) => {
+		void markAsRead(n.id);
+		const href = targetHref(n);
+		if (href) router.push(href);
+	};
+
+	const markAllRead = async () => {
+		setNotifications((prev) => prev.map((n) => ({ ...n, isRead: true })));
+		setUnreadCount(0);
 		try {
-			await api.patch(`/notifications/${id}/read`);
+			await api.patch("/notifications/user/read-all");
 		} catch {
-			// Silent fail for optimistic UI.
+			// optimistic — ignore
 		}
 	};
 
 	return (
-		<div className="max-w-4xl mx-auto space-y-6 pb-20">
-			<div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-				<div className="flex items-center gap-3">
-					<div className="relative">
-						<Bell className="w-7 h-7 text-textPrimary" />
+		<div className="w-full space-y-6 px-4 pb-20 sm:px-6 lg:px-8">
+			{/* Header */}
+			<div className="flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-center">
+				<div className="flex items-start sm:items-center gap-3">
+					<div className="relative mt-1 sm:mt-0">
+						<Bell className="h-8 w-8 text-textPrimary" />
 						{unreadCount > 0 && (
-							<span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-error text-[10px] font-bold text-white">
-								{unreadCount}
+							<span className="absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-error px-1.5 text-[10px] font-bold text-white shadow-sm">
+								{unreadCount > 9 ? "9+" : unreadCount}
 							</span>
 						)}
 					</div>
 					<div>
-						<h1 className="text-2xl font-bold text-textPrimary tracking-tight">
+						<h1 className="text-2xl font-bold tracking-tight text-textPrimary">
 							Notifications
 						</h1>
-						<p className="text-sm text-textSecondary mt-1">
+						<p className="mt-1 text-sm text-textSecondary">
 							Stay updated on your account activity.
 						</p>
 					</div>
@@ -226,69 +222,103 @@ export default function NotificationsPage() {
 				{unreadCount > 0 && (
 					<button
 						onClick={markAllRead}
-						className="flex items-center gap-2 text-sm font-bold text-primary bg-primaryLight/50 hover:bg-primaryLight px-4 py-2 rounded-xl transition-colors">
-						<Check className="w-4 h-4" /> Mark all as read
+						className="flex items-center gap-2 rounded-xl bg-primaryLight/50 px-4 py-2 text-sm font-bold text-primary transition-colors hover:bg-primaryLight">
+						<Check className="h-4 w-4" /> Mark all as read
 					</button>
 				)}
 			</div>
 
-			<div className="bg-surface border border-borderLight rounded-2xl shadow-sm overflow-hidden flex flex-col">
-				{loading ? (
-					<div className="p-12 text-center text-textSecondary">
-						Loading notifications...
+			{/* List */}
+			{loading ? (
+				<div className="flex flex-col overflow-hidden rounded-2xl border border-borderLight bg-surface shadow-sm">
+					<div className="flex items-center justify-center gap-2 p-12 text-textSecondary">
+						<Loader2 className="h-5 w-5 animate-spin text-primary" />
+						Loading notifications…
 					</div>
-				) : error ? (
-					<div className="p-12 text-center text-error font-medium">
-						{error}
-					</div>
-				) : (
-					<div className="divide-y divide-borderLight">
-						{notifications.map((n) => {
-							const style = getNotificationStyle(n.type);
-
-							return (
-								<div
-									key={n.id}
-									onClick={() => void markAsRead(n.id)}
-									className={`p-6 flex flex-col sm:flex-row gap-5 cursor-pointer transition-colors ${n.isRead ? "bg-surface hover:bg-surfaceVariant/50" : "bg-primaryLight/10 hover:bg-primaryLight/20"}`}>
+				</div>
+			) : error ? (
+				<div className="flex flex-col overflow-hidden rounded-2xl border border-borderLight bg-surface shadow-sm">
+					<div className="p-12 text-center font-medium text-error">{error}</div>
+				</div>
+			) : notifications.length === 0 ? (
+				<PageEmpty
+					icon={Bell}
+					title="You're all caught up"
+					description="New activity on your bookings, messages, and disputes will appear here."
+				/>
+			) : (
+				<div className="flex flex-col overflow-hidden rounded-2xl border border-borderLight bg-surface shadow-sm">
+						<div className="divide-y divide-borderLight">
+							{notifications.map((n) => {
+								const style = getNotificationStyle(n.notificationType);
+								const clickable = targetHref(n) !== null;
+								return (
 									<div
-										className={`w-12 h-12 shrink-0 rounded-full flex items-center justify-center ${style.bgColor}`}>
-										{style.icon}
-									</div>
-
-									<div className="flex-1 min-w-0">
-										<div className="flex justify-between items-start gap-4 mb-1">
-											<h3
-												className={`font-bold text-textPrimary ${n.isRead ? "text-base" : "text-lg"}`}>
-												{n.title}
-											</h3>
-											{!n.isRead && (
-												<span className="shrink-0 w-2.5 h-2.5 rounded-full bg-primary mt-2"></span>
-											)}
+										key={n.id}
+										onClick={() => handleClick(n)}
+										role={clickable ? "button" : undefined}
+										tabIndex={clickable ? 0 : undefined}
+										onKeyDown={(e) => {
+											if (clickable && (e.key === "Enter" || e.key === " ")) {
+												e.preventDefault();
+												handleClick(n);
+											}
+										}}
+										className={`flex cursor-pointer gap-4 p-4 transition-colors sm:p-5 ${
+											n.isRead
+												? "bg-surface hover:bg-surfaceVariant/50"
+												: "bg-primaryLight/20 hover:bg-primaryLight/30"
+										}`}>
+										<div
+											className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-full ${style.bgColor}`}>
+											{style.icon}
 										</div>
 
-										<p
-											className={`text-textSecondary ${!n.isRead && "text-textPrimary font-medium"}`}>
-											{n.message}
-										</p>
-
-										<div className="text-xs text-textTertiary font-medium mt-3">
-											{n.time}
+										<div className="min-w-0 flex-1">
+											<div className="mb-0.5 flex items-start justify-between gap-3">
+												<h3
+													className={`truncate text-sm ${
+														n.isRead
+															? "font-semibold text-textPrimary"
+															: "font-bold text-textPrimary"
+													}`}>
+													{n.title}
+												</h3>
+												{!n.isRead && (
+													<span className="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-primary" />
+												)}
+											</div>
+											<p
+												className={`text-sm ${
+													n.isRead ? "text-textSecondary" : "text-textPrimary"
+												}`}>
+												{n.message}
+											</p>
+											<div className="mt-2 text-xs font-medium text-textTertiary">
+												{n.time}
+											</div>
 										</div>
 									</div>
-								</div>
-							);
-						})}
+								);
+							})}
+						</div>
 
-						{notifications.length === 0 && (
-							<div className="p-12 text-center text-textSecondary">
-								<Bell className="w-12 h-12 text-outline mx-auto mb-4" />
-								You have no notifications.
-							</div>
+						{hasMore && (
+							<button
+								onClick={loadMore}
+								disabled={loadingMore}
+								className="flex items-center justify-center gap-2 border-t border-borderLight py-4 text-sm font-semibold text-primary transition-colors hover:bg-surfaceVariant disabled:opacity-60">
+								{loadingMore ? (
+									<>
+										<Loader2 className="h-4 w-4 animate-spin" /> Loading…
+									</>
+								) : (
+									"Load older notifications"
+								)}
+							</button>
 						)}
 					</div>
 				)}
 			</div>
-		</div>
 	);
 }

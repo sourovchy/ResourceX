@@ -58,7 +58,7 @@ export default function MyReviewsPage() {
 	);
 
 	return (
-		<div className="mx-auto max-w-4xl space-y-6 px-4 pb-20 sm:px-6 lg:px-8">
+		<div className="w-full space-y-6 px-4 pb-20 sm:px-6 lg:px-8">
 			
 
 			<h1 className="text-xl font-bold tracking-tight text-textPrimary sm:text-2xl">

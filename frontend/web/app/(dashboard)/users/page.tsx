@@ -20,6 +20,7 @@ import {
 	ShieldOff,
 } from "lucide-react";
 import { DataTable } from "@/components/ui/DataTable";
+import { ConfirmModal } from "@/components/ui/ConfirmModal";
 
 type UserStatus = "VERIFIED" | "PENDING" | "SUSPENDED";
 type FilterType = "ALL" | UserStatus;
@@ -191,6 +192,7 @@ export default function AdminUsersPage() {
 	const [pageIndex, setPageIndex] = useState(0);
 	const [totalPages, setTotalPages] = useState(0);
 	const [submitting, setSubmitting] = useState(false);
+	const [permanentConfirmOpen, setPermanentConfirmOpen] = useState(false);
 
 	useEffect(() => {
 		const urlFilter = searchParams.get("filter") as FilterType | null;
@@ -365,12 +367,16 @@ export default function AdminUsersPage() {
 			toast("Suspension reason is required.", "error");
 			return;
 		}
+		// Permanent suspension is irreversible — require an extra confirmation
 		if (suspensionType === "PERMANENT") {
-			const confirmed = window.confirm(
-				`⚠️ Permanent suspension will schedule ${selectedUser.name}'s account for deletion after 15 days. This cannot be undone. Continue?`
-			);
-			if (!confirmed) return;
+			setPermanentConfirmOpen(true);
+			return;
 		}
+		await executeSuspend();
+	};
+
+	const executeSuspend = async () => {
+		if (!selectedUser) return;
 		setSubmitting(true);
 		try {
 			await api.post(`/admin/block/${selectedUser.id}`, {
@@ -402,7 +408,7 @@ export default function AdminUsersPage() {
 	};
 
 	return (
-		<div className="mx-auto max-w-7xl space-y-6 px-4 pb-20 sm:px-6 lg:px-8">
+		<div className="w-full space-y-6 px-4 pb-20 sm:px-6 lg:px-8">
 			{/* Header */}
 			<div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
 				<div>
@@ -802,6 +808,20 @@ export default function AdminUsersPage() {
 					</div>
 				</div>
 			)}
+
+			<ConfirmModal
+				isOpen={permanentConfirmOpen}
+				isDestructive
+				title="Permanently Suspend Account"
+				message={`Permanent suspension schedules ${selectedUser?.name ?? "this user"}'s account for deletion after 15 days. This cannot be undone. Continue?`}
+				confirmText="Permanently Suspend"
+				cancelText="Cancel"
+				onConfirm={() => {
+					setPermanentConfirmOpen(false);
+					void executeSuspend();
+				}}
+				onCancel={() => setPermanentConfirmOpen(false)}
+			/>
 		</div>
 	);
 }

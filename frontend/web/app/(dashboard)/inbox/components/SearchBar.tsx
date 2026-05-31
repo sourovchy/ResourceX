@@ -17,8 +17,8 @@ export default function SearchBar({ value, onChange }: SearchBarProps) {
 				maxLength={100}
 				value={value}
 				onChange={(e) => onChange(e.target.value)}
-				placeholder="Search conversations..."
-				className="w-full rounded-xl border border-borderLight bg-surface py-2 pl-8 pr-3 text-xs text-textPrimary transition-all placeholder:text-textTertiary focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary sm:py-2.5 sm:pl-9 sm:pr-4 sm:text-sm"
+				placeholder="Search conversations…"
+				className="w-full rounded-xl border border-[var(--color-chatBorder)] bg-[var(--color-chatElevated)] py-2 pl-8 pr-3 text-xs text-textPrimary transition-all placeholder:text-textTertiary focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30 sm:py-2.5 sm:pl-9 sm:pr-4 sm:text-sm"
 			/>
 		</div>
 	);

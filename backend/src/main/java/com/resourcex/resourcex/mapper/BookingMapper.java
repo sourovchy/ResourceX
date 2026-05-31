@@ -26,6 +26,7 @@ public final class BookingMapper {
                                 : null
                 )
                 .rejectionReason(booking.getRejectionReason())
+                .bookingMessage(booking.getBookingMessage())
                 .totalPrice(booking.getTotalPrice())
                 .createdAt(booking.getCreatedAt())
                 .updatedAt(booking.getUpdatedAt())

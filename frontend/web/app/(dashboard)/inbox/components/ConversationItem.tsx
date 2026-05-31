@@ -1,7 +1,7 @@
 "use client";
 
-import { Conversation } from "@/types/chat";
-
+import { Conversation } from "../types/chat";
+import { ShieldCheck } from "lucide-react";
 interface ConversationItemProps {
 	conversation: Conversation;
 	isActive: boolean;
@@ -22,68 +22,88 @@ export default function ConversationItem({
 		? conversation.participantTwoName
 		: conversation.participantOneName;
 
+	const isOtherParticipantStaff = isParticipantOneCurrentUser
+		? conversation.participantTwoIsStaff
+		: conversation.participantOneIsStaff;
+
 	const otherParticipantInitial = otherParticipantName
 		? otherParticipantName.charAt(0).toUpperCase()
 		: "U";
 
-	const contextLabel = conversation.bookingId
-		? `Booking #${conversation.bookingId}`
-		: conversation.disputeId
-			? `Dispute #${conversation.disputeId}`
-			: "Direct Conversation";
+	const formattedTime = conversation.lastMessageAt
+		? new Date(conversation.lastMessageAt).toLocaleTimeString([], {
+				hour: "2-digit",
+				minute: "2-digit",
+			})
+		: "";
 
 	return (
 		<div
 			onClick={onClick}
-			className={`flex items-start gap-2 rounded-xl p-2.5 transition-colors sm:gap-3 sm:p-3 cursor-pointer ${
-				isActive ? "bg-primaryLight/50" : "hover:bg-surfaceVariant"
+			className={`group relative flex items-center gap-3 overflow-hidden rounded-xl p-3 transition-colors cursor-pointer ${
+				isActive
+					? "bg-[var(--color-chatSelected)] before:absolute before:left-0 before:top-0 before:bottom-0 before:w-1 before:rounded-r-full before:bg-primary"
+					: "hover:bg-[var(--color-chatHover)]"
 			}`}>
 			{/* Avatar */}
-			<div className="relative shrink-0 self-start">
-				<div
-					className={`flex h-10 w-10 items-center justify-center rounded-full text-base font-bold sm:h-12 sm:w-12 sm:text-lg ${
-						isActive
-							? "bg-primary text-white"
-							: "bg-surface border border-borderLight text-primary"
-					}`}>
-					{otherParticipantInitial}
-				</div>
+			<div className="relative shrink-0">
+				{isOtherParticipantStaff ? (
+					<div
+						className={`flex h-11 w-11 items-center justify-center rounded-full text-base font-bold transition-colors ${
+							isActive
+								? "bg-white text-dashboardBlue"
+								: "bg-dashboardBlueTint text-dashboardBlue"
+						}`}>
+						<ShieldCheck className="h-6 w-6" />
+					</div>
+				) : (
+					<div
+						className={`flex h-11 w-11 items-center justify-center rounded-full text-base font-bold transition-colors ${
+							isActive
+								? "bg-primary text-white"
+								: "bg-[var(--color-chatBase)] border border-[var(--color-chatBorder)] text-primary"
+						}`}>
+						{otherParticipantInitial}
+					</div>
+				)}
 			</div>
 
 			{/* Content */}
-			<div className="min-w-0 flex-1">
-				<div className="mb-0.5 flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between sm:gap-2">
-					<h3 className="truncate text-sm font-bold text-textPrimary">
-						{otherParticipantName}
-					</h3>
-
-					{conversation.lastMessageAt && (
-						<span className="shrink-0 text-[11px] text-textSecondary sm:text-xs">
-							{new Date(conversation.lastMessageAt).toLocaleString()}
+			<div className="flex flex-1 flex-col justify-center min-w-0">
+				<div className="flex items-baseline justify-between gap-2 mb-0.5">
+					<div className="flex items-center gap-1.5 truncate min-w-0">
+						<h3 className={`truncate text-[15px] font-semibold ${isActive ? "text-primaryDark" : "text-textPrimary"}`}>
+							{otherParticipantName}
+						</h3>
+						{isOtherParticipantStaff && (
+							<ShieldCheck className={`h-3.5 w-3.5 shrink-0 ${isActive ? "text-primaryDark" : "text-dashboardBlue"}`} />
+						)}
+					</div>
+					{formattedTime && (
+						<span className={`shrink-0 text-[11px] font-medium ${conversation.unreadCount > 0 && !isActive ? "text-primary font-bold" : "text-textTertiary"}`}>
+							{formattedTime}
 						</span>
 					)}
 				</div>
 
-				<div className="mb-1 truncate text-[11px] font-medium text-primary sm:text-xs">
-					{contextLabel}
+				<div className="flex items-center justify-between gap-3">
+					<p
+						className={`truncate text-[13px] ${
+							conversation.unreadCount > 0 && !isActive
+								? "font-bold text-textPrimary"
+								: "text-textSecondary"
+						}`}>
+						{conversation.lastMessageContent || "No messages yet"}
+					</p>
+					
+					{/* Unread badge */}
+					{conversation.unreadCount > 0 && !isActive && (
+						<div className="flex h-5 min-w-[20px] shrink-0 items-center justify-center rounded-full bg-primary px-1.5 text-[10px] font-bold text-white shadow-sm">
+							{conversation.unreadCount}
+						</div>
+					)}
 				</div>
-
-				<p
-					className={`truncate text-xs sm:text-sm ${
-						conversation.unreadCount > 0
-							? "font-bold text-textPrimary"
-							: "text-textSecondary"
-					}`}>
-					{conversation.lastMessageContent || "No messages yet"}
-				</p>
 			</div>
-
-			{/* Unread badge */}
-			{conversation.unreadCount > 0 && !isActive && (
-				<div className="flex h-5 w-5 shrink-0 self-center items-center justify-center rounded-full bg-primary text-[10px] font-bold text-white">
-					{conversation.unreadCount}
-				</div>
-			)}
 		</div>
 	);
 }

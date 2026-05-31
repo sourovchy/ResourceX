@@ -1,15 +1,28 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import Link from "next/link";
 import { Mail, Loader2 } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { useAuth } from "@/context/AuthContext";
 import api from "@/lib/api";
 
 export default function ForgotPasswordPage() {
+	const router = useRouter();
+	const { user, loading: authLoading } = useAuth();
+
 	const [email, setEmail] = useState("");
 	const [loading, setLoading] = useState(false);
 	const [message, setMessage] = useState("");
 	const [error, setError] = useState("");
+
+	useEffect(() => {
+		if (!authLoading && user) {
+			router.replace("/dashboard");
+		}
+	}, [authLoading, user, router]);
+
+	if (authLoading || user) return null;
 
 	const handleSubmit = async (e: React.FormEvent) => {
 		e.preventDefault();

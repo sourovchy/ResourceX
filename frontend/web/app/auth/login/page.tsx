@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import Link from "next/link";
 import { Mail, Lock, ArrowRight, Eye, EyeOff, User, Loader2 } from "lucide-react";
 import { AxiosError } from "axios";
@@ -12,17 +12,23 @@ type ErrorResponse = {
 };
 
 export default function LoginPage() {
-	const { login } = useAuth();
+	const { login, user, loading: authLoading } = useAuth();
 	const router = useRouter();
 
-	const [form, setForm] = useState({
-		email: "",
-		password: "",
-	});
-
+	const [form, setForm] = useState({ email: "", password: "" });
 	const [error, setError] = useState("");
 	const [loading, setLoading] = useState(false);
 	const [showPassword, setShowPassword] = useState(false);
+
+	// Redirect already-authenticated users away from login
+	useEffect(() => {
+		if (!authLoading && user) {
+			router.replace("/dashboard");
+		}
+	}, [authLoading, user, router]);
+
+	// Render nothing while auth is hydrating or redirecting
+	if (authLoading || user) return null;
 
 	const validate = () => {
 		if (!form.email.includes("@")) return "Invalid email address";

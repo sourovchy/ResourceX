@@ -59,6 +59,9 @@ public class Booking {
     @Column(name = "rejection_reason", length = 1000)
     private String rejectionReason;
 
+    @Column(name = "booking_message", length = 1000)
+    private String bookingMessage;
+
     @OneToOne(mappedBy = "booking", fetch = FetchType.LAZY)
     private Payment payment;
 

@@ -71,4 +71,12 @@ public class ItemController {
     ) {
         itemService.deleteItem(itemId);
     }
+
+    @GetMapping("/user/{userId}")
+    public Page<ItemResponse> getUserItems(
+            @PathVariable Long userId,
+            @PageableDefault(size = 6, sort = "itemId", direction = Sort.Direction.DESC) Pageable pageable
+    ) {
+        return itemService.getUserItems(userId, pageable);
+    }
 }

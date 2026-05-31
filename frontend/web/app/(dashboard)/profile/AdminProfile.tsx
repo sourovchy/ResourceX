@@ -9,12 +9,9 @@ import {
 	Users,
 	Package,
 	AlertTriangle,
-	BarChart3,
 	Settings,
 	Activity,
 	CheckCircle2,
-	Search,
-	MessageSquareWarning,
 	Loader2,
 	RefreshCw,
 } from "lucide-react";
@@ -32,18 +29,6 @@ type DashboardStats = {
 	totalListings?: number;
 	openDisputes?: number;
 	pendingVerifs?: number;
-	uptime?: string;
-	status?: string;
-	stability?: string;
-	load?: string;
-};
-
-type FlaggedActivity = {
-	id?: string | number;
-	title?: string;
-	description?: string;
-	priority?: "HIGH" | "MEDIUM" | "LOW" | string;
-	type?: string;
 };
 
 type ApiError = {
@@ -66,7 +51,7 @@ function getInitials(name?: string) {
 export default function AdminProfilePage() {
 	const [profile, setProfile] = useState<AdminProfile | null>(null);
 	const [stats, setStats] = useState<DashboardStats | null>(null);
-	const [activities, setActivities] = useState<FlaggedActivity[]>([]);
+
 	const [loading, setLoading] = useState(true);
 	const [refreshing, setRefreshing] = useState(false);
 	const [error, setError] = useState("");
@@ -79,21 +64,9 @@ export default function AdminProfilePage() {
 			const mePromise = api.get<AdminProfile>("/auth/me");
 			const statsPromise = api.get<DashboardStats>("/admin/dashboard");
 
-			// Attempt to fetch reports if backend provides them, but don't fail whole page if missing.
-			let activitiesPromise: Promise<any> | null = null;
-			try {
-				activitiesPromise = api.get<{
-					items?: FlaggedActivity[];
-					data?: FlaggedActivity[];
-				}>("/admin/reports/recent");
-			} catch (e) {
-				activitiesPromise = null;
-			}
-
-			const [meRes, statsRes, activitiesRes] = await Promise.all([
+			const [meRes, statsRes] = await Promise.all([
 				mePromise,
 				statsPromise,
-				activitiesPromise ?? Promise.resolve({ data: { items: [] } }),
 			]);
 
 			// `GET /auth/me` returns { user, roles } — extract the nested user if present.
@@ -102,19 +75,11 @@ export default function AdminProfilePage() {
 			// Map backend DashboardStatsResponse to frontend display shape.
 			const s = statsRes.data || {};
 			setStats({
-				totalUsers: (s as any).totalUsers ?? (s as any).totalUsers ?? 0,
-				totalListings:
-					(s as any).totalListings ?? (s as any).activeBookings ?? 0,
+				totalUsers: (s as any).totalUsers ?? 0,
+				totalListings: (s as any).totalListings ?? 0,
 				openDisputes: (s as any).openDisputes ?? 0,
 				pendingVerifs: (s as any).pendingApprovals ?? 0,
-				uptime: (s as any).uptime ?? undefined,
-				status: (s as any).status ?? undefined,
-				stability: (s as any).stability ?? undefined,
-				load: (s as any).load ?? undefined,
 			});
-
-			const list = activitiesRes.data?.items ?? activitiesRes.data?.data ?? [];
-			setActivities(list);
 		} catch (err) {
 			const axiosError = err as AxiosError<ApiError>;
 			setError(
@@ -152,7 +117,7 @@ export default function AdminProfilePage() {
 		"Platform Overseer";
 
 	return (
-		<div className="mx-auto max-w-4xl space-y-6 px-4 pb-20 sm:px-6 lg:px-8">
+		<div className="w-full space-y-6 px-4 pb-20 sm:px-6 lg:px-8">
 			<div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
 				<h1 className="text-xl font-bold tracking-tight text-textPrimary sm:text-2xl">
 					Admin Control Center
@@ -183,8 +148,8 @@ export default function AdminProfilePage() {
 				</div>
 			) : null}
 
-			<div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
-				<div className="space-y-6 lg:col-span-1">
+			<div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+				<div className="space-y-6">
 					<div className="flex flex-col items-center rounded-2xl border border-borderLight bg-surface p-4 text-center shadow-sm sm:p-6">
 						<div className="relative mb-4 flex h-20 w-20 items-center justify-center rounded-full bg-dashboardBlueTint text-2xl font-extrabold text-dashboardBlue sm:h-24 sm:w-24 sm:text-3xl">
 							{getInitials(profile?.name)}
@@ -219,31 +184,49 @@ export default function AdminProfilePage() {
 						</Link>
 					</div>
 
-					<div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-primary to-primaryDark p-4 text-center text-white shadow-sm sm:p-6">
-						<BarChart3 className="absolute -right-4 -top-4 h-24 w-24 opacity-10" />
-						<div className="mb-2 text-xs font-bold uppercase tracking-wider opacity-90 sm:text-sm">
-							Platform Status
-						</div>
-						<div className="mb-1 text-3xl font-extrabold leading-none sm:text-4xl">
-							{stats?.status || "Active"}
-						</div>
-						<div className="mt-3 rounded-full bg-white/20 px-3 py-1 text-xs font-bold backdrop-blur-sm sm:text-sm">
-							Uptime: {stats?.uptime || "—"}
-						</div>
-
-						<div className="mt-6 space-y-1">
-							<div className="flex justify-between text-xs font-bold opacity-80">
-								<span>Stability</span>
-								<span>{stats?.stability || "Normal Load"}</span>
-							</div>
-							<div className="h-2 w-full overflow-hidden rounded-full bg-black/20">
-								<div className="h-full w-[92%] rounded-full bg-white" />
-							</div>
+					<div className="rounded-2xl border border-borderLight bg-surface p-4 shadow-sm sm:p-6">
+						<h3 className="mb-4 text-sm font-bold uppercase tracking-wider text-textSecondary">
+							Quick Actions
+						</h3>
+						<div className="flex flex-col gap-2">
+							<Link
+								href="/users"
+								className="flex items-center gap-3 rounded-xl p-3 transition hover:bg-surfaceVariant">
+								<div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-dashboardBlueTint text-dashboardBlue">
+									<Users className="h-5 w-5" />
+								</div>
+								<div>
+									<div className="font-semibold text-textPrimary">Manage Users</div>
+									<div className="text-xs text-textSecondary">View and manage all users</div>
+								</div>
+							</Link>
+							<Link
+								href="/disputes"
+								className="flex items-center gap-3 rounded-xl p-3 transition hover:bg-surfaceVariant">
+								<div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-warningLight text-warningDark">
+									<AlertTriangle className="h-5 w-5" />
+								</div>
+								<div>
+									<div className="font-semibold text-textPrimary">Review Disputes</div>
+									<div className="text-xs text-textSecondary">Handle user disputes</div>
+								</div>
+							</Link>
+							<Link
+								href="/bookings"
+								className="flex items-center gap-3 rounded-xl p-3 transition hover:bg-surfaceVariant">
+								<div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-successLight text-success">
+									<Package className="h-5 w-5" />
+								</div>
+								<div>
+									<div className="font-semibold text-textPrimary">Monitor Bookings</div>
+									<div className="text-xs text-textSecondary">View all system bookings</div>
+								</div>
+							</Link>
 						</div>
 					</div>
 				</div>
 
-				<div className="space-y-6 lg:col-span-2">
+				<div className="space-y-6">
 					<h2 className="text-lg font-bold text-textPrimary">
 						Platform Overview
 					</h2>
@@ -306,57 +289,6 @@ export default function AdminProfilePage() {
 						</div>
 					</div>
 
-					<div className="space-y-4 rounded-2xl border border-borderLight bg-surface p-4 sm:p-6">
-						<div className="mb-2 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-							<h2 className="text-lg font-bold text-textPrimary">
-								Flagged Activities
-							</h2>
-							<Link
-								href="/disputes"
-								className="text-sm font-bold text-primary hover:underline">
-								Review All
-							</Link>
-						</div>
-
-						{activities.length === 0 ? (
-							<div className="rounded-xl border border-dashed border-borderLight p-6 text-sm text-textSecondary">
-								No flagged activities right now.
-							</div>
-						) : (
-							<div className="divide-y divide-borderLight">
-								{activities.map((item, index) => (
-									<div key={item.id ?? index} className="py-4">
-										<div className="mb-2 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-											<div className="flex min-w-0 items-center gap-2">
-												{item.type === "PENALTY" ? (
-													<Search className="h-4 w-4 text-dashboardBlue" />
-												) : (
-													<MessageSquareWarning className="h-4 w-4 text-warningDark" />
-												)}
-												<div className="min-w-0 truncate text-sm font-bold text-textPrimary">
-													{item.title || "Flagged item"}
-												</div>
-											</div>
-
-											<span
-												className={`inline-flex w-fit rounded-full px-2 py-0.5 text-[10px] font-bold uppercase ${
-													(item.priority || "").toUpperCase() === "HIGH"
-														? "bg-warningLight text-warningDark"
-														: "bg-dashboardBlueTint text-dashboardBlue"
-												}`}>
-												{item.priority || "Review"}
-											</span>
-										</div>
-
-										<p className="text-sm text-textSecondary">
-											{item.description ||
-												"No description provided by backend."}
-										</p>
-									</div>
-								))}
-							</div>
-						)}
-					</div>
 				</div>
 			</div>
 		</div>

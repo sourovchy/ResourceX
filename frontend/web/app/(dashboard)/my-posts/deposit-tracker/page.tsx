@@ -9,11 +9,12 @@ import {
 	Calendar,
 } from "lucide-react";
 import api from "@/lib/api";
+import { formatShortDate } from "@/lib/dateUtils";
 import type { BookingResponse } from "@/types/booking";
 
 function formatDate(date?: string) {
 	if (!date) return "—";
-	return new Date(date).toLocaleDateString();
+	return formatShortDate(date);
 }
 
 export default function DepositTrackerPage() {
@@ -73,7 +74,7 @@ export default function DepositTrackerPage() {
 	}
 
 	return (
-		<div className="mx-auto max-w-4xl space-y-5 px-3 pb-20 sm:space-y-6 sm:px-0">
+		<div className="w-full space-y-5 px-3 pb-20 sm:space-y-6 sm:px-0">
 			
 
 			<div className="flex flex-col gap-4 rounded-2xl border border-borderLight bg-surface p-4 shadow-sm md:flex-row md:items-center md:justify-between sm:p-6">

@@ -19,6 +19,7 @@ import {
     BarChart3,
     Users,
     Package,
+    Tags,
     ShieldAlert,
     ShieldCheck,
     UserCog,
@@ -64,7 +65,7 @@ const DASHBOARD_NAV: NavItem[] = [
     },
     {
         href: "/categories",
-        icon: Package,
+        icon: Tags,
         label: "Categories",
         roles: ["admin", "super_admin", "moderator"],
     },
@@ -163,7 +164,7 @@ export default function DashboardLayout({
 
     if (loading) {
         return (
-            <div className="flex min-h-screen items-center justify-center bg-bgPrimary px-4 text-center text-sm text-textSecondary">
+            <div className="flex min-h-screen items-center justify-center bg-background px-4 text-center text-sm text-textSecondary">
                 Loading dashboard...
             </div>
         );

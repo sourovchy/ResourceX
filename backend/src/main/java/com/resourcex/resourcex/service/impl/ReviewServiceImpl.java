@@ -12,6 +12,7 @@ import com.resourcex.resourcex.mapper.ReviewMapper;
 import com.resourcex.resourcex.repository.BookingRepository;
 import com.resourcex.resourcex.repository.ReviewRepository;
 import com.resourcex.resourcex.repository.UserRepository;
+import com.resourcex.resourcex.service.NotificationService;
 import com.resourcex.resourcex.service.ReviewService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -32,6 +33,7 @@ public class ReviewServiceImpl implements ReviewService {
     private final ReviewRepository reviewRepository;
     private final BookingRepository bookingRepository;
     private final UserRepository userRepository;
+    private final NotificationService notificationService;
 
     @Override
     public ReviewResponse createReview(CreateReviewRequest request) {
@@ -56,7 +58,19 @@ public class ReviewServiceImpl implements ReviewService {
                 .comment(request.getComment())
                 .build();
 
-        return ReviewMapper.toResponse(reviewRepository.save(review));
+        Review saved = reviewRepository.save(review);
+
+        // Notify the reviewee (item owner) that they received a review
+        notificationService.createReviewNotification(
+                saved.getReviewee().getUserId(),
+                saved.getReviewId(),
+                "New Review Received",
+                reviewer.getName() + " left you a " + saved.getRating() + "-star review for \""
+                        + booking.getItem().getTitle() + "\".",
+                reviewer.getUserId()
+        );
+
+        return ReviewMapper.toResponse(saved);
     }
 
     @Override

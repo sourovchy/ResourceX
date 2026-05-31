@@ -148,7 +148,7 @@ function RaiseDisputeForm() {
 	}
 
 	return (
-		<div className="mx-auto max-w-2xl space-y-5 px-3 pb-20 sm:space-y-6 sm:px-0">
+		<div className="w-full space-y-5 px-3 pb-20 sm:space-y-6 sm:px-0">
 			<div className="rounded-2xl border border-borderLight bg-surface p-4 shadow-sm sm:p-6">
 				<h1 className="flex items-center gap-2 text-2xl font-bold tracking-tight text-textPrimary sm:text-3xl">
 					<Scale className="h-6 w-6 text-error" /> Raise a Dispute

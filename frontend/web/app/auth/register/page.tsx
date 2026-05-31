@@ -1,8 +1,9 @@
 "use client";
 
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { useAuth } from "@/context/AuthContext";
 import {
 	Mail,
 	Lock,
@@ -15,6 +16,7 @@ import {
 } from "lucide-react";
 import api from "@/lib/api";
 import { PENDING_EMAIL_KEY, setOtpLastSendTimestamp } from "@/lib/auth";
+
 import { validatePasswordChecks, isPasswordStrong, validateEmail, validatePhone, normalizePhone } from "@/lib/validation";
 
 type AuthResponse = {
@@ -33,6 +35,7 @@ type AuthResponse = {
 
 export default function RegisterPage() {
 	const router = useRouter();
+	const { user, loading: authLoading } = useAuth();
 
 	const [form, setForm] = useState({
 		name: "",
@@ -52,6 +55,15 @@ export default function RegisterPage() {
 
 	const passwordChecks = useMemo(() => validatePasswordChecks(form.password), [form.password]);
 	const passwordIsStrong = useMemo(() => isPasswordStrong(form.password), [form.password]);
+
+	// Redirect already-authenticated users away from register
+	useEffect(() => {
+		if (!authLoading && user) {
+			router.replace("/dashboard");
+		}
+	}, [authLoading, user, router]);
+
+	if (authLoading || user) return null;
 
 	const validate = () => {
 		if (!form.name.trim()) return "Full name is required";

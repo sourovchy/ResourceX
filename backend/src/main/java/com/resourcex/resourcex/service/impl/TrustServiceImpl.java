@@ -9,6 +9,7 @@ import com.resourcex.resourcex.repository.PenaltyRepository;
 import com.resourcex.resourcex.repository.TrustEventRepository;
 import com.resourcex.resourcex.repository.UserRepository;
 import com.resourcex.resourcex.service.AuditLogService;
+import com.resourcex.resourcex.service.NotificationService;
 import com.resourcex.resourcex.service.TrustService;
 import com.resourcex.resourcex.entity.AuditLog;
 import lombok.RequiredArgsConstructor;
@@ -29,6 +30,7 @@ public class TrustServiceImpl implements TrustService {
     private final com.resourcex.resourcex.repository.StudentProfileRepository studentProfileRepository;
     private final com.resourcex.resourcex.repository.AuditLogRepository auditLogRepository;
     private final AuditLogService auditLogService;
+    private final NotificationService notificationService;
 
     @Override
     public TrustEventResponse createTrustEvent(
@@ -64,6 +66,20 @@ public class TrustServiceImpl implements TrustService {
                 AuditLog.AuditOutcome.SUCCESS,
                 "Trust event created for user " + user.getUserId() + ". Points: " + changeAmount
         );
+
+        if (changeAmount != 0) {
+            String title = changeAmount > 0 ? "Trust Score Increased" : "Trust Score Decreased";
+            String message = "Your trust score " + (changeAmount > 0 ? "increased" : "decreased") + 
+                             " by " + Math.abs(changeAmount) + " points. Reason: " + reason;
+
+            notificationService.createTrustNotification(
+                    userId,
+                    savedEvent.getTrustEventId(),
+                    title,
+                    message,
+                    null
+            );
+        }
 
         return mapToResponse(savedEvent);
     }
@@ -177,6 +193,18 @@ public class TrustServiceImpl implements TrustService {
                 userId,
                 AuditLog.AuditOutcome.APPLIED,
                 details
+        );
+
+        String title = change > 0 ? "Trust Score Increased" : "Trust Score Decreased";
+        String message = "Your trust score " + (change > 0 ? "increased" : "decreased") + 
+                         " by " + Math.abs(change) + " points. Reason: " + (reason != null ? reason : "Manual adjustment");
+
+        notificationService.createTrustNotification(
+                userId,
+                null,
+                title,
+                message,
+                actor != null ? actor.getUserId() : null
         );
     }
 

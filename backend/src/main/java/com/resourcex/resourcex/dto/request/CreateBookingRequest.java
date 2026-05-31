@@ -20,4 +20,6 @@ public class CreateBookingRequest {
 
     @NotNull(message = "End date is required")
     private LocalDate endDate;
+
+    private String bookingMessage;
 }

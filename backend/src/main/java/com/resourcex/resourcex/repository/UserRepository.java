@@ -23,6 +23,18 @@ public interface UserRepository extends JpaRepository<User, Long> {
     @Query("SELECT DISTINCT u FROM User u WHERE NOT EXISTS (SELECT 1 FROM UserRole ur JOIN Role r ON ur.role = r WHERE ur.user = u AND r.name IN :excludedRoles)")
     Page<User> findAllExcludingRoles(@Param("excludedRoles") List<String> excludedRoles, Pageable pageable);
 
+    /**
+     * Search active users by name or email (case-insensitive), excluding one user (the searcher).
+     */
+    @Query("SELECT u FROM User u WHERE u.status = com.resourcex.resourcex.entity.UserStatus.ACTIVE "
+            + "AND u.userId <> :excludeUserId "
+            + "AND (LOWER(u.name) LIKE LOWER(CONCAT('%', :query, '%')) "
+            + "OR LOWER(u.email) LIKE LOWER(CONCAT('%', :query, '%'))) "
+            + "ORDER BY u.name ASC")
+    List<User> searchActiveUsers(@Param("query") String query,
+                                 @Param("excludeUserId") Long excludeUserId,
+                                 Pageable pageable);
+
     Optional<User> findByEmailIgnoreCase(String email);
 
     boolean existsByEmailIgnoreCase(String email);

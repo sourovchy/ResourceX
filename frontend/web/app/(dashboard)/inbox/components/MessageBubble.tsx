@@ -5,11 +5,15 @@ import { Message } from "@/types/chat";
 interface MessageBubbleProps {
 	message: Message;
 	currentUserId?: number;
+	isFirstInGroup?: boolean;
+	isLastInGroup?: boolean;
 }
 
 export default function MessageBubble({
 	message,
 	currentUserId,
+	isFirstInGroup = true,
+	isLastInGroup = true,
 }: MessageBubbleProps) {
 	const isMe = message.senderUserId === currentUserId;
 
@@ -20,35 +24,43 @@ export default function MessageBubble({
 			})
 		: "";
 
+	// Tighter bubble corners on the "joined" side within a group
+	let radiusClasses = "rounded-2xl";
+	if (isMe) {
+		if (!isFirstInGroup) radiusClasses += " rounded-tr-md";
+		if (!isLastInGroup) radiusClasses += " rounded-br-md";
+	} else {
+		if (!isFirstInGroup) radiusClasses += " rounded-tl-md";
+		if (!isLastInGroup) radiusClasses += " rounded-bl-md";
+	}
+
+	const bubbleBgClasses = isMe
+		? "bg-primary text-white"
+		: "bg-[var(--color-chatIncoming)] text-textPrimary border border-[var(--color-chatBorder)]";
+
 	return (
-		<div className={`flex w-full flex-col ${isMe ? "items-end" : "items-start"}`}>
-			{!isMe && (
-				<div className="mb-1 px-1 text-[11px] font-semibold text-textSecondary sm:text-xs">
-					{message.senderName}
-				</div>
-			)}
+		<div
+			className={`flex flex-col ${isMe ? "items-end" : "items-start"} ${
+				isFirstInGroup ? "mt-3" : "mt-[3px]"
+			}`}>
+
 
 			<div
-				className={`max-w-[88%] rounded-2xl px-3 py-2.5 text-xs leading-relaxed whitespace-pre-wrap break-words sm:max-w-[75%] sm:px-4 sm:py-3 sm:text-sm lg:max-w-[70%] ${
-					isMe
-						? "bg-primary text-white rounded-br-none"
-						: "bg-surface border border-borderLight text-textPrimary rounded-bl-none"
-				}`}>
+				className={`max-w-[82%] px-3 py-1.5 text-[14px] leading-[1.35] whitespace-pre-wrap break-words sm:max-w-[72%] lg:max-w-[60%] ${radiusClasses} ${bubbleBgClasses}`}>
 				{message.content}
 			</div>
 
-			<div className="mt-1 flex flex-wrap items-center gap-1 px-1 text-[9px] font-medium text-textTertiary sm:text-[10px]">
-				<span>{formattedTime}</span>
-
-				{isMe && (
-					<>
-						<span>•</span>
-						<span>
-							{message.isRead ? "Read" : "Sent"}
+			{/* Meta — once per group, on the last bubble only */}
+			{isLastInGroup && (
+				<div className="mt-[3px] flex items-center gap-1 px-1 text-[10px] font-medium text-textTertiary">
+					<span>{formattedTime}</span>
+					{isMe && (
+						<span className="tracking-tighter text-primary">
+							{message.isRead ? "✓✓" : "✓"}
 						</span>
-					</>
-				)}
-			</div>
+					)}
+				</div>
+			)}
 		</div>
 	);
 }
