@@ -2,144 +2,312 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Light theme */
+/* ─── Light theme ───────────────────────────────────────────────── */
 :root {
   color-scheme: light;
 
   /* Primary — Claude coral/orange */
-  --color-primary: #da7756;
-  --color-primaryLight: #fdf0ec;
-  --color-primaryMuted: #f4c4ae;
-  --color-primaryDark: #8f3c24;
-  --color-primaryHover: #c45e3e;
-  --color-onPrimary: #ffffff;
+  --color-primary:       #da7756;
+  --color-primaryLight:  #fdf0ec;
+  --color-primaryMuted:  #f4c4ae;
+  --color-primaryDark:   #8f3c24;
+  --color-primaryHover:  #c45e3e;
+  --color-onPrimary:     #ffffff;
 
   /* Accent — warm ink */
-  --color-accent: #1a1816;
-  --color-accentLight: #f3f1ec;
-  --color-accentDark: #0d0b09;
+  --color-accent:        #1a1816;
+  --color-accentLight:   #f3f1ec;
+  --color-accentDark:    #0d0b09;
 
   /* Semantic */
-  --color-success: #22c55e;
-  --color-successLight: #dcfce7;
-  --color-successDark: #166534;
+  --color-success:       #22c55e;
+  --color-successLight:  #dcfce7;
+  --color-successDark:   #166534;
 
-  --color-error: #ef4444;
-  --color-errorLight: #fee2e2;
-  --color-errorDark: #991b1b;
+  --color-error:         #ef4444;
+  --color-errorLight:    #fee2e2;
+  --color-errorDark:     #991b1b;
 
-  --color-warning: #eab308;
-  --color-warningLight: #fef9c3;
-  --color-warningDark: #854d0e;
+  --color-warning:       #eab308;
+  --color-warningLight:  #fef9c3;
+  --color-warningDark:   #854d0e;
 
-  --color-info: #38bdf8;
-  --color-infoLight: #e0f2fe;
-  --color-infoDark: #0369a1;
+  --color-info:          #38bdf8;
+  --color-infoLight:     #e0f2fe;
+  --color-infoDark:      #0369a1;
 
-  --color-secondary: #da7756;
+  --color-secondary:     #da7756;
 
   /* Surfaces — warm off-white */
-  --color-background: #faf9f7;
-  --color-surface: #f3f1ec;
-  --color-surfaceVariant: #ede9e1;
-  --color-card: #ffffff;
+  --color-background:      #faf9f7;
+  --color-surface:         #f3f1ec;
+  --color-surfaceVariant:  #ede9e1;
+  --color-card:            #ffffff;
+  --color-popover:         #ffffff;
 
   /* Text — warm charcoal */
-  --color-textPrimary: #1a1816;
+  --color-textPrimary:   #1a1816;
   --color-textSecondary: #5c5851;
-  --color-textTertiary: #9c9890;
-  --color-onSurface: #1a1816;
+  --color-textTertiary:  #9c9890;
+  --color-onSurface:     #1a1816;
 
   /* Borders */
-  --color-border: #e8e5de;
-  --color-borderLight: #e5e2db;
-  --color-outline: #b5b1aa;
-  --color-outlineVariant: #d4d1ca;
-  --color-divider: #e5e2db;
+  --color-border:          #e8e5de;
+  --color-borderLight:     #e5e2db;
+  --color-outline:         #b5b1aa;
+  --color-outlineVariant:  #d4d1ca;
+  --color-divider:         #e5e2db;
 
-  /* Messaging surfaces — distinct hierarchy for the inbox workspace */
-  --color-chatPanel: #f3f1ec;      /* conversation list rail (surface-2)   */
-  --color-chatBase: #faf9f7;       /* chat workspace / message area (surface-0) */
-  --color-chatElevated: #ffffff;   /* chat header + composer (elevated)    */
-  --color-chatHover: #ede9e1;      /* conversation hover                   */
-  --color-chatSelected: #fdf0ec;   /* selected conversation (primary tint) */
-  --color-chatIncoming: #ffffff;   /* incoming message bubble              */
-  --color-chatBorder: #e5e2db;     /* subtle messaging dividers            */
+  /* Messaging surfaces */
+  --color-chatPanel:    #f3f1ec; /* conversation list rail        */
+  --color-chatBase:     #faf9f7; /* chat workspace / message area */
+  --color-chatElevated: #ffffff; /* chat header + composer        */
+  --color-chatHover:    #ede9e1; /* conversation hover            */
+  --color-chatSelected: #fdf0ec; /* selected conversation         */
+  --color-chatIncoming: #ffffff; /* incoming message bubble       */
+  --color-chatBorder:   #e5e2db; /* subtle messaging dividers     */
+
+  /* ── Full ramp library ── */
+
+  /* Purple */
+  --color-purple-50:  #EEEDFE;
+  --color-purple-100: #CECBF6;
+  --color-purple-200: #AFA9EC;
+  --color-purple-400: #7F77DD;
+  --color-purple-600: #534AB7;
+  --color-purple-800: #3C3489;
+  --color-purple-900: #26215C;
+
+  /* Teal */
+  --color-teal-50:  #E1F5EE;
+  --color-teal-100: #9FE1CB;
+  --color-teal-200: #5DCAA5;
+  --color-teal-400: #1D9E75;
+  --color-teal-600: #0F6E56;
+  --color-teal-800: #085041;
+  --color-teal-900: #04342C;
+
+  /* Coral */
+  --color-coral-50:  #FAECE7;
+  --color-coral-100: #F5C4B3;
+  --color-coral-200: #F0997B;
+  --color-coral-400: #D85A30;
+  --color-coral-600: #993C1D;
+  --color-coral-800: #712B13;
+  --color-coral-900: #4A1B0C;
+
+  /* Pink */
+  --color-pink-50:  #FBEAF0;
+  --color-pink-100: #F4C0D1;
+  --color-pink-200: #ED93B1;
+  --color-pink-400: #D4537E;
+  --color-pink-600: #993556;
+  --color-pink-800: #72243E;
+  --color-pink-900: #4B1528;
+
+  /* Gray */
+  --color-gray-50:  #F1EFE8;
+  --color-gray-100: #D3D1C7;
+  --color-gray-200: #B4B2A9;
+  --color-gray-400: #888780;
+  --color-gray-600: #5F5E5A;
+  --color-gray-800: #444441;
+  --color-gray-900: #2C2C2A;
+
+  /* Blue */
+  --color-blue-50:  #E6F1FB;
+  --color-blue-100: #B5D4F4;
+  --color-blue-200: #85B7EB;
+  --color-blue-400: #378ADD;
+  --color-blue-600: #185FA5;
+  --color-blue-800: #0C447C;
+  --color-blue-900: #042C53;
+
+  /* Green */
+  --color-green-50:  #EAF3DE;
+  --color-green-100: #C0DD97;
+  --color-green-200: #97C459;
+  --color-green-400: #639922;
+  --color-green-600: #3B6D11;
+  --color-green-800: #27500A;
+  --color-green-900: #173404;
+
+  /* Amber */
+  --color-amber-50:  #FAEEDA;
+  --color-amber-100: #FAC775;
+  --color-amber-200: #EF9F27;
+  --color-amber-400: #BA7517;
+  --color-amber-600: #854F0B;
+  --color-amber-800: #633806;
+  --color-amber-900: #412402;
+
+  /* Red */
+  --color-red-50:  #FCEBEB;
+  --color-red-100: #F7C1C1;
+  --color-red-200: #F09595;
+  --color-red-400: #E24B4A;
+  --color-red-600: #A32D2D;
+  --color-red-800: #791F1F;
+  --color-red-900: #501313;
 
   /* Animation */
-  --duration-fast: 150ms;
-  --duration-base: 250ms;
-  --duration-slow: 400ms;
-  --duration-page: 350ms;
+  --duration-fast:  150ms;
+  --duration-base:  250ms;
+  --duration-slow:  400ms;
+  --duration-page:  350ms;
 
-  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-out:    cubic-bezier(0.16, 1, 0.3, 1);
   --ease-in-out: cubic-bezier(0.45, 0, 0.55, 1);
   --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
-/* Dark theme */
+/* ─── Dark theme ────────────────────────────────────────────────── */
 .dark {
   color-scheme: dark;
 
   /* Primary */
-  --color-primary: #e8895c;
-  --color-primaryLight: #3d2118;
-  --color-primaryMuted: #5a2f1c;
-  --color-primaryDark: #f4c4ae;
-  --color-primaryHover: #f09970;
-  --color-onPrimary: #1a1816;
+  --color-primary:       #e8895c;
+  --color-primaryLight:  #3d2118;
+  --color-primaryMuted:  #5a2f1c;
+  --color-primaryDark:   #f4c4ae;
+  --color-primaryHover:  #f09970;
+  --color-onPrimary:     #1a1816;
 
   /* Accent */
-  --color-accent: #f5f1ec;
-  --color-accentLight: #1c1a17;
-  --color-accentDark: #d4cfc8;
+  --color-accent:        #f5f1ec;
+  --color-accentLight:   #1c1a17;
+  --color-accentDark:    #d4cfc8;
 
   /* Semantic */
-  --color-success: #4ade80;
-  --color-successLight: #14532d;
-  --color-successDark: #86efac;
+  --color-success:       #4ade80;
+  --color-successLight:  #14532d;
+  --color-successDark:   #86efac;
 
-  --color-error: #f87171;
-  --color-errorLight: #450a0a;
-  --color-errorDark: #fca5a5;
+  --color-error:         #f87171;
+  --color-errorLight:    #450a0a;
+  --color-errorDark:     #fca5a5;
 
-  --color-warning: #facc15;
-  --color-warningLight: #422006;
-  --color-warningDark: #fde68a;
+  --color-warning:       #facc15;
+  --color-warningLight:  #422006;
+  --color-warningDark:   #fde68a;
 
-  --color-info: #7dd3fc;
-  --color-infoLight: #0c2a3e;
-  --color-infoDark: #bae6fd;
+  --color-info:          #7dd3fc;
+  --color-infoLight:     #0c2a3e;
+  --color-infoDark:      #bae6fd;
 
-  --color-secondary: #e8895c;
+  --color-secondary:     #e8895c;
 
   /* Surfaces — warm charcoal */
-  --color-background: #141210;
-  --color-surface: #1c1a17;
-  --color-surfaceVariant: #242119;
-  --color-card: #1c1a17;
+  --color-background:      #141210;
+  --color-surface:         #1c1a17;
+  --color-surfaceVariant:  #242119;
+  --color-card:            #1c1a17;
+  --color-popover:         #2a271f;
 
   /* Text */
-  --color-textPrimary: #f5f1ec;
+  --color-textPrimary:   #f5f1ec;
   --color-textSecondary: #b5b0a8;
-  --color-textTertiary: #7a756e;
-  --color-onSurface: #f5f1ec;
+  --color-textTertiary:  #7a756e;
+  --color-onSurface:     #f5f1ec;
 
   /* Borders */
-  --color-border: #2e2b27;
-  --color-borderLight: #2a271f;
-  --color-outline: #4a4641;
-  --color-outlineVariant: #3d3a35;
-  --color-divider: #332f29;
+  --color-border:          #2e2b27;
+  --color-borderLight:     #2a271f;
+  --color-outline:         #4a4641;
+  --color-outlineVariant:  #3d3a35;
+  --color-divider:         #332f29;
 
-  /* Messaging surfaces — distinct hierarchy for the inbox workspace */
-  --color-chatPanel: #1c1a17;      /* conversation list rail (surface-2)   */
-  --color-chatBase: #141210;       /* chat workspace / message area (surface-0) */
-  --color-chatElevated: #242119;   /* chat header + composer (elevated)    */
-  --color-chatHover: #242119;      /* conversation hover                   */
-  --color-chatSelected: #3d2118;   /* selected conversation (primary tint) */
-  --color-chatIncoming: #242119;   /* incoming message bubble              */
-  --color-chatBorder: #2a271f;     /* subtle messaging dividers            */
+  /* Messaging surfaces */
+  --color-chatPanel:    #1c1a17;
+  --color-chatBase:     #141210;
+  --color-chatElevated: #242119;
+  --color-chatHover:    #242119;
+  --color-chatSelected: #3d2118;
+  --color-chatIncoming: #242119;
+  --color-chatBorder:   #2a271f;
+
+  /* ── Full ramp library (dark overrides) ── */
+
+  /* Purple */
+  --color-purple-50:  #26215C;
+  --color-purple-100: #3C3489;
+  --color-purple-200: #534AB7;
+  --color-purple-400: #7F77DD;
+  --color-purple-600: #AFA9EC;
+  --color-purple-800: #CECBF6;
+  --color-purple-900: #EEEDFE;
+
+  /* Teal */
+  --color-teal-50:  #04342C;
+  --color-teal-100: #085041;
+  --color-teal-200: #0F6E56;
+  --color-teal-400: #1D9E75;
+  --color-teal-600: #5DCAA5;
+  --color-teal-800: #9FE1CB;
+  --color-teal-900: #E1F5EE;
+
+  /* Coral */
+  --color-coral-50:  #4A1B0C;
+  --color-coral-100: #712B13;
+  --color-coral-200: #993C1D;
+  --color-coral-400: #D85A30;
+  --color-coral-600: #F0997B;
+  --color-coral-800: #F5C4B3;
+  --color-coral-900: #FAECE7;
+
+  /* Pink */
+  --color-pink-50:  #4B1528;
+  --color-pink-100: #72243E;
+  --color-pink-200: #993556;
+  --color-pink-400: #D4537E;
+  --color-pink-600: #ED93B1;
+  --color-pink-800: #F4C0D1;
+  --color-pink-900: #FBEAF0;
+
+  /* Gray */
+  --color-gray-50:  #2C2C2A;
+  --color-gray-100: #444441;
+  --color-gray-200: #5F5E5A;
+  --color-gray-400: #888780;
+  --color-gray-600: #B4B2A9;
+  --color-gray-800: #D3D1C7;
+  --color-gray-900: #F1EFE8;
+
+  /* Blue */
+  --color-blue-50:  #042C53;
+  --color-blue-100: #0C447C;
+  --color-blue-200: #185FA5;
+  --color-blue-400: #378ADD;
+  --color-blue-600: #85B7EB;
+  --color-blue-800: #B5D4F4;
+  --color-blue-900: #E6F1FB;
+
+  /* Green */
+  --color-green-50:  #173404;
+  --color-green-100: #27500A;
+  --color-green-200: #3B6D11;
+  --color-green-400: #639922;
+  --color-green-600: #97C459;
+  --color-green-800: #C0DD97;
+  --color-green-900: #EAF3DE;
+
+  /* Amber */
+  --color-amber-50:  #412402;
+  --color-amber-100: #633806;
+  --color-amber-200: #854F0B;
+  --color-amber-400: #BA7517;
+  --color-amber-600: #EF9F27;
+  --color-amber-800: #FAC775;
+  --color-amber-900: #FAEEDA;
+
+  /* Red */
+  --color-red-50:  #501313;
+  --color-red-100: #791F1F;
+  --color-red-200: #A32D2D;
+  --color-red-400: #E24B4A;
+  --color-red-600: #F09595;
+  --color-red-800: #F7C1C1;
+  --color-red-900: #FCEBEB;
 }
 
 /* ─── Base ──────────────────────────────────────────────────────── */
@@ -159,11 +327,11 @@ html.theme-transitioning,
 html.theme-transitioning * {
   transition:
     background-color var(--duration-base) ease,
-    color var(--duration-base) ease,
-    border-color var(--duration-base) ease,
-    box-shadow var(--duration-base) ease,
-    fill var(--duration-base) ease,
-    stroke var(--duration-base) ease;
+    color            var(--duration-base) ease,
+    border-color     var(--duration-base) ease,
+    box-shadow       var(--duration-base) ease,
+    fill             var(--duration-base) ease,
+    stroke           var(--duration-base) ease;
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -175,8 +343,8 @@ html.theme-transitioning * {
   *,
   *::before,
   *::after {
-    animation-duration: 0.01ms !important;
+    animation-duration:        0.01ms !important;
     animation-iteration-count: 1 !important;
-    transition-duration: 0.01ms !important;
+    transition-duration:       0.01ms !important;
   }
 }

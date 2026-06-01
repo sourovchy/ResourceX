@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from "react";
 import Link from "next/link";
-import api from "@/lib/api";
+import api, { getFileUrl } from "@/lib/api";
 import { useAuth } from "@/context/AuthContext";
 import SafeImage from "@/components/ui/SafeImage";
 import { formatShortDate } from "@/lib/dateUtils";
@@ -135,9 +135,19 @@ export default function ProfilePage() {
 			<div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
 				<div className="space-y-6 lg:col-span-1">
 					<div className="flex flex-col items-center rounded-lg border border-borderLight bg-surface p-4 text-center shadow-sm sm:p-6">
-						<div className="relative mb-4 flex h-20 w-20 items-center justify-center rounded-full bg-primaryLight text-2xl font-extrabold text-primary sm:h-24 sm:w-24 sm:text-3xl">
-							{displayUser?.name?.[0] ?? "U"}
-							<span className="absolute bottom-0 right-0 bg-success text-white p-1 rounded-full border-2 border-surface">
+						<div className="relative mb-4 flex h-20 w-20 items-center justify-center overflow-hidden rounded-full bg-primaryLight text-2xl font-extrabold text-primary sm:h-24 sm:w-24 sm:text-3xl">
+							{displayUser?.avatarUrl ? (
+								<SafeImage
+									src={getFileUrl(displayUser.avatarUrl)}
+									alt={displayUser.name ?? "Profile"}
+									fill
+									className="object-cover"
+									sizes="96px"
+								/>
+							) : (
+								displayUser?.name?.[0] ?? "U"
+							)}
+							<span className="absolute bottom-0 right-0 bg-success text-white p-1 rounded-full border-2 border-surface z-10">
 								<CheckCircle2 className="w-4 h-4" />
 							</span>
 						</div>

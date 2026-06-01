@@ -27,6 +27,8 @@ import { extractErrorMessage } from "@/lib/errorUtils";
 import { useToast } from "@/context/ToastContext";
 import { ConfirmModal } from "@/components/ui/ConfirmModal";
 import MessageModal from "@/components/misc/MessageModal";
+import SafeImage from "@/components/ui/SafeImage";
+import { getFileUrl } from "@/lib/api";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -94,6 +96,7 @@ type AdminUserDetail = {
 	suspendedAt?: string | null;
 	suspendedUntil?: string | null;
 	scheduledDeletionAt?: string | null;
+	avatarUrl?: string | null;
 };
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
@@ -294,6 +297,7 @@ export default function AdminUserDetailPage() {
 						items: [],
 						disputes: [],
 						trustLog: [],
+						avatarUrl: payload.avatarUrl ?? undefined,
 					};
 				} else {
 					nextUser = {
@@ -321,6 +325,7 @@ export default function AdminUserDetailPage() {
 						suspendedAt: payload.suspendedAt ?? null,
 						suspendedUntil: payload.suspendedUntil ?? null,
 						scheduledDeletionAt: payload.scheduledDeletionAt ?? null,
+						avatarUrl: payload.avatarUrl ?? undefined,
 					};
 				}
 
@@ -421,6 +426,11 @@ export default function AdminUserDetailPage() {
 		const value = Number(adjustment.value);
 		if (Number.isNaN(value) || value === 0) return;
 
+		if (!adjustment.reason.trim()) {
+			toast("A reason is required to adjust the trust score.", "error");
+			return;
+		}
+
 		try {
 			// Correct endpoint: PATCH /trust/admin/{userId}/adjust with { change, reason }
 			await api.patch(`/trust/admin/${userId}/adjust`, {
@@ -489,8 +499,18 @@ export default function AdminUserDetailPage() {
 
 			{/* Profile Card */}
 			<div className="flex flex-col items-start gap-5 rounded-2xl border border-borderLight bg-surface p-4 shadow-sm sm:p-5 lg:flex-row lg:gap-6 lg:p-6">
-				<div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-primaryLight text-xl font-extrabold text-primary sm:h-16 sm:w-16 sm:text-2xl">
-					{user.name?.[0]?.toUpperCase() ?? "?"}
+				<div className="relative flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-full bg-primaryLight text-xl font-extrabold text-primary sm:h-16 sm:w-16 sm:text-2xl">
+					{user.avatarUrl ? (
+						<SafeImage
+							src={getFileUrl(user.avatarUrl)}
+							alt={user.name}
+							fill
+							className="object-cover"
+							sizes="64px"
+						/>
+					) : (
+						user.name?.[0]?.toUpperCase() ?? "?"
+					)}
 				</div>
 
 				<div className="min-w-0 flex-1">

@@ -12,7 +12,7 @@ import {
 	Loader2,
 	CheckCircle2
 } from "lucide-react";
-import api from "@/lib/api";
+import api, { getFileUrl } from "@/lib/api";
 import { isPasswordStrong, validatePhone, normalizePhone } from "@/lib/validation";
 import { useAuth } from "@/context/AuthContext";
 import { useImageUpload } from "@/hooks/useImageUpload";
@@ -376,7 +376,7 @@ export default function EditProfilePage() {
 						<div className="flex h-20 w-20 items-center justify-center overflow-hidden rounded-full border-2 border-transparent bg-primaryLight text-2xl font-extrabold text-primary transition-colors group-hover:border-primary sm:h-24 sm:w-24 sm:text-3xl">
 							{avatarPreviews[0]?.url || profile.avatarUrl ? (
 								<img
-									src={avatarPreviews[0]?.url || profile.avatarUrl || ""}
+									src={avatarPreviews[0]?.url || (profile.avatarUrl ? getFileUrl(profile.avatarUrl) : "")}
 									alt="Profile avatar"
 									className="h-full w-full object-cover"
 								/>

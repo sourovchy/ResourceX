@@ -151,6 +151,36 @@ public class ConversationServiceImpl implements ConversationService {
                 return messageRepository.countByReceiverUserUserIdAndIsReadFalse(currentUser.getUserId());
         }
 
+        @Override
+        @Transactional
+        public void clearChat(String currentUserEmail, Long conversationId) {
+                User currentUser = getAuthenticatedUser(currentUserEmail);
+                Conversation conversation = getConversationForUser(conversationId, currentUser.getUserId());
+
+                if (conversation.getParticipantOneUser().getUserId().equals(currentUser.getUserId())) {
+                        conversation.setParticipantOneClearedAt(LocalDateTime.now());
+                } else {
+                        conversation.setParticipantTwoClearedAt(LocalDateTime.now());
+                }
+                conversationRepository.save(conversation);
+        }
+
+        @Override
+        @Transactional
+        public void deleteConversation(String currentUserEmail, Long conversationId) {
+                User currentUser = getAuthenticatedUser(currentUserEmail);
+                Conversation conversation = getConversationForUser(conversationId, currentUser.getUserId());
+
+                if (conversation.getParticipantOneUser().getUserId().equals(currentUser.getUserId())) {
+                        conversation.setParticipantOneDeleted(true);
+                        conversation.setParticipantOneClearedAt(LocalDateTime.now());
+                } else {
+                        conversation.setParticipantTwoDeleted(true);
+                        conversation.setParticipantTwoClearedAt(LocalDateTime.now());
+                }
+                conversationRepository.save(conversation);
+        }
+
         private void sendInitialMessage(Conversation conversation, User sender, User receiver, String content) {
                 MessageRequest request = MessageRequest.builder()
                                 .content(content)

@@ -15,9 +15,11 @@ public class MessageMapper {
                 .senderUserId(getUserId(message.getSenderUser()))
                 .senderName(getUserName(message.getSenderUser()))
                 .senderEmail(getUserEmail(message.getSenderUser()))
+                .senderAvatarUrl(getUserAvatar(message.getSenderUser()))
                 .receiverUserId(getUserId(message.getReceiverUser()))
                 .receiverName(getUserName(message.getReceiverUser()))
                 .receiverEmail(getUserEmail(message.getReceiverUser()))
+                .receiverAvatarUrl(getUserAvatar(message.getReceiverUser()))
                 .content(message.getContent())
                 .isRead(message.isRead())
                 .readAt(message.getReadAt())
@@ -36,5 +38,9 @@ public class MessageMapper {
 
     private String getUserEmail(User user) {
         return user != null ? user.getEmail() : null;
+    }
+
+    private String getUserAvatar(User user) {
+        return user != null ? user.getAvatarUrl() : null;
     }
 }

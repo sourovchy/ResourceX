@@ -14,6 +14,7 @@ import api from "@/lib/api";
 import { extractErrorMessage, logErrorDetails } from "@/lib/errorUtils";
 import { formatShortDate } from "@/lib/dateUtils";
 import { DataTable } from "@/components/ui/DataTable";
+import { Select } from "@/components/ui/Select";
 
 type FilterType =
 	| "ALL"
@@ -303,19 +304,15 @@ export default function AdminBookingsPage() {
 							Select a new status for booking{" "}
 							<span className="font-bold text-textPrimary">{overrideId}</span>
 						</p>
-
-						<select
+						<Select
 							value={overrideStatus}
-							onChange={(e) =>
-								setOverrideStatus(e.target.value as BookingStatus)
-							}
-							className="w-full rounded-xl border border-outlineVariant bg-surfaceVariant px-3 py-2.5 text-sm text-textPrimary outline-none focus:ring-2 focus:ring-primary">
-							{OVERRIDE_STATUS_OPTIONS.map(({ value, label }) => (
-								<option key={value} value={value}>
-									{label}
-								</option>
-							))}
-						</select>
+							onChange={(val) => setOverrideStatus(val as BookingStatus)}
+							options={OVERRIDE_STATUS_OPTIONS.map(({ value, label }) => ({
+								value,
+								label,
+							}))}
+							placeholder="Select new status"
+						/>
 
 						<div className="flex flex-col gap-3 sm:flex-row">
 							<button

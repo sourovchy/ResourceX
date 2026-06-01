@@ -16,8 +16,10 @@ import {
 } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import api from "@/lib/api";
-import { DataTable, ColumnDef } from "@/components/ui/DataTable";
+import { useToast } from "@/context/ToastContext";
 import { ConfirmModal } from "@/components/ui/ConfirmModal";
+import { Select } from "@/components/ui/Select";
+import { DataTable, ColumnDef } from "@/components/ui/DataTable";
 
 type StaffRole = "ADMIN" | "MODERATOR" | "SUPER_ADMIN";
 
@@ -469,15 +471,16 @@ export default function StaffManagementPage() {
 							</div>
 
 							<Field label="Role" htmlFor="role" required>
-								<select
-									id="role"
+								<Select
 									value={form.role}
-									onChange={(e) => handleChange("role", e.target.value)}
-									className="h-11 w-full min-w-0 rounded-xl border border-borderLight bg-surface px-4 text-sm text-textPrimary outline-none transition focus:border-primary focus:ring-4 focus:ring-primary/10"
-									required>
-									<option value="ADMIN">Admin</option>
-									<option value="MODERATOR">Moderator</option>
-								</select>
+									onChange={(val) => handleChange("role", val)}
+									options={[
+										{ value: "ADMIN", label: "Admin" },
+										{ value: "MODERATOR", label: "Moderator" },
+									]}
+									placeholder="Select Role"
+									required
+								/>
 							</Field>
 
 							<div className="rounded-2xl border border-borderLight bg-surfaceVariant px-4 py-3 text-sm text-textSecondary">

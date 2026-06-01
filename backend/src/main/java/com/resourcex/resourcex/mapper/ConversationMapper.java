@@ -25,10 +25,12 @@ public class ConversationMapper {
                 .participantOneName(getUserName(conversation.getParticipantOneUser()))
                 .participantOneEmail(participantOneIsStaff ? null : getUserEmail(conversation.getParticipantOneUser()))
                 .participantOneIsStaff(participantOneIsStaff)
+                .participantOneAvatarUrl(participantOneIsStaff ? null : getUserAvatar(conversation.getParticipantOneUser()))
                 .participantTwoUserId(getUserId(conversation.getParticipantTwoUser()))
                 .participantTwoName(getUserName(conversation.getParticipantTwoUser()))
                 .participantTwoEmail(participantTwoIsStaff ? null : getUserEmail(conversation.getParticipantTwoUser()))
                 .participantTwoIsStaff(participantTwoIsStaff)
+                .participantTwoAvatarUrl(participantTwoIsStaff ? null : getUserAvatar(conversation.getParticipantTwoUser()))
                 .bookingId(conversation.getBooking() != null ? conversation.getBooking().getBookingId() : null)
                 .disputeId(conversation.getDispute() != null ? conversation.getDispute().getDisputeId() : null)
                 .unreadCount(unreadCount)
@@ -56,6 +58,10 @@ public class ConversationMapper {
 
     private String getUserEmail(User user) {
         return user != null ? user.getEmail() : null;
+    }
+
+    private String getUserAvatar(User user) {
+        return user != null ? user.getAvatarUrl() : null;
     }
 
     private boolean isUserStaff(User user) {

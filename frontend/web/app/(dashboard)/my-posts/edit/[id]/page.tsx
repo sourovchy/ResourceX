@@ -7,6 +7,8 @@ import { UploadCloud, CheckCircle2, Loader2, X } from "lucide-react";
 import api from "@/lib/api";
 import type { ItemResponse } from "@/types/item";
 import { useImageUpload } from "@/hooks/useImageUpload";
+import { Select } from "@/components/ui/Select";
+import { SearchableCombobox } from "@/components/ui/SearchableCombobox";
 
 export default function EditItemPage() {
 	const params = useParams();
@@ -212,28 +214,16 @@ export default function EditItemPage() {
 							<label className="text-sm font-bold text-textPrimary">
 								Category
 							</label>
-							<select
+							<SearchableCombobox
 								value={category}
-								onChange={(e) => setCategory(e.target.value)}
-								disabled={isCategoriesLoading || !!categoriesError}
-								className={`w-full rounded-xl border border-borderLight px-4 py-3 text-sm transition ${
-									isCategoriesLoading || !!categoriesError
-										? "cursor-not-allowed bg-surfaceVariant text-textSecondary"
-										: "bg-surface text-textPrimary"
-								}`}>
-								<option value="">
-									{isCategoriesLoading
-										? "Loading categories..."
-										: categoriesError
-											? "Error loading categories"
-											: "Select Category"}
-								</option>
-								{categories.map((c) => (
-									<option key={c.id} value={c.name}>
-										{c.name}
-									</option>
-								))}
-							</select>
+								onChange={setCategory}
+								options={categories.map((c) => ({ value: c.name, label: c.name }))}
+								placeholder={isCategoriesLoading ? "Loading categories..." : "Select Category"}
+								searchPlaceholder="Search categories..."
+								error={!!categoriesError}
+								required
+								loading={isCategoriesLoading}
+							/>
 							{categoriesError && (
 								<p className="mt-1 text-xs text-error">{categoriesError}</p>
 							)}
@@ -243,15 +233,17 @@ export default function EditItemPage() {
 							<label className="text-sm font-bold text-textPrimary">
 								Condition
 							</label>
-							<select
+							<Select
 								value={condition}
-								onChange={(e) => setCondition(e.target.value)}
-								className="w-full rounded-xl border border-borderLight bg-surface px-4 py-3 text-sm text-textPrimary transition"
-							>
-								<option value="New">New</option>
-								<option value="Good">Good</option>
-								<option value="Fair">Fair</option>
-							</select>
+								onChange={setCondition}
+								options={[
+									{ value: "New", label: "New" },
+									{ value: "Good", label: "Good" },
+									{ value: "Fair", label: "Fair" },
+								]}
+								placeholder="Select Condition"
+								required
+							/>
 						</div>
 					</div>
 

@@ -54,6 +54,7 @@ const config: Config = {
 				surface: "var(--color-surface)",
 				surfaceVariant: "var(--color-surfaceVariant)",
 				card: "var(--color-card)",
+				popover: "var(--color-popover)",
 				textPrimary: "var(--color-textPrimary)",
 				textSecondary: "var(--color-textSecondary)",
 				textTertiary: "var(--color-textTertiary)",

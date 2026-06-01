@@ -4,10 +4,14 @@ export interface Conversation {
 	participantOneUserId: number;
 	participantOneName: string;
 	participantOneEmail: string;
+	participantOneIsStaff?: boolean;
+	participantOneAvatarUrl?: string | null;
 
 	participantTwoUserId: number;
 	participantTwoName: string;
 	participantTwoEmail: string;
+	participantTwoIsStaff?: boolean;
+	participantTwoAvatarUrl?: string | null;
 
 	bookingId?: number | null;
 	disputeId?: number | null;
@@ -31,10 +35,12 @@ export interface Message {
 	senderUserId: number;
 	senderName: string;
 	senderEmail: string;
+	senderAvatarUrl?: string | null;
 
 	receiverUserId: number;
 	receiverName: string;
 	receiverEmail: string;
+	receiverAvatarUrl?: string | null;
 
 	content: string;
 	isRead: boolean;

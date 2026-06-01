@@ -56,6 +56,20 @@ public class Conversation {
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;
 
+    @Column(name = "participant_one_cleared_at")
+    private LocalDateTime participantOneClearedAt;
+
+    @Column(name = "participant_two_cleared_at")
+    private LocalDateTime participantTwoClearedAt;
+
+    @Column(name = "participant_one_deleted", nullable = false)
+    @Builder.Default
+    private boolean participantOneDeleted = false;
+
+    @Column(name = "participant_two_deleted", nullable = false)
+    @Builder.Default
+    private boolean participantTwoDeleted = false;
+
     @PrePersist
     protected void onCreate() {
         LocalDateTime now = LocalDateTime.now();

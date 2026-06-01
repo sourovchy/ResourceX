@@ -215,6 +215,36 @@ export function useChat() {
 		[refreshConversations, selectConversation],
 	);
 
+	const clearChat = useCallback(async (conversationId: number) => {
+		try {
+			await chatService.clearChat(conversationId);
+			setMessages((prev) => ({ ...prev, [conversationId]: [] }));
+			setConversations((prev) =>
+				prev.map((c) =>
+					c.conversationId === conversationId
+						? { ...c, lastMessageContent: "Chat cleared", lastMessageAt: new Date().toISOString() }
+						: c
+				)
+			);
+			toast("Chat cleared successfully", "success");
+		} catch (err) {
+			toast(extractErrorMessage(err), "error");
+		}
+	}, [toast]);
+
+	const deleteConversation = useCallback(async (conversationId: number) => {
+		try {
+			await chatService.deleteConversation(conversationId);
+			setConversations((prev) => prev.filter((c) => c.conversationId !== conversationId));
+			if (selectedId === conversationId) {
+				setSelectedId(null);
+			}
+			toast("Conversation deleted", "success");
+		} catch (err) {
+			toast(extractErrorMessage(err), "error");
+		}
+	}, [selectedId, toast]);
+
 	const isCurrentUserStaff = canAccess("admin") || canAccess("super_admin") || canAccess("moderator");
 
 	return {
@@ -235,5 +265,7 @@ export function useChat() {
 		sendMessage,
 		refreshConversations,
 		openCreatedConversation,
+		clearChat,
+		deleteConversation,
 	};
 }

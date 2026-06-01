@@ -9,6 +9,7 @@ import { Sun, Moon, Menu, LogOut, X } from "lucide-react";
 import SidebarToggle from "./SidebarToggle";
 import NotifBell from "@/components/misc/NotifBell";
 import SafeImage from "@/components/ui/SafeImage";
+import { getFileUrl } from "@/lib/api";
 
 interface TooltipState {
 	label: string;
@@ -232,7 +233,7 @@ export default function AppShell({
 							<div className="relative flex h-9 w-9 items-center justify-center overflow-hidden rounded-full border border-primary/20 bg-primary/10 text-sm font-bold text-primary transition-all group-hover:ring-4 ring-primary/10">
 								{user?.avatarUrl ? (
 									<SafeImage
-										src={user.avatarUrl}
+										src={getFileUrl(user.avatarUrl)}
 										alt={user.name ?? "Profile"}
 										fill
 										className="object-cover"

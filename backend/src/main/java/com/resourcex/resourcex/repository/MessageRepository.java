@@ -10,6 +10,17 @@ import java.util.Optional;
 
 public interface MessageRepository extends JpaRepository<Message, Long> {
 
+    @Query("""
+            select m from Message m
+            where m.conversation.conversationId = :conversationId
+              and (cast(:clearedAt as timestamp) is null or m.createdAt >= :clearedAt)
+            order by m.createdAt asc
+            """)
+    List<Message> findVisibleMessagesForUser(
+            @Param("conversationId") Long conversationId,
+            @Param("clearedAt") LocalDateTime clearedAt
+    );
+
     List<Message> findByConversationConversationIdOrderByCreatedAtAsc(Long conversationId);
 
     Optional<Message> findFirstByConversationConversationIdOrderByCreatedAtDesc(Long conversationId);

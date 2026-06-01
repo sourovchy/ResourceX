@@ -47,7 +47,7 @@ public class UserController {
     }
 
     @GetMapping("/{userId}")
-    @PreAuthorize("hasAnyRole('ADMIN','MODERATOR','SUPER_ADMIN')")
+    @PreAuthorize("isAuthenticated()")
     public UserResponse getUserById(
             @PathVariable Long userId
     ) {

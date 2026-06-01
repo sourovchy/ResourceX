@@ -15,6 +15,8 @@ import {
 
 import api from "@/lib/api";
 import { useImageUpload } from "@/hooks/useImageUpload";
+import { extractErrorMessage } from "@/lib/errorUtils";
+import { SearchableCombobox } from "@/components/ui/SearchableCombobox";
 
 type BookingOption = {
 	bookingId: string;
@@ -60,7 +62,7 @@ function RaiseDisputeForm() {
 			setError(null);
 
 			try {
-				const res = await api.get("/bookings/me");
+				const res = await api.get("/bookings/owner");
 				if (!active) return;
 				const raw = res.data?.content ?? res.data ?? [];
 				const loaded = Array.isArray(raw) ? raw.map(normalizeBooking) : [];
@@ -70,9 +72,7 @@ function RaiseDisputeForm() {
 				}
 			} catch (err) {
 				if (!active) return;
-				setError(
-					err instanceof Error ? err.message : "Failed to load bookings.",
-				);
+				setError(extractErrorMessage(err) || "Failed to load bookings.");
 			} finally {
 				if (active) setLoading(false);
 			}
@@ -109,9 +109,7 @@ function RaiseDisputeForm() {
 
 			setSubmitted(true);
 		} catch (err) {
-			setError(
-				err instanceof Error ? err.message : "Failed to submit dispute.",
-			);
+			setError(extractErrorMessage(err) || "Failed to submit dispute.");
 		} finally {
 			setSubmitting(false);
 		}
@@ -183,24 +181,24 @@ function RaiseDisputeForm() {
 						Select Related Booking
 					</label>
 
-					<select
+					<SearchableCombobox
 						value={selectedBooking}
-						onChange={(e) => setSelectedBooking(e.target.value)}
-						className="w-full rounded-xl border border-borderLight bg-surface px-4 py-3 text-sm outline-none transition focus:border-error focus:ring-1 focus:ring-error"
-						required>
-						<option value="">
-							{loading
+						onChange={setSelectedBooking}
+						options={bookings.map((b) => ({
+							value: b.bookingId,
+							label: `${b.itemTitle} (Owner: ${b.ownerName}, Renter: ${b.renterName})`,
+							searchText: `${b.itemTitle} ${b.ownerName} ${b.renterName}`,
+						}))}
+						placeholder={
+							loading
 								? "Loading bookings..."
-								: `-- Choose a booking (${bookings.length} available) --`}
-						</option>
-
-						{bookings.map((booking) => (
-							<option key={booking.bookingId} value={booking.bookingId}>
-								{booking.itemTitle} (Owner: {booking.ownerName}, Renter:{" "}
-								{booking.renterName})
-							</option>
-						))}
-					</select>
+								: `-- Choose a booking (${bookings.length} available) --`
+						}
+						searchPlaceholder="Search by item or name..."
+						required
+						loading={loading}
+						emptyState="No matching bookings found."
+					/>
 				</div>
 
 				<div className="space-y-2">

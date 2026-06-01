@@ -2,6 +2,7 @@
 
 import { Conversation } from "../types/chat";
 import { ShieldCheck } from "lucide-react";
+import { getFileUrl } from "@/lib/api";
 interface ConversationItemProps {
 	conversation: Conversation;
 	isActive: boolean;
@@ -26,6 +27,10 @@ export default function ConversationItem({
 		? conversation.participantTwoIsStaff
 		: conversation.participantOneIsStaff;
 
+	const otherParticipantAvatarUrl = isParticipantOneCurrentUser
+		? conversation.participantTwoAvatarUrl
+		: conversation.participantOneAvatarUrl;
+
 	const otherParticipantInitial = otherParticipantName
 		? otherParticipantName.charAt(0).toUpperCase()
 		: "U";
@@ -40,11 +45,15 @@ export default function ConversationItem({
 	return (
 		<div
 			onClick={onClick}
-			className={`group relative flex items-center gap-3 overflow-hidden rounded-xl p-3 transition-colors cursor-pointer ${
+			className={`group relative flex items-center gap-3 overflow-hidden rounded-xl p-3 transition-all duration-200 cursor-pointer border ${
 				isActive
-					? "bg-[var(--color-chatSelected)] before:absolute before:left-0 before:top-0 before:bottom-0 before:w-1 before:rounded-r-full before:bg-primary"
-					: "hover:bg-[var(--color-chatHover)]"
+					? "bg-primary/5 border-primary/20 shadow-sm"
+					: "bg-transparent border-transparent hover:bg-surfaceVariant/50"
 			}`}>
+			{/* Active indicator line */}
+			{isActive && (
+				<div className="absolute bottom-0 left-0 top-0 w-[4px] rounded-r-full bg-primary" />
+			)}
 			{/* Avatar */}
 			<div className="relative shrink-0">
 				{isOtherParticipantStaff ? (
@@ -56,6 +65,14 @@ export default function ConversationItem({
 						}`}>
 						<ShieldCheck className="h-6 w-6" />
 					</div>
+				) : otherParticipantAvatarUrl ? (
+					<img
+						src={getFileUrl(otherParticipantAvatarUrl)}
+						alt={otherParticipantName}
+						className={`h-11 w-11 rounded-full object-cover shadow-sm transition-colors ${
+							isActive ? "border-2 border-primary" : "border border-[var(--color-chatBorder)]"
+						}`}
+					/>
 				) : (
 					<div
 						className={`flex h-11 w-11 items-center justify-center rounded-full text-base font-bold transition-colors ${

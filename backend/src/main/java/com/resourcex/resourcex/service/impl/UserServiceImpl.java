@@ -81,7 +81,30 @@ public class UserServiceImpl implements UserService {
                 .map(user -> {
                     List<UserRole> userRoles = userRoleRepository.findAllByUser(user);
                     StudentProfile studentProfile = studentProfileRepository.findByUser(user).orElse(null);
-                    return UserMapper.toResponse(user, userRoles, studentProfile);
+                    UserResponse response = UserMapper.toResponse(user, userRoles, studentProfile);
+                    
+                    Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+                    boolean isPrivileged = auth != null && auth.getAuthorities().stream()
+                            .anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN") || 
+                                           a.getAuthority().equals("ROLE_MODERATOR") || 
+                                           a.getAuthority().equals("ROLE_SUPER_ADMIN"));
+                    boolean isSelf = auth != null && auth.getName().equals(user.getEmail());
+                    
+                    if (!isPrivileged && !isSelf) {
+                        response.setEmail(null);
+                        if (response.getStudentProfile() != null) {
+                            response.getStudentProfile().setPhone(null);
+                            response.getStudentProfile().setStudentId(null);
+                            response.getStudentProfile().setIdCardFileId(null);
+                        }
+                        response.setSuspensionType(null);
+                        response.setSuspensionReason(null);
+                        response.setSuspendedAt(null);
+                        response.setSuspendedUntil(null);
+                        response.setScheduledDeletionAt(null);
+                    }
+                    
+                    return response;
                 })
                 .orElseThrow(() -> new ResourceNotFoundException("User not found"));
     }

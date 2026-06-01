@@ -48,8 +48,8 @@ public class DisputeServiceImpl implements DisputeService {
         Booking booking = bookingRepository.findById(request.getBookingId())
                 .orElseThrow(() -> new ResourceNotFoundException("Booking not found"));
 
-        if (!isAdmin() && !isBookingParticipant(booking, user)) {
-            throw new ForbiddenException("You cannot raise a dispute for this booking");
+        if (!isAdmin() && !booking.getItem().getOwner().getUserId().equals(user.getUserId())) {
+            throw new ForbiddenException("Only the item owner can raise a dispute for this booking");
         }
 
         if (disputeRepository.existsByBookingAndRaisedBy(booking, user)) {

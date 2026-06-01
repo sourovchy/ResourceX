@@ -47,4 +47,22 @@ public class ConversationController {
     public ResponseEntity<Long> getUnreadCount(Authentication authentication) {
         return ResponseEntity.ok(conversationService.getUnreadCount(authentication.getName()));
     }
+
+    @DeleteMapping("/{conversationId}/messages")
+    public ResponseEntity<Void> clearChat(
+            @PathVariable Long conversationId,
+            Authentication authentication
+    ) {
+        conversationService.clearChat(authentication.getName(), conversationId);
+        return ResponseEntity.noContent().build();
+    }
+
+    @DeleteMapping("/{conversationId}")
+    public ResponseEntity<Void> deleteConversation(
+            @PathVariable Long conversationId,
+            Authentication authentication
+    ) {
+        conversationService.deleteConversation(authentication.getName(), conversationId);
+        return ResponseEntity.noContent().build();
+    }
 }

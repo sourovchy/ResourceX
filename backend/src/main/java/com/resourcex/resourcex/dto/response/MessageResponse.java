@@ -17,10 +17,12 @@ public class MessageResponse {
     private Long senderUserId;
     private String senderName;
     private String senderEmail;
+    private String senderAvatarUrl;
 
     private Long receiverUserId;
     private String receiverName;
     private String receiverEmail;
+    private String receiverAvatarUrl;
 
     private String content;
     private Boolean isRead;

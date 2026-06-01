@@ -201,16 +201,6 @@ export default function StudentBookings() {
 										<ArrowRight className="h-3 w-3" />
 									</Link>
 								)}
-
-								{/* Raise Dispute — for approved or completed bookings */}
-								{(isApproved || isCompleted) && (
-									<Link
-										href={`/disputes?bookingId=${booking.bookingId}`}
-										className="flex items-center justify-center gap-1 rounded-xl border border-errorLight bg-errorLight px-4 py-2 text-sm font-bold text-errorDark transition-colors hover:bg-error hover:text-white">
-										<AlertTriangle className="h-3 w-3" />
-										Raise Dispute
-									</Link>
-								)}
 							</div>
 						</div>
 					);

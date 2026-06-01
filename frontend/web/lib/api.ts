@@ -1,8 +1,19 @@
 import axios from "axios";
 import { logger } from "@/lib/logger";
 
-const API_BASE =
+export const API_BASE =
 	process.env.NEXT_PUBLIC_API_URL?.replace(/\/$/, "") || "http://localhost:8082/api";
+
+export const getFileUrl = (url: string | null | undefined): string => {
+	if (!url) return "";
+	if (url.startsWith("http")) return url;
+	if (url.startsWith("blob:")) return url;
+	if (url.startsWith("/api/")) {
+		// e.g. /api/files/xyz -> http://localhost:8082/api/files/xyz
+		return API_BASE.replace(/\/api$/, "") + url;
+	}
+	return API_BASE.replace(/\/api$/, "") + "/" + url.replace(/^\//, "");
+};
 
 const api = axios.create({
 	baseURL: API_BASE,

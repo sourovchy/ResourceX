@@ -3,7 +3,8 @@
 import React, { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import type { AxiosError } from "axios";
-import api from "@/lib/api";
+import api, { getFileUrl } from "@/lib/api";
+import SafeImage from "@/components/ui/SafeImage";
 import {
 	ShieldCheck,
 	Users,
@@ -22,6 +23,7 @@ type AdminProfile = {
 	email?: string;
 	role?: string;
 	roles?: string[];
+	avatarUrl?: string | null;
 };
 
 type DashboardStats = {
@@ -151,9 +153,19 @@ export default function AdminProfilePage() {
 			<div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
 				<div className="space-y-6">
 					<div className="flex flex-col items-center rounded-2xl border border-borderLight bg-surface p-4 text-center shadow-sm sm:p-6">
-						<div className="relative mb-4 flex h-20 w-20 items-center justify-center rounded-full bg-dashboardBlueTint text-2xl font-extrabold text-dashboardBlue sm:h-24 sm:w-24 sm:text-3xl">
-							{getInitials(profile?.name)}
-							<span className="absolute bottom-0 right-0 rounded-full border-2 border-surface bg-primary p-1 text-white">
+						<div className="relative mb-4 flex h-20 w-20 items-center justify-center overflow-hidden rounded-full bg-dashboardBlueTint text-2xl font-extrabold text-dashboardBlue sm:h-24 sm:w-24 sm:text-3xl">
+							{profile?.avatarUrl ? (
+								<SafeImage
+									src={getFileUrl(profile.avatarUrl)}
+									alt={adminName}
+									fill
+									className="object-cover"
+									sizes="96px"
+								/>
+							) : (
+								getInitials(profile?.name)
+							)}
+							<span className="absolute bottom-0 right-0 rounded-full border-2 border-surface bg-primary p-1 text-white z-10">
 								<ShieldCheck className="h-4 w-4" />
 							</span>
 						</div>

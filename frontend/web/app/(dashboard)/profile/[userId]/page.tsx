@@ -8,12 +8,14 @@ import {
 	CheckCircle2,
 	GraduationCap,
 	Loader2,
+	Mail,
 	MessageSquare,
 	Package,
+	Phone,
 	Shield,
 	Tag,
 } from "lucide-react";
-import api from "@/lib/api";
+import api, { getFileUrl } from "@/lib/api";
 import { useAuth } from "@/context/AuthContext";
 import SafeImage from "@/components/ui/SafeImage";
 import MessageModal from "@/components/misc/MessageModal";
@@ -51,10 +53,14 @@ type PublicItem = {
 type ProfileInfo = {
 	userId: number;
 	name: string;
+	email?: string | null;
+	phone?: string | null;
+	status?: string | null;
 	emailVerified: boolean;
 	trustScore: number | null;
 	university: string | null;
 	department: string | null;
+	avatarUrl?: string | null;
 };
 
 // ── Component ─────────────────────────────────────────────────────────────────
@@ -81,36 +87,30 @@ export default function PublicProfilePage({
 		setLoading(true);
 		setError(null);
 
-		api
-			.get(`/items/user/${targetId}`)
-			.then((res) => {
+		Promise.all([
+			api.get(`/users/${targetId}`),
+			api.get(`/items/user/${targetId}`),
+		])
+			.then(([userRes, itemsRes]) => {
 				if (!active) return;
-				const raw: any[] = Array.isArray(res.data)
-					? res.data
-					: res.data?.content ?? [];
+				
+				const u = userRes.data;
+				setProfile({
+					userId: u.userId ?? targetId,
+					name: u.name ?? "Unknown User",
+					email: u.email,
+					phone: u.studentProfile?.phone,
+					status: u.status,
+					emailVerified: u.studentProfile?.emailVerified ?? false,
+					trustScore: u.studentProfile?.trustScore ?? null,
+					university: u.studentProfile?.university ?? null,
+					department: u.studentProfile?.department ?? null,
+					avatarUrl: u.avatarUrl,
+				});
 
-				// Extract profile info from the owner field of any item
-				const ownerRaw = raw[0]?.owner;
-				if (ownerRaw) {
-					setProfile({
-						userId: ownerRaw.userId ?? targetId,
-						name: ownerRaw.name ?? "Unknown User",
-						emailVerified: ownerRaw.studentProfile?.emailVerified ?? false,
-						trustScore: ownerRaw.studentProfile?.trustScore ?? null,
-						university: ownerRaw.studentProfile?.university ?? null,
-						department: ownerRaw.studentProfile?.department ?? null,
-					});
-				} else if (raw.length === 0) {
-					// No items — still show a minimal profile header
-					setProfile({
-						userId: targetId,
-						name: "ResourceX Member",
-						emailVerified: false,
-						trustScore: null,
-						university: null,
-						department: null,
-					});
-				}
+				const raw: any[] = Array.isArray(itemsRes.data)
+					? itemsRes.data
+					: itemsRes.data?.content ?? [];
 
 				setItems(
 					raw
@@ -125,8 +125,9 @@ export default function PublicProfilePage({
 						})),
 				);
 			})
-			.catch(() => {
+			.catch((err) => {
 				if (!active) return;
+				console.error("Profile fetch error:", err);
 				setError("Could not load this profile. Please try again.");
 			})
 			.finally(() => {
@@ -172,8 +173,18 @@ export default function PublicProfilePage({
 					<div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
 						{/* Avatar + name block */}
 						<div className="flex items-center gap-4">
-							<div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-full bg-primaryLight text-2xl font-extrabold text-primary">
-								{profile?.name?.charAt(0).toUpperCase() ?? "?"}
+							<div className="relative flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-full bg-primaryLight text-2xl font-extrabold text-primary">
+								{profile?.avatarUrl ? (
+									<SafeImage
+										src={getFileUrl(profile.avatarUrl)}
+										alt={profile.name}
+										fill
+										className="object-cover"
+										sizes="64px"
+									/>
+								) : (
+									profile?.name?.charAt(0).toUpperCase() ?? "?"
+								)}
 							</div>
 							<div>
 								<div className="flex flex-wrap items-center gap-2">
@@ -188,8 +199,8 @@ export default function PublicProfilePage({
 									)}
 								</div>
 
-								{/* University / dept */}
-								<div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-xs text-textSecondary">
+								{/* Info */}
+								<div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-textSecondary">
 									{profile?.university && (
 										<span className="flex items-center gap-1">
 											<Building2 className="h-3.5 w-3.5" />
@@ -200,6 +211,18 @@ export default function PublicProfilePage({
 										<span className="flex items-center gap-1">
 											<GraduationCap className="h-3.5 w-3.5" />
 											{profile.department}
+										</span>
+									)}
+									{profile?.email && (
+										<span className="flex items-center gap-1">
+											<Mail className="h-3.5 w-3.5" />
+											{profile.email}
+										</span>
+									)}
+									{profile?.phone && (
+										<span className="flex items-center gap-1">
+											<Phone className="h-3.5 w-3.5" />
+											{profile.phone}
 										</span>
 									)}
 								</div>

@@ -62,7 +62,12 @@ public class MessageServiceImpl implements MessageService {
                 .build();
 
         Message savedMessage = messageRepository.save(message);
+        
+        // Resurrect conversation if deleted
+        conversation.setParticipantOneDeleted(false);
+        conversation.setParticipantTwoDeleted(false);
         conversation.setLastMessageAt(savedMessage.getCreatedAt() != null ? savedMessage.getCreatedAt() : LocalDateTime.now());
+        
         conversationRepository.save(conversation);
 
         MessageResponse response = messageMapper.toResponse(savedMessage);
@@ -92,7 +97,11 @@ public class MessageServiceImpl implements MessageService {
 
         markConversationAsRead(currentUserEmail, conversationId);
 
-        return messageRepository.findByConversationConversationIdOrderByCreatedAtAsc(conversation.getConversationId())
+        LocalDateTime clearedAt = conversation.getParticipantOneUser().getUserId().equals(currentUser.getUserId())
+                ? conversation.getParticipantOneClearedAt()
+                : conversation.getParticipantTwoClearedAt();
+
+        return messageRepository.findVisibleMessagesForUser(conversation.getConversationId(), clearedAt)
                 .stream()
                 .map(messageMapper::toResponse)
                 .toList();

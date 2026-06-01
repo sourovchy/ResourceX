@@ -13,5 +13,9 @@ public interface ConversationService {
 
     ConversationResponse getConversation(String currentUserEmail, Long conversationId);
 
+    void clearChat(String currentUserEmail, Long conversationId);
+
+    void deleteConversation(String currentUserEmail, Long conversationId);
+
     long getUnreadCount(String currentUserEmail);
 }

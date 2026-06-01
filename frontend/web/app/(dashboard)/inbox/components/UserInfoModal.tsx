@@ -9,12 +9,14 @@ import { useToast } from "@/context/ToastContext";
 import { extractErrorMessage } from "@/lib/errorUtils";
 import { chatService } from "../services/chatService";
 import type { BlockStatus } from "../types/chat";
+import { getFileUrl } from "@/lib/api";
 
 interface ConversationUser {
 	userId: number;
 	name: string;
 	email: string;
 	isStaff?: boolean;
+	avatarUrl?: string | null;
 }
 
 interface UserInfoModalProps {
@@ -127,7 +129,15 @@ export default function UserInfoModal({
 							<div className="flex flex-col gap-4 rounded-2xl border border-borderLight bg-surfaceVariant/50 p-4">
 								<div className="flex items-center gap-4">
 									<div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-primary text-xl font-bold text-white shadow-sm">
-										{initial}
+										{user.avatarUrl ? (
+											<img
+												src={getFileUrl(user.avatarUrl)}
+												alt={user.name}
+												className="h-full w-full rounded-full object-cover"
+											/>
+										) : (
+											initial
+										)}
 									</div>
 									<div className="min-w-0 flex-1">
 										<h4 className="truncate text-base font-bold text-textPrimary">

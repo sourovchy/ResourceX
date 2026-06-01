@@ -10,6 +10,8 @@ import {
 	XCircle,
 } from "lucide-react";
 import api from "@/lib/api";
+import { useToast } from "@/context/ToastContext";
+import { Select } from "@/components/ui/Select";
 import { formatShortDate } from "@/lib/dateUtils";
 import type { BookingResponse } from "@/types/booking";
 
@@ -101,13 +103,16 @@ export default function HistoryPage() {
 						{history.length} completed rental{history.length !== 1 ? "s" : ""}
 					</p>
 				</div>
-				<select
-					value={sortBy}
-					onChange={(e) => setSortBy(e.target.value as "recent" | "oldest")}
-					className="w-full rounded-lg border border-borderLight bg-surface px-3 py-2 text-sm text-textPrimary outline-none focus:ring-2 focus:ring-primary sm:w-auto">
-					<option value="recent">Most Recent</option>
-					<option value="oldest">Oldest First</option>
-				</select>
+				<div className="w-full sm:w-48">
+					<Select
+						value={sortBy}
+						onChange={(val) => setSortBy(val as "recent" | "oldest")}
+						options={[
+							{ value: "recent", label: "Most Recent" },
+							{ value: "oldest", label: "Oldest First" },
+						]}
+					/>
+				</div>
 			</div>
 
 			<div className="space-y-3 pb-2">

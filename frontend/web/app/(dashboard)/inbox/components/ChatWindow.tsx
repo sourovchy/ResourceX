@@ -2,10 +2,12 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Info, MessageSquare, ChevronLeft, ShieldCheck } from "lucide-react";
+import { Info, MessageSquare, ChevronLeft, ShieldCheck, MoreVertical, Eraser, Trash2 } from "lucide-react";
+import { ConfirmModal } from "@/components/ui/ConfirmModal";
 import { Conversation, Message } from "@/types/chat";
 import type { BlockStatus } from "../types/chat";
 import { chatService } from "../services/chatService";
+import { getFileUrl } from "@/lib/api";
 import MessageBubble from "./MessageBubble";
 import MessageInput from "./MessageInput";
 import UserInfoModal from "./UserInfoModal";
@@ -17,6 +19,8 @@ interface ChatWindowProps {
 	isCurrentUserStaff?: boolean;
 	onSend: (text: string) => void;
 	onBack: () => void;
+	onClearChat?: (id: number) => void;
+	onDeleteConversation?: (id: number) => void;
 }
 
 export default function ChatWindow({
@@ -26,11 +30,29 @@ export default function ChatWindow({
 	isCurrentUserStaff,
 	onSend,
 	onBack,
+	onClearChat,
+	onDeleteConversation,
 }: ChatWindowProps) {
 	const router = useRouter();
 	const bottomRef = useRef<HTMLDivElement>(null);
+	const menuRef = useRef<HTMLDivElement>(null);
 	const [showInfo, setShowInfo] = useState(false);
 	const [blockStatus, setBlockStatus] = useState<BlockStatus | null>(null);
+	
+	const [menuOpen, setMenuOpen] = useState(false);
+	const [confirmClearOpen, setConfirmClearOpen] = useState(false);
+	const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
+
+	// Close menu on click outside
+	useEffect(() => {
+		const handleClickOutside = (e: MouseEvent) => {
+			if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+				setMenuOpen(false);
+			}
+		};
+		document.addEventListener("mousedown", handleClickOutside);
+		return () => document.removeEventListener("mousedown", handleClickOutside);
+	}, []);
 
 	const otherParticipant = useMemo(() => {
 		if (!conversation) return null;
@@ -41,6 +63,7 @@ export default function ChatWindow({
 				name: conversation.participantTwoName,
 				email: conversation.participantTwoEmail,
 				isStaff: conversation.participantTwoIsStaff,
+				avatarUrl: conversation.participantTwoAvatarUrl,
 			};
 		}
 
@@ -49,6 +72,7 @@ export default function ChatWindow({
 			name: conversation.participantOneName,
 			email: conversation.participantOneEmail,
 			isStaff: conversation.participantOneIsStaff,
+			avatarUrl: conversation.participantOneAvatarUrl,
 		};
 	}, [conversation, currentUserId]);
 
@@ -131,6 +155,12 @@ export default function ChatWindow({
 							<div className="flex h-9 w-9 items-center justify-center rounded-full bg-dashboardBlueTint text-base font-bold text-dashboardBlue sm:h-10 sm:w-10 sm:text-lg">
 								<ShieldCheck className="h-5 w-5" />
 							</div>
+						) : otherParticipant.avatarUrl ? (
+							<img
+								src={getFileUrl(otherParticipant.avatarUrl)}
+								alt={otherParticipant.name}
+								className="h-9 w-9 rounded-full object-cover shadow-sm sm:h-10 sm:w-10 transition-opacity group-hover:opacity-80"
+							/>
 						) : (
 							<div className="flex h-9 w-9 items-center justify-center rounded-full bg-primary text-base font-bold text-white transition-opacity group-hover:opacity-80 sm:h-10 sm:w-10 sm:text-lg">
 								{participantInitial}
@@ -168,6 +198,39 @@ export default function ChatWindow({
 						title="Conversation Info">
 						<Info className="w-5 h-5" />
 					</button>
+
+					{/* 3-Dot Menu */}
+					<div className="relative" ref={menuRef}>
+						<button
+							onClick={() => setMenuOpen(!menuOpen)}
+							className={`p-2 transition-colors rounded-lg ${menuOpen ? "bg-surfaceVariant text-primary" : "text-textSecondary hover:text-primary hover:bg-surfaceVariant"}`}
+							title="More options">
+							<MoreVertical className="w-5 h-5" />
+						</button>
+
+						{menuOpen && (
+							<div className="absolute right-0 mt-1 w-56 origin-top-right rounded-xl bg-[var(--color-chatElevated)] py-2 shadow-lg ring-1 ring-black/5 z-50 border border-[var(--color-chatBorder)]">
+								<button
+									onClick={() => {
+										setMenuOpen(false);
+										setConfirmClearOpen(true);
+									}}
+									className="flex w-full items-center gap-3 px-4 py-2.5 text-sm font-medium text-textPrimary hover:bg-surfaceVariant transition-colors">
+									<Eraser className="w-4 h-4 text-textSecondary" />
+									Clear Chat
+								</button>
+								<button
+									onClick={() => {
+										setMenuOpen(false);
+										setConfirmDeleteOpen(true);
+									}}
+									className="flex w-full items-center gap-3 px-4 py-2.5 text-sm font-medium text-error hover:bg-errorLight transition-colors">
+									<Trash2 className="w-4 h-4" />
+									Delete Conversation
+								</button>
+							</div>
+						)}
+					</div>
 				</div>
 			</div>
 
@@ -231,6 +294,36 @@ export default function ChatWindow({
 					onBlockChange={setBlockStatus}
 				/>
 			)}
+
+			{/* Confirm Clear Chat */}
+			<ConfirmModal
+				isOpen={confirmClearOpen}
+				title="Clear Chat"
+				message={`Are you sure you want to clear this chat with ${otherParticipant.name}? This will remove all messages for you, but they will still be visible to the other person.`}
+				confirmText="Clear Chat"
+				cancelText="Cancel"
+				isDestructive={true}
+				onConfirm={() => {
+					onClearChat?.(conversation.conversationId);
+					setConfirmClearOpen(false);
+				}}
+				onCancel={() => setConfirmClearOpen(false)}
+			/>
+
+			{/* Confirm Delete Conversation */}
+			<ConfirmModal
+				isOpen={confirmDeleteOpen}
+				title="Delete Conversation"
+				message={`Are you sure you want to completely delete this conversation with ${otherParticipant.name}? It will be removed from your inbox.`}
+				confirmText="Delete"
+				cancelText="Cancel"
+				isDestructive={true}
+				onConfirm={() => {
+					onDeleteConversation?.(conversation.conversationId);
+					setConfirmDeleteOpen(false);
+				}}
+				onCancel={() => setConfirmDeleteOpen(false)}
+			/>
 		</div>
 	);
 }

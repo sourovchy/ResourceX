@@ -99,6 +99,14 @@ export const chatService = {
 		}
 	},
 
+	clearChat: async (conversationId: number): Promise<void> => {
+		await api.delete(`${CONVERSATION_BASE_URL}/${conversationId}/messages`);
+	},
+
+	deleteConversation: async (conversationId: number): Promise<void> => {
+		await api.delete(`${CONVERSATION_BASE_URL}/${conversationId}`);
+	},
+
 	getBlockStatus: async (userId: number): Promise<BlockStatus> => {
 		const { data } = await api.get<BlockStatus>(
 			`${BLOCK_BASE_URL}/status/${userId}`,

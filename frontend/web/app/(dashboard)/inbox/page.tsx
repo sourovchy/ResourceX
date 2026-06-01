@@ -19,6 +19,8 @@ export default function InboxPage() {
     isCurrentUserStaff,
     loading,
     openCreatedConversation,
+    clearChat,
+    deleteConversation,
   } = useChat();
 
   const isChatOpen = selectedId !== null;
@@ -57,6 +59,8 @@ export default function InboxPage() {
           isCurrentUserStaff={isCurrentUserStaff}
           onSend={sendMessage}
           onBack={deselectConversation}
+          onClearChat={clearChat}
+          onDeleteConversation={deleteConversation}
         />
       </div>
       </div>

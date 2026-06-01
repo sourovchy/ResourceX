@@ -13,7 +13,10 @@ public interface ConversationRepository extends JpaRepository<Conversation, Long
     @Query("""
             select c
             from Conversation c
-            where (c.participantOneUser.userId = :userId or c.participantTwoUser.userId = :userId)
+            where (
+                   (c.participantOneUser.userId = :userId and c.participantOneDeleted = false)
+                or (c.participantTwoUser.userId = :userId and c.participantTwoDeleted = false)
+            )
             order by coalesce(c.lastMessageAt, c.createdAt) desc, c.conversationId desc
             """)
     List<Conversation> findAllByUserIdOrderByActivityDesc(@Param("userId") Long userId);
