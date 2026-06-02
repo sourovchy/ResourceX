@@ -1,9 +1,12 @@
 "use client";
 
 import React, { useEffect, useMemo, useState } from "react";
-import { ShieldAlert, CheckCircle2, X, Loader2, RefreshCw } from "lucide-react";
+import { ShieldAlert, CheckCircle2, X, Loader2 } from "lucide-react";
 import api from "@/lib/api";
 import { formatShortDate } from "@/lib/dateUtils";
+import { useAutoRefresh } from "@/hooks/useAutoRefresh";
+import { useToast } from "@/context/ToastContext";
+import { extractErrorMessage } from "@/lib/errorUtils";
 import { PageEmpty } from "@/components/ui/PageEmpty";
 
 type DisputeStatus = "OPEN" | "RESOLVED";
@@ -101,6 +104,7 @@ export default function AdminDisputesPage() {
 	const [loading, setLoading] = useState(true);
 	const [submitting, setSubmitting] = useState(false);
 	const [error, setError] = useState<string | null>(null);
+	const { toast } = useToast();
 
 	const [activeDispute, setActiveDispute] = useState<string | number | null>(
 		null,
@@ -143,6 +147,9 @@ export default function AdminDisputesPage() {
 		fetchDisputes();
 	}, []);
 
+	// Auto-refresh on tab focus + light polling
+	useAutoRefresh(fetchDisputes, { intervalMs: 45_000 });
+
 	const filtered = useMemo(() => {
 		return disputes.filter(
 			(d) => filterOpen === "ALL" || d.status === filterOpen,
@@ -174,9 +181,11 @@ export default function AdminDisputesPage() {
 
 			setActiveDispute(null);
 			setDecision("");
+			toast("Dispute resolved. The parties have been notified.");
 		} catch (err) {
-			console.error(err);
-			setError("Failed to resolve dispute.");
+			const msg = extractErrorMessage(err);
+			setError(msg);
+			toast(msg, "error");
 		} finally {
 			setSubmitting(false);
 		}
@@ -196,13 +205,6 @@ export default function AdminDisputesPage() {
 				</div>
 
 				<div className="flex flex-wrap gap-2">
-					<button
-						onClick={fetchDisputes}
-						className="inline-flex items-center gap-2 rounded-xl border border-outlineVariant bg-surface px-4 py-2 text-sm font-semibold text-textSecondary transition hover:bg-surfaceVariant">
-						<RefreshCw className="h-4 w-4" />
-						Refresh
-					</button>
-
 					{openCount > 0 && (
 						<div className="inline-flex items-center gap-2 rounded-xl border border-error/30 bg-errorLight px-4 py-2 text-sm font-bold text-error shadow-sm">
 							<ShieldAlert className="h-4 w-4" />

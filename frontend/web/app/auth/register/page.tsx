@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
@@ -16,8 +16,25 @@ import {
 } from "lucide-react";
 import api from "@/lib/api";
 import { PENDING_EMAIL_KEY, setOtpLastSendTimestamp } from "@/lib/auth";
+import { Logo, LogoIcon } from "@/components/ui/Logo";
+import { Select } from "@/components/ui/Select";
+import AuthProgressOverlay, { AuthProgress } from "@/components/auth/AuthProgressOverlay";
 
 import { validatePasswordChecks, isPasswordStrong, validateEmail, validatePhone, normalizePhone } from "@/lib/validation";
+
+const universityOptions = [
+	{ value: "Chittagong University of Engineering and Technology", label: "Chittagong University of Engineering and Technology" },
+	{ value: "North South University", label: "North South University" },
+	{ value: "BRAC University", label: "BRAC University" },
+	{ value: "Dhaka University", label: "Dhaka University" },
+];
+
+const departmentOptions = [
+	{ value: "Computer Science and Engineering", label: "Computer Science and Engineering" },
+	{ value: "Electrical Engineering", label: "Electrical Engineering" },
+	{ value: "Business Administration", label: "Business Administration" },
+	{ value: "English", label: "English" },
+];
 
 type AuthResponse = {
 	message: string;
@@ -48,6 +65,8 @@ export default function RegisterPage() {
 	});
 	const [error, setError] = useState("");
 	const [loading, setLoading] = useState(false);
+	const submittingRef = useRef(false);
+	const [progress, setProgress] = useState<AuthProgress | null>(null);
 	const [showPassword, setShowPassword] = useState(false);
 	const [idCardFileName, setIdCardFileName] = useState("");
 	const [idCardDataUrl, setIdCardDataUrl] = useState("");
@@ -110,6 +129,7 @@ export default function RegisterPage() {
 
 	const handleSubmit = async (e: React.FormEvent) => {
 		e.preventDefault();
+		if (submittingRef.current) return; // guard against double-submit
 
 		const err = validate();
 		if (err) {
@@ -117,22 +137,24 @@ export default function RegisterPage() {
 			return;
 		}
 
+		submittingRef.current = true;
 		setError("");
 		setLoading(true);
 
 		try {
-			let uploadedIdCardUrl = "";
+			let uploadedIdCardFileId: number | null = null;
 
 			if (idCardFile) {
+				setProgress({ message: "Uploading your ID card…", state: "loading" });
 				const formData = new FormData();
 				formData.append("file", idCardFile);
-				
+
 				const uploadRes = await api.post("/files/upload?purpose=ID_CARD", formData, {
 					headers: { "Content-Type": "multipart/form-data" },
 				});
-				
-				if (uploadRes.data && uploadRes.data.fileUrl) {
-					uploadedIdCardUrl = uploadRes.data.fileUrl;
+
+				if (uploadRes.data && uploadRes.data.fileId != null) {
+					uploadedIdCardFileId = uploadRes.data.fileId;
 				} else {
 					throw new Error("Failed to upload ID card. Please try again.");
 				}
@@ -140,6 +162,7 @@ export default function RegisterPage() {
 				throw new Error("Please select an ID card image");
 			}
 
+			setProgress({ message: "Creating your account…", state: "loading" });
 			await api.post<AuthResponse>("/auth/register", {
 				studentId: form.studentId.trim(),
 				name: form.name.trim(),
@@ -148,11 +171,12 @@ export default function RegisterPage() {
 				phone: normalizePhone(form.phone),
 				university: form.university.trim(),
 				department: form.department.trim(),
-				idCardDataUrl: uploadedIdCardUrl,
+				idCardFileId: uploadedIdCardFileId,
 			});
 
 			localStorage.setItem(PENDING_EMAIL_KEY, form.email.trim());
 
+			setProgress({ message: "Sending verification code…", state: "loading" });
 			try {
 				await api.post("/otp/request", { email: form.email.trim() });
 				setOtpLastSendTimestamp(Date.now());
@@ -160,8 +184,13 @@ export default function RegisterPage() {
 				// Non-fatal
 			}
 
+			// Brief success confirmation before navigating, so the flow reads as intentional.
+			setProgress({ message: "Verification code sent", state: "success" });
+			await new Promise((r) => setTimeout(r, 850));
+
 			router.push("/auth/verify-email");
 		} catch (err: any) {
+			setProgress(null);
 			console.error("Registration error:", err?.response?.data ?? err);
 
 			const responseData = err?.response?.data;
@@ -179,6 +208,7 @@ export default function RegisterPage() {
 
 			setError(friendlyMessage || "Could not create your account. Please try again.");
 		} finally {
+			submittingRef.current = false;
 			setLoading(false);
 		}
 	};
@@ -188,6 +218,7 @@ export default function RegisterPage() {
 
 	return (
 		<div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-background px-4 py-8 sm:px-6 lg:px-8">
+			<AuthProgressOverlay progress={progress} />
 			<div className="pointer-events-none absolute inset-0 overflow-hidden">
 				<div className="absolute left-[-10%] top-[-10%] h-[28rem] w-[28rem] rounded-full bg-primary opacity-10 blur-3xl" />
 				<div className="absolute bottom-[-10%] left-[-10%] h-[26rem] w-[26rem] rounded-full bg-accent opacity-10 blur-3xl" />
@@ -207,9 +238,7 @@ export default function RegisterPage() {
 				<div className="grid overflow-hidden rounded-3xl border border-borderLight bg-surface/90 shadow-2xl backdrop-blur-xl lg:grid-cols-[0.75fr_1.25fr]">
 					<div className="hidden flex-col justify-between border-r border-borderLight bg-surfaceVariant/30 p-10 lg:flex">
 						<div>
-							<div className="inline-flex rounded-full border border-outlineVariant px-4 py-1 text-sm font-medium text-primary">
-								ResourceX
-							</div>
+							<Logo size={36} priority />
 
 							<h1 className="mt-8 text-5xl font-bold leading-tight text-textPrimary">
 								Student Marketplace
@@ -236,6 +265,9 @@ export default function RegisterPage() {
 					<div className="bg-surface p-5 sm:p-6 md:p-8 lg:p-10">
 						<div className="mx-auto w-full max-w-xl px-1 sm:px-0">
 							<div className="mb-6 sm:mb-8">
+								<div className="mb-4 flex justify-start lg:hidden">
+									<LogoIcon size={36} />
+								</div>
 								<h2 className="text-2xl font-bold leading-tight text-textPrimary sm:text-3xl">Create Account</h2>
 								<p className="mt-2 text-sm text-textSecondary sm:text-base">Register with your university details.</p>
 							</div>
@@ -311,56 +343,36 @@ export default function RegisterPage() {
 
 									<div className="space-y-1.5">
 										<label className="block text-sm font-medium text-textPrimary">University</label>
-										<input
-											type="text"
-											list="university-list"
+										<Select
 											value={form.university}
-											onChange={(e) =>
+											onChange={(val) =>
 												setForm({
 													...form,
-													university: e.target.value,
+													university: val,
 												})
 											}
-											className={inputBase}
-											placeholder="Chittagong University of Engineering and Technology"
-											maxLength={100}
+											options={universityOptions}
+											placeholder="Select University"
 											required
 										/>
-
-										<datalist id="university-list">
-											<option value="Chittagong University of Engineering and Technology" />
-											<option value="North South University" />
-											<option value="BRAC University" />
-											<option value="Dhaka University" />
-										</datalist>
 									</div>
 								</div>
 
 								<div className="grid grid-cols-1 gap-4 sm:gap-5 sm:grid-cols-2">
 									<div className="space-y-1.5">
 										<label className="block text-sm font-medium text-textPrimary">Department</label>
-										<input
-											type="text"
-											list="department-list"
+										<Select
 											value={form.department}
-											onChange={(e) =>
+											onChange={(val) =>
 												setForm({
 													...form,
-													department: e.target.value.replace(/[^a-zA-Z\s]/g, ""),
+													department: val,
 												})
 											}
-											className={inputBase}
-											placeholder="Computer Science & Engineering"
-											maxLength={100}
+											options={departmentOptions}
+											placeholder="Select Department"
 											required
 										/>
-
-										<datalist id="department-list">
-											<option value="Computer Science and Engineering" />
-											<option value="Electrical Engineering" />
-											<option value="Business Administration" />
-											<option value="English" />
-										</datalist>
 									</div>
 
 									<div className="space-y-1.5">

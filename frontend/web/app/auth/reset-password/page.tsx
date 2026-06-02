@@ -6,6 +6,7 @@ import { useSearchParams, useRouter } from "next/navigation";
 import { Lock, Loader2, Eye, EyeOff } from "lucide-react";
 import api from "@/lib/api";
 import { validatePasswordChecks, isPasswordStrong } from "@/lib/validation";
+import AuthProgressOverlay, { AuthProgress } from "@/components/auth/AuthProgressOverlay";
 
 function ResetPasswordForm() {
 	const searchParams = useSearchParams();
@@ -16,6 +17,7 @@ function ResetPasswordForm() {
 	const [confirmPassword, setConfirmPassword] = useState("");
 	const [showPassword, setShowPassword] = useState(false);
 	const [loading, setLoading] = useState(false);
+	const [progress, setProgress] = useState<AuthProgress | null>(null);
 	const [error, setError] = useState("");
 	const [success, setSuccess] = useState(false);
 
@@ -43,12 +45,15 @@ function ResetPasswordForm() {
 
 		setLoading(true);
 		try {
+			setProgress({ message: "Updating your password…", state: "loading" });
 			await api.post("/auth/reset-password", { token, newPassword });
+			setProgress(null);
 			setSuccess(true);
 			setTimeout(() => {
 				router.push("/auth/login");
-			}, 3000);
+			}, 2500);
 		} catch (err: any) {
+			setProgress(null);
 			setError(err.response?.data?.message || "Failed to reset password. The link might have expired.");
 		} finally {
 			setLoading(false);
@@ -74,6 +79,7 @@ function ResetPasswordForm() {
 
 	return (
 		<form className="space-y-4 sm:space-y-5" onSubmit={handleSubmit}>
+			<AuthProgressOverlay progress={progress} />
 			{error && (
 				<div className="rounded-xl border border-red-500/20 bg-red-50 px-4 py-3 text-sm leading-relaxed text-red-700">
 					{error}

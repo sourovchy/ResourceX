@@ -4,15 +4,14 @@ import React, { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import {
 	Search,
-	XCircle,
 	Eye,
 	Package,
 	Loader2,
-	RefreshCw,
 } from "lucide-react";
 
 import api from "@/lib/api";
 import { formatShortDate } from "@/lib/dateUtils";
+import { useAutoRefresh } from "@/hooks/useAutoRefresh";
 
 type FilterType =
 	| "ALL"
@@ -148,12 +147,9 @@ function getStatusClass(status: ItemStatus) {
 export default function AdminItemsPage() {
 	const [items, setItems] = useState<Item[]>([]);
 	const [loading, setLoading] = useState(true);
-	const [submitting, setSubmitting] = useState(false);
 	const [error, setError] = useState("");
 	const [search, setSearch] = useState("");
 	const [filter, setFilter] = useState<FilterType>("ALL");
-	const [removeId, setRemoveId] = useState<string | number | null>(null);
-	const [removeReason, setRemoveReason] = useState("");
 
 	const fetchItems = async () => {
 		try {
@@ -185,6 +181,9 @@ export default function AdminItemsPage() {
 		void fetchItems();
 	}, []);
 
+	// Auto-refresh on tab focus + light polling
+	useAutoRefresh(fetchItems, { intervalMs: 45_000 });
+
 	const filtered = useMemo(() => {
 		const searchStr = search.trim().toLowerCase();
 
@@ -204,33 +203,6 @@ export default function AdminItemsPage() {
 			return matchSearch && matchFilter;
 		});
 	}, [items, search, filter]);
-
-	const handleRemoveItem = async () => {
-		if (removeId == null) return;
-
-		if (!removeReason.trim()) {
-			setError("Please provide a removal reason.");
-			return;
-		}
-
-		try {
-			setSubmitting(true);
-			setError("");
-
-			await api.post(`/admin/block-item/${removeId}`, {
-				reason: removeReason.trim(),
-			});
-
-			await fetchItems();
-			setRemoveId(null);
-			setRemoveReason("");
-		} catch (err) {
-			console.error(err);
-			setError("Failed to remove item.");
-		} finally {
-			setSubmitting(false);
-		}
-	};
 
 	if (loading) {
 		return (
@@ -294,51 +266,7 @@ export default function AdminItemsPage() {
 					))}
 				</div>
 
-				<button
-					onClick={fetchItems}
-					className="inline-flex items-center justify-center gap-2 rounded-xl border border-outlineVariant bg-surface px-4 py-2 text-sm font-semibold text-textSecondary transition hover:bg-surfaceVariant lg:w-auto">
-					<RefreshCw className="h-4 w-4" />
-					Refresh
-				</button>
 			</div>
-
-			{removeId != null && (
-				<div className="fixed inset-0 z-50 flex items-end justify-center bg-black/50 p-3 sm:items-center sm:p-4">
-					<div className="w-full max-w-md space-y-4 rounded-2xl border border-borderLight bg-surface p-5 shadow-2xl sm:p-6">
-						<h3 className="text-lg font-bold text-textPrimary">Remove Item</h3>
-
-						<p className="text-sm text-textSecondary">
-							Provide a reason for removal. The owner will be notified.
-						</p>
-
-						<textarea
-							value={removeReason}
-							onChange={(e) => setRemoveReason(e.target.value)}
-							rows={4}
-							placeholder="Explain why this item is being removed..."
-							className="w-full resize-none rounded-xl border border-outlineVariant bg-surfaceVariant px-3 py-2.5 text-sm text-textPrimary outline-none transition focus:ring-2 focus:ring-primary"
-						/>
-
-						<div className="flex flex-col gap-3 sm:flex-row">
-							<button
-								onClick={() => {
-									setRemoveId(null);
-									setRemoveReason("");
-								}}
-								className="w-full rounded-xl border border-outlineVariant py-2.5 text-sm font-semibold text-textSecondary transition hover:bg-surfaceVariant sm:flex-1">
-								Cancel
-							</button>
-
-							<button
-								onClick={handleRemoveItem}
-								disabled={submitting}
-								className="w-full rounded-xl bg-error py-2.5 text-sm font-bold text-white transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60 sm:flex-1">
-								{submitting ? "Removing..." : "Confirm Remove"}
-							</button>
-						</div>
-					</div>
-				</div>
-			)}
 
 			<div className="overflow-hidden rounded-2xl border border-borderLight bg-surface shadow-sm">
 				<div className="overflow-x-auto">
@@ -383,13 +311,6 @@ export default function AdminItemsPage() {
 
 									<td className="px-5 py-3.5 align-top">
 										<div className="flex items-center justify-end gap-2">
-											<button
-												onClick={() => setRemoveId(item.itemId)}
-												className="inline-flex items-center gap-1 rounded-lg bg-errorLight px-2.5 py-1.5 text-xs font-bold text-error transition hover:bg-error/20">
-												<XCircle className="h-3.5 w-3.5" />
-												Remove
-											</button>
-
 											<Link
 												href={`/items/${item.itemId}`}
 												className="inline-flex items-center gap-1 rounded-lg bg-surfaceVariant px-2.5 py-1.5 text-xs font-bold text-textSecondary transition hover:bg-borderLight">

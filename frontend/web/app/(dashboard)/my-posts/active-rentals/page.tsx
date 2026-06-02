@@ -17,6 +17,7 @@ import { ConfirmModal } from "@/components/ui/ConfirmModal";
 import { formatDateRange, formatShortDate } from "@/lib/dateUtils";
 import { extractErrorMessage } from "@/lib/errorUtils";
 import MessageModal from "@/components/misc/MessageModal";
+import { useAutoRefresh } from "@/hooks/useAutoRefresh";
 
 type ActiveBooking = {
 	bookingId: number;
@@ -68,6 +69,9 @@ export default function ActiveRentalsPage() {
 
 	useEffect(() => { load(); }, []);
 
+	// Keep rental status fresh when returning to the tab
+	useAutoRefresh(load, { intervalMs: 60_000 });
+
 	const markCompleted = async () => {
 		if (!completeTarget) return;
 		setCompleting(true);
@@ -86,12 +90,12 @@ export default function ActiveRentalsPage() {
 	const today = new Date().toISOString().split("T")[0];
 
 	return (
-		<div className="w-full space-y-5 px-3 pb-16 sm:px-4 sm:pb-20 lg:px-0">
-			<div>
-				<h1 className="text-xl font-bold text-textPrimary sm:text-2xl">
+		<div className="w-full space-y-6 px-4 pb-16 sm:px-6 sm:pb-20 lg:space-y-8 lg:px-8">
+			<div className="space-y-1">
+				<h1 className="text-2xl font-bold tracking-tight text-textPrimary sm:text-3xl lg:text-4xl">
 					Active Rentals
 				</h1>
-				<p className="text-sm text-textSecondary">
+				<p className="text-sm text-textSecondary sm:text-base lg:text-lg">
 					Items you have approved and are currently rented out.
 				</p>
 			</div>
@@ -124,7 +128,7 @@ export default function ActiveRentalsPage() {
 			)}
 
 			{!loading && !error && bookings.length > 0 && (
-				<div className="space-y-4">
+				<div className="space-y-5 lg:space-y-6">
 					{bookings.map((booking) => {
 						const started = booking.startDate <= today;
 						const overdue  = booking.endDate < today;
@@ -142,7 +146,7 @@ export default function ActiveRentalsPage() {
 						return (
 							<div
 								key={booking.bookingId}
-								className="space-y-4 rounded-2xl border border-borderLight bg-surface p-4 shadow-sm sm:p-5">
+								className="space-y-5 rounded-2xl border border-borderLight bg-surface p-5 shadow-sm transition-all duration-200 hover:shadow-md sm:p-6 lg:p-8">
 								{/* Header */}
 								<div className="flex flex-col gap-2 border-b border-borderLight pb-4 sm:flex-row sm:items-center sm:justify-between">
 									<div className="min-w-0">
@@ -193,10 +197,10 @@ export default function ActiveRentalsPage() {
 								</div>
 
 								{/* Actions */}
-								<div className="flex flex-col gap-3 border-t border-borderLight pt-3 sm:flex-row">
+								<div className="flex flex-col gap-3 border-t border-borderLight pt-5 sm:flex-row">
 									<button
 										onClick={() => setCompleteTarget(booking.bookingId)}
-										className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-primary px-4 py-2.5 text-sm font-bold text-white transition-colors hover:bg-primaryDark">
+										className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-primary px-4 py-3 text-sm font-bold text-white transition-all hover:bg-primaryDark active:scale-[0.98]">
 										<CheckCircle className="h-4 w-4" />
 										{started ? "Mark as Returned" : "Confirm Handover"}
 									</button>
@@ -209,7 +213,7 @@ export default function ActiveRentalsPage() {
 													name: booking.renter.name ?? "Renter",
 												})
 											}
-											className="flex flex-1 items-center justify-center gap-2 rounded-xl border border-borderLight bg-surface px-4 py-2.5 text-sm font-semibold text-textSecondary transition-colors hover:border-primary hover:bg-primaryLight hover:text-primary">
+											className="flex flex-1 items-center justify-center gap-2 rounded-xl border border-borderLight bg-surface px-4 py-3 text-sm font-semibold text-textSecondary transition-all hover:border-primary hover:bg-primaryLight hover:text-primary active:scale-[0.98]">
 											<MessageSquare className="h-4 w-4" />
 											Message Renter
 										</button>
@@ -217,7 +221,7 @@ export default function ActiveRentalsPage() {
 
 									<Link
 										href={`/disputes?bookingId=${booking.bookingId}`}
-										className="flex flex-1 items-center justify-center gap-2 rounded-xl border border-borderLight bg-surface px-4 py-2.5 text-sm font-semibold text-textSecondary transition-colors hover:bg-surfaceVariant">
+										className="flex flex-1 items-center justify-center gap-2 rounded-xl border border-borderLight bg-surface px-4 py-3 text-sm font-semibold text-textSecondary transition-all hover:bg-surfaceVariant active:scale-[0.98]">
 										Raise Dispute
 									</Link>
 								</div>

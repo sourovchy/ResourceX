@@ -10,6 +10,9 @@ import SidebarToggle from "./SidebarToggle";
 import NotifBell from "@/components/misc/NotifBell";
 import SafeImage from "@/components/ui/SafeImage";
 import { getFileUrl } from "@/lib/api";
+import { Logo, LogoIcon } from "@/components/ui/Logo";
+import LogoNav from "./LogoNav";
+import PageTransition from "./PageTransition";
 
 interface TooltipState {
 	label: string;
@@ -93,25 +96,33 @@ export default function AppShell({
 			>
 				{/* Logo Header */}
 				<div className={`flex h-14 shrink-0 items-center sm:h-16 transition-all duration-300 justify-between px-4 sm:px-6 ${collapsed ? "md:justify-center md:px-4" : ""}`}>
-					<Link
-						href="/dashboard"
-						className={`flex items-center gap-2.5 min-w-0 transition-all duration-300 ${collapsed ? "md:opacity-0 md:w-0 md:hidden" : "opacity-100"}`}>
-						<div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary text-sm font-black text-onPrimary">
-							RX
+					{collapsed ? (
+						<div className="relative group/header flex items-center justify-center h-10 w-10">
+							<LogoNav className="transition-opacity duration-200 group-hover/header:opacity-0 flex items-center justify-center">
+								<LogoIcon size={32} />
+							</LogoNav>
+							<SidebarToggle
+								collapsed={collapsed}
+								onClick={() => setCollapsed(false)}
+								className="absolute inset-0 opacity-0 group-hover/header:opacity-100 transition-opacity duration-200 flex items-center justify-center !block"
+							/>
 						</div>
-						<span className="whitespace-nowrap text-lg font-black tracking-tight text-textPrimary">
-							ResourceX
-						</span>
-					</Link>
-					<div className="flex items-center">
-						<button
-							onClick={() => setMobileSidebarOpen(false)}
-							className="md:hidden rounded-lg p-1.5 text-textSecondary hover:bg-surfaceVariant transition-colors"
-						>
-							<X className="h-5 w-5" />
-						</button>
-						<SidebarToggle collapsed={collapsed} onClick={() => setCollapsed((p) => !p)} />
-					</div>
+					) : (
+						<>
+							<LogoNav className="flex items-center gap-2.5 min-w-0 transition-all duration-300">
+								<Logo size={32} />
+							</LogoNav>
+							<div className="flex items-center">
+								<button
+									onClick={() => setMobileSidebarOpen(false)}
+									className="md:hidden rounded-lg p-1.5 text-textSecondary hover:bg-surfaceVariant transition-colors"
+								>
+									<X className="h-5 w-5" />
+								</button>
+								<SidebarToggle collapsed={collapsed} onClick={() => setCollapsed(true)} />
+							</div>
+						</>
+					)}
 				</div>
 
 				{/* Nav — scrolls independently; overflow-x: visible so tooltips escape */}
@@ -195,14 +206,19 @@ export default function AppShell({
 				{/* HEADER — sits at the top of the right panel, never scrolls */}
 				<header className="shrink-0 z-20 flex h-14 items-center justify-between gap-3 border-b border-border bg-surface/80 px-3 backdrop-blur-md sm:h-16 sm:px-4 md:px-6">
 					<div className="flex min-w-0 items-center gap-2 sm:gap-4">
-						{/* Mobile menu button */}
-						<button
-							onClick={() => setMobileSidebarOpen(true)}
-							aria-label="Open sidebar"
-							className="rounded-lg p-2 text-textSecondary transition-colors hover:bg-surfaceVariant md:hidden"
-						>
-							<Menu className="h-5 w-5" />
-						</button>
+						{/* Mobile menu button and logo */}
+						<div className="flex items-center gap-2 md:gap-0">
+							<button
+								onClick={() => setMobileSidebarOpen(true)}
+								aria-label="Open sidebar"
+								className="rounded-lg p-2 text-textSecondary transition-colors hover:bg-surfaceVariant md:hidden"
+							>
+								<Menu className="h-5 w-5" />
+							</button>
+							<LogoNav className="md:hidden flex items-center shrink-0">
+								<LogoIcon size={28} />
+							</LogoNav>
+						</div>
 
 						<h1 className="hidden min-w-0 truncate text-lg font-semibold text-textPrimary sm:block">
 							{activeItem?.label || "Dashboard"}
@@ -253,13 +269,17 @@ export default function AppShell({
 				</header>
 
 				{/* PAGE CONTENT — the only scrolling region */}
-				<main className={`flex-1 bg-background flex flex-col ${isMessagingRoute ? "overflow-hidden" : "overflow-y-auto"}`}>
+				<main
+					id="app-scroll"
+					className={`flex-1 bg-background flex flex-col ${isMessagingRoute ? "overflow-hidden" : "overflow-y-auto"}`}>
 					{isMessagingRoute ? (
 						children
 					) : (
 						<div className="flex min-h-full flex-col">
 							<div className="flex-1 px-3 py-4 sm:px-4 sm:py-6 md:px-6 flex flex-col">
-								<div className="mx-auto w-full max-w-7xl flex-1 flex flex-col">{children}</div>
+								<div className="mx-auto w-full max-w-7xl flex-1 flex flex-col">
+									<PageTransition>{children}</PageTransition>
+								</div>
 							</div>
 						</div>
 					)}

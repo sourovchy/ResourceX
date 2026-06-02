@@ -102,8 +102,15 @@ public class UserServiceImpl implements UserService {
                         response.setSuspendedAt(null);
                         response.setSuspendedUntil(null);
                         response.setScheduledDeletionAt(null);
+                    } else if (response.getStudentProfile() != null
+                            && response.getStudentProfile().getIdCardFileId() != null) {
+                        // Privileged/self viewer: resolve the ID card file id to its stored
+                        // name so the client can load it via GET /api/files/{storedName}.
+                        fileMetadataRepository.findById(response.getStudentProfile().getIdCardFileId())
+                                .ifPresent(meta -> response.getStudentProfile()
+                                        .setIdCardDataUrl(meta.getStoredName()));
                     }
-                    
+
                     return response;
                 })
                 .orElseThrow(() -> new ResourceNotFoundException("User not found"));

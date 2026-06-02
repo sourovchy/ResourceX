@@ -74,16 +74,16 @@ export default function DepositTrackerPage() {
 	}
 
 	return (
-		<div className="w-full space-y-5 px-3 pb-20 sm:space-y-6 sm:px-0">
+		<div className="w-full space-y-6 px-4 pb-20 sm:px-6 lg:space-y-8 lg:px-8">
 			
 
-			<div className="flex flex-col gap-4 rounded-2xl border border-borderLight bg-surface p-4 shadow-sm md:flex-row md:items-center md:justify-between sm:p-6">
+			<div className="flex flex-col gap-4 rounded-2xl border border-borderLight bg-surface p-5 shadow-sm transition-shadow hover:shadow-md md:flex-row md:items-center md:justify-between sm:p-6 lg:p-8">
 				<div>
-					<h1 className="flex items-center gap-2 text-xl font-bold tracking-tight text-textPrimary sm:text-2xl">
-						<Shield className="h-6 w-6 text-primary" />
+					<h1 className="flex items-center gap-2 text-2xl font-bold tracking-tight text-textPrimary sm:text-3xl lg:text-4xl">
+						<Shield className="h-6 w-6 text-primary sm:h-8 sm:w-8" />
 						Deposit Tracker
 					</h1>
-					<p className="mt-1 text-sm text-textSecondary">
+					<p className="mt-2 text-sm text-textSecondary sm:text-base lg:text-lg">
 						Security deposits held from your active rentals.
 					</p>
 				</div>
@@ -96,13 +96,13 @@ export default function DepositTrackerPage() {
 			</div>
 
 			{bookings.length > 0 ? (
-				<div className="space-y-3">
+				<div className="space-y-4 lg:space-y-5">
 					{bookings.map((booking) => {
 						const deposit = Number(booking.item?.deposit) || 0;
 						return (
 							<div
 								key={booking.bookingId}
-								className="rounded-xl border border-borderLight bg-surface p-4 transition-shadow hover:shadow-md sm:p-5">
+								className="rounded-2xl border border-borderLight bg-surface p-5 transition-all duration-200 hover:-translate-y-1 hover:shadow-md sm:p-6">
 								<div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
 									<div className="min-w-0 flex-1">
 										<h3 className="break-words font-semibold text-textPrimary">

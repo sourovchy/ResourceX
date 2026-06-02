@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Logo } from "@/components/ui/Logo";
 import {
   ArrowRight,
   BadgeCheck,
@@ -40,7 +41,7 @@ const FAQS = [
   },
   {
     q: "How are payments handled?",
-    a: "Payments are securely processed through our integrated payment gateway. We hold the rental fee in escrow until the item is successfully returned.",
+    a: "Payment is arranged directly with the owner after they approve your request. The refundable deposit is settled between you and the owner at handover and returned when the item is safely back.",
   },
   {
     q: "What happens if an item is damaged?",
@@ -54,13 +55,8 @@ export default function LandingPage() {
       {/* ── Nav ──────────────────────────────────────────────── */}
       <header className="sticky top-0 z-50 border-b border-borderLight bg-surface/80 backdrop-blur-md">
         <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-4">
-          <Link href="/" className="flex items-center gap-2.5 group">
-            <div className="w-8 h-8 rounded-lg bg-primary text-onPrimary flex items-center justify-center font-black text-sm tracking-tight transition-transform group-hover:scale-105">
-              RX
-            </div>
-            <span className="font-black text-lg tracking-tight text-textPrimary">
-              ResourceX
-            </span>
+          <Link href="/" className="flex items-center group">
+            <Logo size={32} priority className="transition-transform group-hover:scale-105" />
           </Link>
 
           <nav className="flex items-center gap-2">
@@ -83,7 +79,7 @@ export default function LandingPage() {
       {/* ── Hero ─────────────────────────────────────────────── */}
       <section className="mx-auto max-w-7xl px-6 py-20 lg:py-28 grid lg:grid-cols-[1.1fr_0.9fr] gap-14 items-center">
         {/* Left copy */}
-        <div className="page-enter space-y-8">
+        <div className="space-y-8">
           <div className="inline-flex items-center gap-2 rounded-full border border-borderLight bg-surface px-3.5 py-1.5 text-xs font-semibold text-textSecondary shadow-sm">
             <Sparkles className="w-3.5 h-3.5 text-primary" />
             Secure student-to-student resource sharing

@@ -1,7 +1,10 @@
 "use client";
 
 import React, { useEffect, useMemo, useState } from "react";
-import { Tag, Plus, Edit2, Trash2, X, Loader2, RefreshCw } from "lucide-react";
+import { createPortal } from "react-dom";
+import { Tag, Plus, Edit2, Trash2, X, Loader2 } from "lucide-react";
+import { useAutoRefresh } from "@/hooks/useAutoRefresh";
+import { useToast } from "@/context/ToastContext";
 import api from "@/lib/api";
 import { extractErrorMessage, logErrorDetails } from "@/lib/errorUtils";
 
@@ -23,6 +26,7 @@ interface CategoryApiResponse {
 }
 
 export default function AdminCategoriesPage() {
+	const { toast } = useToast();
 	const [categories, setCategories] = useState<Category[]>([]);
 	const [loading, setLoading] = useState(true);
 	const [submitting, setSubmitting] = useState(false);
@@ -78,6 +82,9 @@ export default function AdminCategoriesPage() {
 		fetchCategories();
 	}, []);
 
+	// Categories change rarely — refresh on focus, no aggressive polling
+	useAutoRefresh(fetchCategories);
+
 	const resetForm = () => {
 		setForm({
 			name: "",
@@ -104,9 +111,11 @@ export default function AdminCategoriesPage() {
 
 			await fetchCategories();
 			closeModal();
+			toast("Category created.");
 		} catch (err) {
-			console.error(err);
-			setError("Failed to create category.");
+			const msg = extractErrorMessage(err);
+			setError(msg);
+			toast(msg, "error");
 		} finally {
 			setSubmitting(false);
 		}
@@ -125,9 +134,11 @@ export default function AdminCategoriesPage() {
 
 			await fetchCategories();
 			closeModal();
+			toast("Category updated.");
 		} catch (err) {
-			console.error(err);
-			setError("Failed to update category.");
+			const msg = extractErrorMessage(err);
+			setError(msg);
+			toast(msg, "error");
 		} finally {
 			setSubmitting(false);
 		}
@@ -151,9 +162,11 @@ export default function AdminCategoriesPage() {
 			setCategories((prev) => prev.filter((c) => c.id !== id));
 
 			setDeleteId(null);
+			toast("Category deleted.");
 		} catch (err) {
-			console.error(err);
-			setError("Category cannot be deleted. Remove related items first.");
+			const msg = "Category cannot be deleted. Remove related items first.";
+			setError(msg);
+			toast(msg, "error");
 		} finally {
 			setSubmitting(false);
 		}
@@ -188,13 +201,6 @@ export default function AdminCategoriesPage() {
 
 				<div className="flex w-full flex-col gap-3 sm:flex-row md:w-auto">
 					<button
-						onClick={fetchCategories}
-						className="flex w-full items-center justify-center gap-2 rounded-xl border border-outlineVariant bg-surface px-4 py-2.5 text-sm font-semibold text-textSecondary transition hover:bg-surfaceVariant sm:w-auto">
-						<RefreshCw className="h-4 w-4" />
-						Refresh
-					</button>
-
-					<button
 						onClick={() => {
 							resetForm();
 							setShowAddModal(true);
@@ -206,16 +212,18 @@ export default function AdminCategoriesPage() {
 				</div>
 			</div>
 
-			{error && (
-				<div className="rounded-xl border border-error/30 bg-errorLight px-4 py-3 text-sm font-medium text-error">
+			{error && !showAddModal && !editId && !deleteId && (
+				<div
+					role="alert"
+					className="rounded-xl border border-error/30 bg-errorLight px-4 py-3 text-sm font-medium text-error">
 					{error}
 				</div>
 			)}
 
 			{/* Add/Edit Modal */}
-			{(showAddModal || editId) && (
-				<div className="fixed inset-0 z-50 flex items-end justify-center bg-black/50 p-3 sm:items-center sm:p-4">
-					<div className="w-full max-w-md space-y-4 rounded-2xl border border-borderLight bg-surface p-5 shadow-2xl sm:p-6">
+			{(showAddModal || editId) && createPortal(
+				<div className="fixed inset-0 z-[100] flex items-end justify-center bg-black/50 p-3 backdrop-blur-sm animate-in fade-in duration-200 sm:items-center sm:p-4">
+					<div className="flex max-h-[90dvh] w-full max-w-md flex-col space-y-4 overflow-y-auto rounded-2xl border border-borderLight bg-surface p-5 shadow-xl sm:p-6">
 						<div className="flex items-center justify-between gap-3">
 							<h3 className="text-lg font-bold text-textPrimary">
 								{editId ? "Edit Category" : "New Category"}
@@ -283,13 +291,14 @@ export default function AdminCategoriesPage() {
 							</button>
 						</div>
 					</div>
-				</div>
+				</div>,
+				document.body,
 			)}
 
 			{/* Delete Modal */}
-			{deleteId && deleteTarget && (
-				<div className="fixed inset-0 z-50 flex items-end justify-center bg-black/50 p-3 sm:items-center sm:p-4">
-					<div className="w-full max-w-sm space-y-4 rounded-2xl border border-borderLight bg-surface p-5 shadow-2xl sm:p-6">
+			{deleteId && deleteTarget && createPortal(
+				<div className="fixed inset-0 z-[100] flex items-end justify-center bg-black/50 p-3 backdrop-blur-sm animate-in fade-in duration-200 sm:items-center sm:p-4">
+					<div className="flex max-h-[90dvh] w-full max-w-sm flex-col space-y-4 overflow-y-auto rounded-2xl border border-borderLight bg-surface p-5 shadow-xl sm:p-6">
 						<div className="flex items-center justify-between gap-3">
 							<h3 className="text-lg font-bold text-textPrimary">
 								Delete Category
@@ -327,7 +336,8 @@ export default function AdminCategoriesPage() {
 							)}
 						</div>
 					</div>
-				</div>
+				</div>,
+				document.body,
 			)}
 
 			{/* Category List */}

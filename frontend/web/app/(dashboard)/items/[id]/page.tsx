@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useEffect, useMemo, useState } from "react";
+import { createPortal } from "react-dom";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 
@@ -13,10 +14,13 @@ import {
 	Package,
 	Loader2,
 	ShieldAlert,
+	AlertCircle,
 } from "lucide-react";
 
 import api from "@/lib/api";
 import { formatShortDate } from "@/lib/dateUtils";
+import { extractErrorMessage } from "@/lib/errorUtils";
+import { useToast } from "@/context/ToastContext";
 
 type ItemStatus =
 	| "AVAILABLE"
@@ -126,6 +130,7 @@ function formatDate(value?: string) {
 }
 
 export default function AdminItemDetailPage() {
+	const { toast } = useToast();
 	const params = useParams();
 	const router = useRouter();
 
@@ -188,10 +193,12 @@ export default function AdminItemDetailPage() {
 
 			await api.post(`/admin/block-item/${id}?reason=${encodeURIComponent(removeReason.trim())}`);
 
+			toast("Item removed from the marketplace.");
 			router.push("/items");
 		} catch (err) {
-			console.error(err);
-			setError("Failed to remove item.");
+			const msg = extractErrorMessage(err);
+			setError(msg);
+			toast(msg, "error");
 		} finally {
 			setSubmitting(false);
 		}
@@ -228,8 +235,12 @@ export default function AdminItemDetailPage() {
 		<div className="w-full space-y-5 px-3 pb-20 sm:space-y-6 sm:px-0">
 			
 
-			{error && (
-				<div className="rounded-xl border border-error/40 bg-errorLight px-4 py-3 text-sm font-medium text-error">
+			{/* Page-level errors only — hidden while the remove modal is open so the
+			    message is never trapped behind the modal (it renders inside instead). */}
+			{error && !showRemoveModal && (
+				<div
+					role="alert"
+					className="rounded-xl border border-error/40 bg-errorLight px-4 py-3 text-sm font-medium text-error">
 					{error}
 				</div>
 			)}
@@ -265,7 +276,11 @@ export default function AdminItemDetailPage() {
 					</div>
 
 					<button
-						onClick={() => setShowRemoveModal(true)}
+						onClick={() => {
+							setError("");
+							setRemoveReason("");
+							setShowRemoveModal(true);
+						}}
 						className="inline-flex w-full items-center justify-center gap-2 rounded-xl border border-error/30 bg-errorLight px-4 py-2 text-sm font-bold text-error transition hover:bg-error/20 sm:w-auto">
 						<XCircle className="h-4 w-4" />
 						Remove Post
@@ -273,9 +288,16 @@ export default function AdminItemDetailPage() {
 				</div>
 			</div>
 
-			{showRemoveModal && (
-				<div className="fixed inset-0 z-50 flex items-end justify-center bg-black/50 p-3 sm:items-center sm:p-4">
-					<div className="w-full max-w-md space-y-4 rounded-2xl border border-borderLight bg-surface p-5 shadow-2xl sm:p-6">
+			{showRemoveModal && createPortal(
+				<div
+					onClick={() => !submitting && setShowRemoveModal(false)}
+					className="fixed inset-0 z-[100] flex items-end justify-center bg-black/50 p-3 backdrop-blur-sm animate-in fade-in duration-200 sm:items-center sm:p-4">
+					<div
+						role="dialog"
+						aria-modal="true"
+						aria-label="Remove This Item"
+						onClick={(e) => e.stopPropagation()}
+						className="flex max-h-[90dvh] w-full max-w-md flex-col overflow-y-auto rounded-2xl border border-borderLight bg-surface p-5 shadow-xl animate-in fade-in zoom-in-95 slide-in-from-bottom-2 duration-200 sm:p-6 sm:slide-in-from-bottom-0 space-y-4">
 						<h3 className="text-lg font-bold text-textPrimary">Remove This Item</h3>
 
 						<p className="text-sm text-textSecondary">
@@ -284,28 +306,43 @@ export default function AdminItemDetailPage() {
 
 						<textarea
 							value={removeReason}
-							onChange={(e) => setRemoveReason(e.target.value)}
+							onChange={(e) => {
+								setRemoveReason(e.target.value);
+								if (error) setError("");
+							}}
 							rows={4}
 							placeholder="Explain why this item is being removed..."
+							aria-invalid={Boolean(error)}
 							className="w-full resize-none rounded-xl border border-outlineVariant bg-surfaceVariant px-3 py-2.5 text-sm text-textPrimary outline-none transition focus:ring-2 focus:ring-primary"
 						/>
+
+						{error && (
+							<div
+								role="alert"
+								className="flex items-start gap-2 rounded-xl border border-error/40 bg-errorLight px-3 py-2 text-sm font-medium text-error animate-in fade-in slide-in-from-top-1 duration-200">
+								<AlertCircle className="mt-0.5 h-4 w-4 flex-shrink-0" />
+								<span className="break-words">{error}</span>
+							</div>
+						)}
 
 						<div className="flex flex-col gap-3 sm:flex-row">
 							<button
 								onClick={() => setShowRemoveModal(false)}
-								className="w-full rounded-xl border border-outlineVariant py-2.5 text-sm font-semibold text-textSecondary transition hover:bg-surfaceVariant sm:flex-1">
+								disabled={submitting}
+								className="w-full rounded-xl border border-outlineVariant py-2.5 text-sm font-semibold text-textSecondary transition hover:bg-surfaceVariant disabled:opacity-50 sm:flex-1">
 								Cancel
 							</button>
 
 							<button
 								onClick={handleRemoveItem}
-								disabled={submitting}
+								disabled={submitting || !removeReason.trim()}
 								className="w-full rounded-xl bg-error py-2.5 text-sm font-bold text-white transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60 sm:flex-1">
 								{submitting ? "Removing..." : "Confirm Remove"}
 							</button>
 						</div>
 					</div>
-				</div>
+				</div>,
+				document.body,
 			)}
 
 			<div className="grid grid-cols-1 gap-5 lg:grid-cols-3 lg:gap-6">

@@ -3,6 +3,7 @@
 import React from "react";
 import Link from "next/link";
 import { Clock, CheckCircle2, ArrowRight } from "lucide-react";
+import { LogoIcon } from "@/components/ui/Logo";
 
 export default function PendingApprovalPage() {
 	return (
@@ -14,6 +15,10 @@ export default function PendingApprovalPage() {
 
 			<div className="relative z-10 w-full max-w-md px-1 sm:px-0">
 				<div className="rounded-2xl border border-borderLight bg-surface p-5 text-center shadow-xl sm:p-6 md:p-8">
+					<div className="mb-6 flex justify-center">
+						<LogoIcon size={40} />
+					</div>
+
 					<div className="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-full border border-warning/20 bg-warningLight sm:mb-6 sm:h-20 sm:w-20">
 						<Clock className="h-8 w-8 text-warning sm:h-10 sm:w-10" />
 					</div>

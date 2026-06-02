@@ -3,6 +3,7 @@
 import React, { useEffect, useState } from "react";
 import Link from "next/link";
 import { Mail, Lock, ArrowRight, Eye, EyeOff, User, Loader2 } from "lucide-react";
+import { LogoIcon } from "@/components/ui/Logo";
 import { AxiosError } from "axios";
 import { useAuth } from "@/context/AuthContext";
 import { useRouter } from "next/navigation";
@@ -90,11 +91,11 @@ export default function LoginPage() {
 					{/* Header */}
 					<div className="mb-6 text-center sm:mb-8">
 						<div className="mb-3 flex justify-center">
-							<User className="h-10 w-10 text-primary" />
+							<LogoIcon size={48} priority />
 						</div>
 
 						<h1 className="text-2xl font-bold text-textPrimary sm:text-3xl">
-							ResourceX Login
+							Sign in to ResourceX
 						</h1>
 
 						<p className="mt-2 text-sm text-textSecondary sm:text-base">

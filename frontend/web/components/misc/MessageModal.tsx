@@ -1,10 +1,12 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import { Loader2, MessageSquare, X } from "lucide-react";
 import { useRouter } from "next/navigation";
 import api from "@/lib/api";
 import { extractErrorMessage } from "@/lib/errorUtils";
+import { useDialog } from "@/hooks/useDialog";
 
 interface MessageModalProps {
 	isOpen: boolean;
@@ -54,18 +56,27 @@ export default function MessageModal({
 		onClose();
 	};
 
-	if (!isOpen) return null;
+	const dialogRef = useDialog({ open: isOpen, onClose: handleClose, closeOnEsc: !sending });
+	const [mounted, setMounted] = useState(false);
+	useEffect(() => setMounted(true), []);
 
-	return (
-		<div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+	if (!isOpen || !mounted) return null;
+
+	return createPortal(
+		<div className="fixed inset-0 z-[100] flex items-end justify-center p-3 sm:items-center sm:p-4">
 			{/* Backdrop */}
 			<div
-				className="absolute inset-0 bg-black/50 backdrop-blur-sm"
+				className="absolute inset-0 bg-black/50 backdrop-blur-sm animate-in fade-in duration-200"
 				onClick={handleClose}
 			/>
 
 			{/* Modal */}
-			<div className="relative z-10 w-full max-w-md rounded-2xl border border-borderLight bg-surface p-5 shadow-2xl sm:p-6">
+			<div
+				ref={dialogRef}
+				role="dialog"
+				aria-modal="true"
+				tabIndex={-1}
+				className="relative z-10 flex max-h-[90dvh] w-full max-w-md flex-col overflow-y-auto rounded-2xl border border-borderLight bg-surface p-5 shadow-xl outline-none animate-in fade-in zoom-in-95 duration-200 sm:p-6">
 				{/* Header */}
 				<div className="mb-4 flex items-center justify-between gap-3">
 					<div className="flex items-center gap-2">
@@ -128,6 +139,7 @@ export default function MessageModal({
 					</button>
 				</div>
 			</div>
-		</div>
+		</div>,
+		document.body,
 	);
 }

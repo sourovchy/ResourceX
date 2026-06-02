@@ -18,6 +18,9 @@ public class PendingUserResponse {
     private String university;
     private String department;
     private Long idCardFileId;
+    // Resolved stored file name for the uploaded ID card (served via GET /api/files/{name}).
+    // Null when no ID card is on file.
+    private String idCardDataUrl;
     private PendingUserStatus status;
     private LocalDateTime createdAt;
 }

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
 	AlertTriangle,
@@ -15,13 +15,14 @@ import { formatShortDate } from "@/lib/dateUtils";
 // ── Helpers ─────────────────────────────────────────────────────────────────
 
 function todayStr(): string {
-	return new Date().toISOString().split("T")[0];
+	const d = new Date();
+	return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 }
 
 function addDays(dateStr: string, days: number): string {
 	const d = new Date(dateStr + "T00:00:00");
 	d.setDate(d.getDate() + days);
-	return d.toISOString().split("T")[0];
+	return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 }
 
 function daysBetween(start: string, end: string): number {
@@ -108,10 +109,13 @@ export default function BookItemPage({ params }: { params: { id: string } }) {
 	};
 
 	const handleStartDateChange = (date: string) => {
-		setStartDate(date);
-		if (date) {
+		const today = todayStr();
+		const validDate = date < today ? today : date;
+		
+		setStartDate(validDate);
+		if (validDate) {
 			// Keep duration, shift end date forward
-			const newEnd = addDays(date, duration - 1);
+			const newEnd = addDays(validDate, duration - 1);
 			setEndDate(newEnd);
 		}
 	};
@@ -131,11 +135,18 @@ export default function BookItemPage({ params }: { params: { id: string } }) {
 
 	// ── Submit ──────────────────────────────────────────────────────────────
 
+	const submittingRef = useRef(false);
+
 	const handleSubmit = async () => {
+		if (submittingRef.current) return; // guard against duplicate bookings
 		setSubmitError(null);
 
 		if (!startDate || !endDate) {
 			setSubmitError("Please select both start and end dates.");
+			return;
+		}
+		if (startDate < todayStr()) {
+			setSubmitError("Start date cannot be in the past.");
 			return;
 		}
 		if (endDate < startDate) {
@@ -144,6 +155,7 @@ export default function BookItemPage({ params }: { params: { id: string } }) {
 		}
 
 		try {
+			submittingRef.current = true;
 			setSubmitting(true);
 			const res = await api.post("/bookings", {
 				itemId: item.id,
@@ -156,6 +168,7 @@ export default function BookItemPage({ params }: { params: { id: string } }) {
 		} catch (err) {
 			setSubmitError(extractErrorMessage(err));
 		} finally {
+			submittingRef.current = false;
 			setSubmitting(false);
 		}
 	};

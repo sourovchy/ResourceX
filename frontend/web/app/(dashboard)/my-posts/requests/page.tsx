@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import {
@@ -255,13 +256,13 @@ export default function RequestsPage() {
 
 	// ── Main render ─────────────────────────────────────────────────────────
 	return (
-		<div className="w-full space-y-5 px-3 pb-20 sm:px-4 lg:px-0">
+		<div className="w-full space-y-6 px-4 pb-20 sm:px-6 lg:space-y-8 lg:px-8">
 			{/* Header */}
-			<div className="space-y-0.5">
-				<h1 className="text-xl font-bold tracking-tight text-textPrimary sm:text-2xl">
+			<div className="space-y-1">
+				<h1 className="text-2xl font-bold tracking-tight text-textPrimary sm:text-3xl lg:text-4xl">
 					Booking Requests
 				</h1>
-				<p className="text-sm text-textSecondary">
+				<p className="text-sm text-textSecondary sm:text-base lg:text-lg">
 					{postId
 						? "Requests for this listing — approve the right renter or reject with a reason."
 						: "All booking requests across your listings."}
@@ -283,34 +284,36 @@ export default function RequestsPage() {
 			)}
 
 			{/* Status tabs */}
-			<div className="flex flex-wrap gap-0 border-b border-borderLight">
-				{(
-					[
-						{ key: "PENDING",  label: "Pending" },
-						{ key: "APPROVED", label: "Approved" },
-						{ key: "REJECTED", label: "Rejected" },
-						{ key: "ALL",      label: "All" },
-					] as const
-				).map(({ key, label }) => (
-					<button
-						key={key}
-						onClick={() => setFilter(key)}
-						className={`relative px-4 py-3 text-sm font-semibold transition-colors ${
-							filter === key
-								? "text-primary after:absolute after:inset-x-0 after:bottom-0 after:h-0.5 after:bg-primary"
-								: "text-textSecondary hover:text-textPrimary"
-						}`}>
-						{label}
-						<span
-							className={`ml-1.5 rounded-full px-1.5 py-0.5 text-xs font-bold ${
+			<div className="border-b border-borderLight">
+				<div className="flex gap-2 overflow-x-auto [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden py-1">
+					{(
+						[
+							{ key: "PENDING",  label: "Pending" },
+							{ key: "APPROVED", label: "Approved" },
+							{ key: "REJECTED", label: "Rejected" },
+							{ key: "ALL",      label: "All" },
+						] as const
+					).map(({ key, label }) => (
+						<button
+							key={key}
+							onClick={() => setFilter(key)}
+							className={`flex items-center whitespace-nowrap px-4 py-3 text-sm font-semibold transition-all hover:bg-surfaceVariant/50 rounded-t-xl border-b-2 sm:text-base ${
 								filter === key
-									? "bg-primary text-white"
-									: "bg-surfaceVariant text-textSecondary"
+									? "border-primary text-primary bg-primaryLight/10"
+									: "border-transparent text-textSecondary hover:text-textPrimary"
 							}`}>
-							{counts[key]}
-						</span>
-					</button>
-				))}
+							{label}
+							<span
+								className={`ml-2 rounded-full px-2 py-0.5 text-xs font-bold transition-colors ${
+									filter === key
+										? "bg-primary text-white"
+										: "bg-surfaceVariant text-textSecondary"
+								}`}>
+								{counts[key]}
+							</span>
+						</button>
+					))}
+				</div>
 			</div>
 
 			{/* Empty state */}
@@ -327,7 +330,7 @@ export default function RequestsPage() {
 			)}
 
 			{/* Request cards */}
-			<div className="space-y-4">
+			<div className="space-y-5 lg:space-y-6">
 				{filtered.map((booking) => {
 					const isBusy = busyId === booking.bookingId;
 					const renter = booking.renter;
@@ -340,7 +343,7 @@ export default function RequestsPage() {
 					return (
 						<div
 							key={booking.bookingId}
-							className="overflow-hidden rounded-2xl border border-borderLight bg-surface shadow-sm">
+							className="overflow-hidden rounded-2xl border border-borderLight bg-surface shadow-sm transition-all duration-200 hover:shadow-md">
 
 							{/* ── Card header: item + dates + status ── */}
 							<div className="flex flex-col gap-2 border-b border-borderLight bg-surfaceVariant/40 px-4 py-3 sm:flex-row sm:items-center sm:justify-between sm:px-5">
@@ -366,7 +369,7 @@ export default function RequestsPage() {
 								</div>
 							</div>
 
-							<div className="space-y-4 p-4 sm:p-5">
+							<div className="space-y-5 p-5 sm:p-6 lg:p-8">
 								{/* ── Renter profile ── */}
 								<div className="flex items-start gap-3 sm:gap-4">
 									{/* Avatar */}
@@ -480,13 +483,13 @@ export default function RequestsPage() {
 
 								{/* ── Actions ── */}
 								{(isPending || renter?.userId) && (
-									<div className="flex flex-col gap-2 pt-4 mt-4 border-t border-borderLight sm:flex-row sm:items-center">
+									<div className="flex flex-col gap-3 pt-5 mt-5 border-t border-borderLight sm:flex-row sm:items-center">
 										{isPending && (
 											<>
 												<button
 													onClick={() => approve(booking.bookingId)}
 													disabled={isBusy}
-													className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-primary py-2.5 text-sm font-bold text-white transition-colors hover:bg-primaryDark disabled:cursor-not-allowed disabled:opacity-60">
+													className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-primary py-3 text-sm font-bold text-white transition-all hover:bg-primaryDark active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-60">
 													{isBusy ? (
 														<Loader2 className="h-4 w-4 animate-spin" />
 													) : (
@@ -497,7 +500,7 @@ export default function RequestsPage() {
 												<button
 													onClick={() => openRejectModal(booking.bookingId)}
 													disabled={isBusy}
-													className="flex flex-1 items-center justify-center gap-2 rounded-xl border border-error bg-surface py-2.5 text-sm font-bold text-error transition-colors hover:bg-errorLight disabled:cursor-not-allowed disabled:opacity-60">
+													className="flex flex-1 items-center justify-center gap-2 rounded-xl border border-error bg-surface py-3 text-sm font-bold text-error transition-all hover:bg-errorLight active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-60">
 													<X className="h-4 w-4" />
 													Reject
 												</button>
@@ -509,7 +512,7 @@ export default function RequestsPage() {
 												onClick={() =>
 													setMessageTarget({ userId: renter.userId, name: renter.name ?? "Renter" })
 												}
-												className="flex items-center justify-center gap-2 rounded-xl border border-borderLight bg-surface px-4 py-2.5 text-sm font-semibold text-textSecondary transition-colors hover:border-primary hover:bg-primaryLight hover:text-primary sm:w-auto w-full">
+												className="flex items-center justify-center gap-2 rounded-xl border border-borderLight bg-surface px-5 py-3 text-sm font-semibold text-textSecondary transition-all hover:border-primary hover:bg-primaryLight hover:text-primary active:scale-[0.98] sm:w-auto w-full">
 												<MessageSquare className="h-4 w-4" />
 												Message Renter
 											</button>
@@ -533,13 +536,13 @@ export default function RequestsPage() {
 			)}
 
 			{/* ── Reject modal ── */}
-			{rejectModalOpen && (
+			{rejectModalOpen && createPortal(
 				<div
-					className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4"
+					className="fixed inset-0 z-[100] flex items-end justify-center bg-black/50 p-3 backdrop-blur-sm animate-in fade-in duration-200 sm:items-center sm:p-4"
 					role="dialog"
 					aria-modal="true"
 					aria-labelledby="reject-modal-title">
-					<div className="w-full max-w-lg space-y-5 rounded-2xl border border-borderLight bg-surface p-5 shadow-xl sm:p-6">
+					<div className="flex max-h-[90dvh] w-full max-w-lg flex-col space-y-5 overflow-y-auto rounded-2xl border border-borderLight bg-surface p-5 shadow-xl sm:p-6">
 						<div className="flex items-start justify-between gap-4">
 							<div>
 								<h2
@@ -601,7 +604,8 @@ export default function RequestsPage() {
 							</button>
 						</div>
 					</div>
-				</div>
+				</div>,
+			document.body,
 			)}
 		</div>
 	);

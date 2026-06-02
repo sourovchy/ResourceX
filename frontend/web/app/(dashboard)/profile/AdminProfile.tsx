@@ -14,8 +14,8 @@ import {
 	Activity,
 	CheckCircle2,
 	Loader2,
-	RefreshCw,
 } from "lucide-react";
+import { useAutoRefresh } from "@/hooks/useAutoRefresh";
 
 type AdminProfile = {
 	userId?: number;
@@ -55,7 +55,6 @@ export default function AdminProfilePage() {
 	const [stats, setStats] = useState<DashboardStats | null>(null);
 
 	const [loading, setLoading] = useState(true);
-	const [refreshing, setRefreshing] = useState(false);
 	const [error, setError] = useState("");
 
 	const loadAdminData = async () => {
@@ -106,11 +105,8 @@ export default function AdminProfilePage() {
 		// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, []);
 
-	const handleRefresh = async () => {
-		setRefreshing(true);
-		await loadAdminData();
-		setRefreshing(false);
-	};
+	// Auto-refresh admin summary on tab focus + moderate polling
+	useAutoRefresh(loadAdminData, { intervalMs: 60_000 });
 
 	const adminName = profile?.name || "System Admin";
 	const roleText =
@@ -124,19 +120,6 @@ export default function AdminProfilePage() {
 				<h1 className="text-xl font-bold tracking-tight text-textPrimary sm:text-2xl">
 					Admin Control Center
 				</h1>
-
-				<button
-					type="button"
-					onClick={handleRefresh}
-					disabled={refreshing}
-					className="inline-flex w-full items-center justify-center gap-2 rounded-xl border border-borderLight bg-surface px-4 py-2 text-sm font-semibold text-textPrimary shadow-sm transition hover:bg-background disabled:opacity-60 sm:w-auto">
-					{refreshing ? (
-						<Loader2 className="h-4 w-4 animate-spin" />
-					) : (
-						<RefreshCw className="h-4 w-4" />
-					)}
-					Refresh
-				</button>
 			</div>
 
 			{loading ? (

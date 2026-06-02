@@ -1,11 +1,13 @@
 "use client";
 
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import StatCard from "@/components/cards/StatCard";
 import ActionCard from "@/components/cards/ActionCard";
 import api from "@/lib/api";
 import { useAuth } from "@/context/AuthContext";
+import { useAutoRefresh } from "@/hooks/useAutoRefresh";
+import { ListRowSkeleton } from "@/components/ui/Skeleton";
 import {
   ShieldCheck,
   PackageSearch,
@@ -16,7 +18,6 @@ import {
   Wallet,
   Star,
   HistoryIcon,
-  Loader2,
   AlertCircle,
   TrendingUp,
 } from "lucide-react";
@@ -57,46 +58,44 @@ export default function StudentDashboard() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
-  useEffect(() => {
-    let active = true;
+  const loadDashboard = useCallback(async (silent = false) => {
+    try {
+      if (!silent) setLoading(true);
+      const [itemsRes, bookingsRes] = await Promise.all([
+        api.get<Item[]>("/items/me").catch(() => ({ data: [] as Item[] })),
+        api.get<Booking[]>("/bookings/me").catch(() => ({ data: [] as Booking[] })),
+      ]);
 
-    async function loadDashboard() {
-      try {
-        const [itemsRes, bookingsRes] = await Promise.all([
-          api.get<Item[]>("/items/me").catch(() => ({ data: [] as Item[] })),
-          api.get<Booking[]>("/bookings/me").catch(() => ({ data: [] as Booking[] })),
-        ]);
-        if (!active) return;
+      const rawItems = itemsRes.data as unknown;
+      setItems(
+        Array.isArray(rawItems)
+          ? (rawItems as Item[])
+          : Array.isArray((rawItems as any)?.content)
+            ? (rawItems as any).content
+            : [],
+      );
 
-        const rawItems = itemsRes.data as unknown;
-        setItems(
-          Array.isArray(rawItems)
-            ? (rawItems as Item[])
-            : Array.isArray((rawItems as any)?.content)
-              ? (rawItems as any).content
-              : [],
-        );
-
-        const rawBookings = bookingsRes.data as unknown;
-        setBookings(
-          Array.isArray(rawBookings)
-            ? (rawBookings as Booking[])
-            : Array.isArray((rawBookings as any)?.content)
-              ? (rawBookings as any).content
-              : [],
-        );
-      } catch {
-        if (active) setError("Could not load your dashboard data.");
-      } finally {
-        if (active) setLoading(false);
-      }
+      const rawBookings = bookingsRes.data as unknown;
+      setBookings(
+        Array.isArray(rawBookings)
+          ? (rawBookings as Booking[])
+          : Array.isArray((rawBookings as any)?.content)
+            ? (rawBookings as any).content
+            : [],
+      );
+    } catch {
+      setError("Could not load your dashboard data.");
+    } finally {
+      if (!silent) setLoading(false);
     }
-
-    void loadDashboard();
-    return () => {
-      active = false;
-    };
   }, []);
+
+  useEffect(() => {
+    void loadDashboard();
+  }, [loadDashboard]);
+
+  // Auto-refresh silently on tab focus + moderate polling
+  useAutoRefresh(() => loadDashboard(true), { intervalMs: 60_000 });
 
   const activeRentals = useMemo(
     () =>
@@ -113,7 +112,7 @@ export default function StudentDashboard() {
 
   /* ── Dashboard ───── */
   return (
-    <div className="page-enter space-y-6 pb-20 sm:pb-0">
+    <div className="space-y-6 pb-20 sm:pb-0">
       {/* Error banner */}
       {error && (
         <div className="flex items-center gap-3 rounded-xl border border-error/40 bg-errorLight px-4 py-3 text-sm font-medium text-error animate-slide-down">
@@ -245,7 +244,7 @@ export default function StudentDashboard() {
           isEmpty={!loading && items.length === 0}
         >
           {loading ? (
-            <div className="flex justify-center py-8"><Loader2 className="h-6 w-6 animate-spin text-textSecondary" /></div>
+            <ListRowSkeleton count={3} />
           ) : (
             <>
               {items.slice(0, 4).map((item) => (
@@ -276,7 +275,7 @@ export default function StudentDashboard() {
           isEmpty={!loading && bookings.length === 0}
         >
           {loading ? (
-            <div className="flex justify-center py-8"><Loader2 className="h-6 w-6 animate-spin text-textSecondary" /></div>
+            <ListRowSkeleton count={3} />
           ) : (
             <>
               {bookings.slice(0, 4).map((booking) => (

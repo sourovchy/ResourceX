@@ -36,6 +36,7 @@ public class AdminServiceImpl implements AdminService {
         private final PaymentRepository paymentRepository;
         private final RoleRepository roleRepository;
         private final UserRoleRepository userRoleRepository;
+        private final FileMetadataRepository fileMetadataRepository;
         private final AuditLogService auditLogService;
 
         @Override
@@ -282,9 +283,22 @@ public class AdminServiceImpl implements AdminService {
                                 .university(pending.getUniversity() != null ? pending.getUniversity().getName() : null)
                                 .department(pending.getDepartment())
                                 .idCardFileId(pending.getIdCardFileId())
+                                .idCardDataUrl(resolveStoredName(pending.getIdCardFileId()))
                                 .status(pending.getStatus())
                                 .createdAt(pending.getCreatedAt())
                                 .build();
+        }
+
+        // Resolves a FileMetadata id to its stored file name, which the
+        // GET /api/files/{storedName} endpoint serves. Returns null when the
+        // id is null or no matching file exists.
+        private String resolveStoredName(Long fileId) {
+                if (fileId == null) {
+                        return null;
+                }
+                return fileMetadataRepository.findById(fileId)
+                                .map(FileMetadata::getStoredName)
+                                .orElse(null);
         }
 
         private void assertUserDoesNotExist(PendingUser pending) {

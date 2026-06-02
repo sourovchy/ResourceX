@@ -4,6 +4,7 @@ import React, { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ArrowRight, RefreshCw, Smartphone } from "lucide-react";
+import { LogoIcon } from "@/components/ui/Logo";
 
 export default function PhoneVerificationPage() {
 	const router = useRouter();
@@ -55,7 +56,7 @@ export default function PhoneVerificationPage() {
 				<div className="rounded-2xl border border-borderLight bg-surface p-5 shadow-xl sm:p-6 md:p-8">
 					<div className="mb-6 text-center sm:mb-8">
 						<div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full border border-primary/20 bg-primaryLight sm:h-16 sm:w-16">
-							<Smartphone className="h-6 w-6 text-primary sm:h-7 sm:w-7" />
+							<LogoIcon size={32} />
 						</div>
 
 						<h1 className="text-2xl font-bold leading-tight text-textPrimary sm:text-3xl">

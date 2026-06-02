@@ -30,11 +30,11 @@ export default function MyPostsLayout({
   const showNav = !HIDE_NAV_PREFIXES.some((p) => pathname.startsWith(p));
 
   return (
-    <div className="space-y-4 sm:space-y-6">
+    <div className="flex flex-col min-h-[calc(100vh-64px)] space-y-4 sm:space-y-6 lg:space-y-8">
       {showNav && (
-        <div className="flex items-center border-b border-borderLight">
+        <div className="sticky top-0 z-10 bg-surface/80 backdrop-blur-md flex items-center border-b border-borderLight px-2 sm:px-4 lg:px-8">
           {/* Scrollable tab strip */}
-          <div className="flex flex-1 overflow-x-auto [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+          <div className="flex flex-1 gap-2 sm:gap-4 overflow-x-auto [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden py-1">
             {MY_POSTS_NAV.map(({ href, label, exact }) => {
               const active = isActive(href, exact);
 
@@ -42,10 +42,10 @@ export default function MyPostsLayout({
                 <Link
                   key={href}
                   href={href}
-                  className={`whitespace-nowrap px-3 py-3 text-sm font-semibold transition-colors sm:px-4 ${
+                  className={`whitespace-nowrap px-4 py-3 text-sm font-semibold transition-all hover:bg-surfaceVariant/50 rounded-t-xl border-b-2 sm:text-base ${
                     active
-                      ? "border-b-2 border-primary text-primary"
-                      : "text-textSecondary hover:text-textPrimary"
+                      ? "border-primary text-primary bg-primaryLight/10"
+                      : "border-transparent text-textSecondary hover:text-textPrimary"
                   }`}
                 >
                   {label}
@@ -56,7 +56,9 @@ export default function MyPostsLayout({
         </div>
       )}
 
-      {children}
+      <div className="flex-1">
+        {children}
+      </div>
     </div>
   );
 }

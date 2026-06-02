@@ -7,7 +7,6 @@ import {
 	Building2,
 	CheckCircle2,
 	GraduationCap,
-	Loader2,
 	Mail,
 	MessageSquare,
 	Package,
@@ -19,6 +18,11 @@ import api, { getFileUrl } from "@/lib/api";
 import { useAuth } from "@/context/AuthContext";
 import SafeImage from "@/components/ui/SafeImage";
 import MessageModal from "@/components/misc/MessageModal";
+import {
+	CardGridSkeleton,
+	ProfileSkeleton,
+	Skeleton,
+} from "@/components/ui/Skeleton";
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
 
@@ -142,9 +146,12 @@ export default function PublicProfilePage({
 	// ── Loading ────────────────────────────────────────────────────────────────
 	if (loading) {
 		return (
-			<div className="flex min-h-[60vh] flex-col items-center justify-center gap-3 px-4 text-center">
-				<Loader2 className="h-10 w-10 animate-spin text-primary" />
-				<p className="text-sm text-textSecondary">Loading profile…</p>
+			<div className="w-full space-y-5 px-3 pb-20 sm:space-y-6 sm:px-0">
+				<ProfileSkeleton />
+				<div>
+					<Skeleton className="mb-3 h-5 w-40" />
+					<CardGridSkeleton count={3} />
+				</div>
 			</div>
 		);
 	}

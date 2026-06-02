@@ -4,7 +4,8 @@ import React, { useEffect, useRef, useState } from "react";
 import ItemCard from "@/components/cards/ItemCard";
 import api from "@/lib/api";
 import { useAuth } from "@/context/AuthContext";
-import { Search, Loader2, AlertTriangle, PackageOpen } from "lucide-react";
+import { Search, AlertTriangle, PackageOpen } from "lucide-react";
+import { CardGridSkeleton } from "@/components/ui/Skeleton";
 
 export default function BorrowPage() {
 	const { user } = useAuth();
@@ -105,14 +106,7 @@ export default function BorrowPage() {
 			</div>
 
 			{/* States */}
-			{loading && (
-				<div className="flex min-h-[40vh] flex-col items-center justify-center gap-3 text-center">
-					<Loader2 className="h-9 w-9 animate-spin text-primary" />
-					<p className="text-sm font-medium text-textSecondary">
-						Discovering campus gear…
-					</p>
-				</div>
-			)}
+			{loading && <CardGridSkeleton count={8} />}
 
 			{!loading && error && (
 				<div className="flex min-h-[40vh] flex-col items-center justify-center gap-4 rounded-2xl border border-errorLight bg-errorLight/20 px-6 py-12 text-center">

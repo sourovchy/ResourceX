@@ -98,6 +98,7 @@ public class FileStorageServiceImpl implements FileStorageService {
         fileMetadataRepository.save(metadata);
 
         return FileUploadResponse.builder()
+                .fileId(metadata.getFileId())
                 .originalName(originalName)
                 .storedName(storedFileName)
                 .fileUrl("/api/files/" + storedFileName)
@@ -153,6 +154,7 @@ public class FileStorageServiceImpl implements FileStorageService {
         fileMetadataRepository.save(metadata);
 
         return FileUploadResponse.builder()
+                .fileId(metadata.getFileId())
                 .originalName(cleanName)
                 .storedName(storedFileName)
                 .fileUrl("/api/files/" + storedFileName)

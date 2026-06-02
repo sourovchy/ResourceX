@@ -3,6 +3,8 @@
 import React, { useEffect, useState } from "react";
 import Link from "next/link";
 import { Mail, Loader2 } from "lucide-react";
+import { LogoIcon } from "@/components/ui/Logo";
+import AuthProgressOverlay, { AuthProgress } from "@/components/auth/AuthProgressOverlay";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
 import api from "@/lib/api";
@@ -13,6 +15,7 @@ export default function ForgotPasswordPage() {
 
 	const [email, setEmail] = useState("");
 	const [loading, setLoading] = useState(false);
+	const [progress, setProgress] = useState<AuthProgress | null>(null);
 	const [message, setMessage] = useState("");
 	const [error, setError] = useState("");
 
@@ -36,13 +39,18 @@ export default function ForgotPasswordPage() {
 
 		setLoading(true);
 		try {
+			setProgress({ message: "Sending reset code…", state: "loading" });
 			const res = await api.post("/auth/forgot-password", {
 				email: email.trim(),
 			});
+			setProgress({ message: "Reset code sent", state: "success" });
+			await new Promise((r) => setTimeout(r, 850));
+			setProgress(null);
 			setMessage(
 				res.data?.message || "Password reset email sent. Please check your inbox.",
 			);
 		} catch (err: any) {
+			setProgress(null);
 			setError(
 				err.response?.data?.message || "Failed to send reset link. Please try again.",
 			);
@@ -53,6 +61,7 @@ export default function ForgotPasswordPage() {
 
 	return (
 		<div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-background px-4 py-8 sm:px-6 lg:px-8">
+			<AuthProgressOverlay progress={progress} />
 			<div className="pointer-events-none absolute inset-0 overflow-hidden">
 				<div className="absolute left-[-10%] top-[-10%] h-72 w-72 rounded-full bg-primary opacity-20 blur-3xl sm:h-96 sm:w-96" />
 				<div className="absolute bottom-[-10%] right-[-10%] h-72 w-72 rounded-full bg-accent opacity-20 blur-3xl sm:h-[30rem] sm:w-[30rem]" />
@@ -62,7 +71,7 @@ export default function ForgotPasswordPage() {
 				<div className="rounded-2xl border border-borderLight bg-surface p-5 shadow-xl sm:p-6 md:p-8">
 					<div className="mb-6 text-center sm:mb-8">
 						<div className="mb-3 flex justify-center">
-							<Mail className="h-10 w-10 text-primary" />
+							<LogoIcon size={48} />
 						</div>
 
 						<h1 className="text-2xl font-bold tracking-tight text-textPrimary sm:text-3xl">

@@ -1,0 +1,22 @@
+{
+  "name": "ResourceX",
+  "short_name": "ResourceX",
+  "description": "Cross-Campus Student-to-Student Resource Sharing Platform",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#faf9f7",
+  "theme_color": "#da7756",
+  "icons": [
+    {
+      "src": "/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml"
+    },
+    {
+      "src": "/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
+    }
+  ]
+}

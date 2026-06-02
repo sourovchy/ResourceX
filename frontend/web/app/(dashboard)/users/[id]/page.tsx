@@ -136,6 +136,7 @@ export default function AdminUserDetailPage() {
 	const [trustScore, setTrustScore] = useState(0);
 	const [adjusting, setAdjusting] = useState(false);
 	const [adjustment, setAdjustment] = useState({ value: "", reason: "" });
+	const [trustError, setTrustError] = useState<string | null>(null);
 	const [adminFeedback, setAdminFeedback] = useState("");
 	const [actionDone, setActionDone] = useState<string | null>(null);
 	const [secondaryLoading, setSecondaryLoading] = useState(false);
@@ -377,10 +378,9 @@ export default function AdminUserDetailPage() {
 	};
 
 	const handleSuspend = async () => {
-		if (!suspensionReason.trim()) {
-			toast("Suspension reason is required.", "error");
-			return;
-		}
+		// The reason field is enforced inline by ConfirmModal (confirm stays disabled
+		// until a reason is entered); this guard is a no-op safety net.
+		if (!suspensionReason.trim()) return;
 		// Permanent suspension is irreversible — require an extra confirmation
 		if (suspensionType === "PERMANENT") {
 			setPermanentConfirmOpen(true);
@@ -424,13 +424,17 @@ export default function AdminUserDetailPage() {
 
 	const handleTrustAdjustment = async () => {
 		const value = Number(adjustment.value);
-		if (Number.isNaN(value) || value === 0) return;
-
-		if (!adjustment.reason.trim()) {
-			toast("A reason is required to adjust the trust score.", "error");
+		if (Number.isNaN(value) || value === 0) {
+			setTrustError("Enter a valid non-zero adjustment amount.");
 			return;
 		}
 
+		if (!adjustment.reason.trim()) {
+			setTrustError("A reason is required to adjust the trust score.");
+			return;
+		}
+
+		setTrustError(null);
 		try {
 			// Correct endpoint: PATCH /trust/admin/{userId}/adjust with { change, reason }
 			await api.patch(`/trust/admin/${userId}/adjust`, {
@@ -705,26 +709,43 @@ export default function AdminUserDetailPage() {
 						</div>
 
 						{adjusting && (
-							<div className="mt-5 grid grid-cols-1 gap-3 md:grid-cols-3">
-								<input
-									type="number"
-									value={adjustment.value}
-									onChange={(e) => setAdjustment({ ...adjustment, value: e.target.value })}
-									placeholder="+10 or -5"
-									className="rounded-xl border border-outlineVariant bg-surface px-4 py-2.5 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary"
-								/>
-								<input
-									type="text"
-									value={adjustment.reason}
-									onChange={(e) => setAdjustment({ ...adjustment, reason: e.target.value })}
-									placeholder="Adjustment reason"
-									className="rounded-xl border border-outlineVariant bg-surface px-4 py-2.5 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary"
-								/>
-								<button
-									onClick={handleTrustAdjustment}
-									className="rounded-xl bg-primary px-4 py-2.5 text-sm font-bold text-onPrimary transition hover:opacity-90">
-									Apply Adjustment
-								</button>
+							<div className="mt-5 space-y-3">
+								<div className="grid grid-cols-1 gap-3 md:grid-cols-3">
+									<input
+										type="number"
+										value={adjustment.value}
+										onChange={(e) => {
+											setAdjustment({ ...adjustment, value: e.target.value });
+											if (trustError) setTrustError(null);
+										}}
+										placeholder="+10 or -5"
+										className="rounded-xl border border-outlineVariant bg-surface px-4 py-2.5 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary"
+									/>
+									<input
+										type="text"
+										value={adjustment.reason}
+										onChange={(e) => {
+											setAdjustment({ ...adjustment, reason: e.target.value });
+											if (trustError) setTrustError(null);
+										}}
+										placeholder="Adjustment reason"
+										className="rounded-xl border border-outlineVariant bg-surface px-4 py-2.5 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary"
+									/>
+									<button
+										onClick={handleTrustAdjustment}
+										disabled={!adjustment.value.trim() || !adjustment.reason.trim()}
+										className="rounded-xl bg-primary px-4 py-2.5 text-sm font-bold text-onPrimary transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60">
+										Apply Adjustment
+									</button>
+								</div>
+								{trustError && (
+									<div
+										role="alert"
+										className="flex items-start gap-2 rounded-xl border border-error/40 bg-errorLight px-3 py-2 text-sm font-medium text-error animate-in fade-in slide-in-from-top-1 duration-200">
+										<AlertTriangle className="mt-0.5 h-4 w-4 flex-shrink-0" />
+										<span className="break-words">{trustError}</span>
+									</div>
+								)}
 							</div>
 						)}
 
@@ -948,88 +969,60 @@ export default function AdminUserDetailPage() {
 			</div>
 
 			{/* ── Suspension modal ─────────────────────────────────────────────────── */}
-			{suspendModalOpen && (
-				<div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm">
-					<div className="w-full max-w-lg rounded-3xl border border-borderLight bg-surface shadow-2xl">
-						<div className="flex items-center justify-between border-b border-borderLight px-5 py-4">
-							<h2 className="text-lg font-bold text-textPrimary">Suspend Account</h2>
+			{/* Hidden while the permanent-suspend confirmation is open so the two
+			    dialogs never stack (avoids competing focus traps). */}
+			<ConfirmModal
+				isOpen={suspendModalOpen && !permanentConfirmOpen}
+				isDestructive
+				title="Suspend Account"
+				message={`Suspending ${user.name} will immediately invalidate their active session.`}
+				confirmText={suspensionType === "PERMANENT" ? "Permanently Suspend" : "Suspend User"}
+				cancelText="Cancel"
+				requireReason
+				reasonLabel="Suspension reason"
+				reasonPlaceholder="Describe the policy violation or reason for suspension…"
+				reasonValue={suspensionReason}
+				onReasonChange={setSuspensionReason}
+				onConfirm={handleSuspend}
+				onCancel={() => {
+					setSuspendModalOpen(false);
+					setSuspensionReason("");
+					setSuspensionType("ONE_DAY");
+				}}>
+				{/* Duration picker */}
+				<div>
+					<label className="mb-2 block text-xs font-bold uppercase tracking-wider text-textTertiary">
+						Suspension Duration
+					</label>
+					<div className="grid grid-cols-2 gap-2">
+						{SUSPENSION_OPTIONS.map((opt) => (
 							<button
-								onClick={() => { setSuspendModalOpen(false); setSuspensionReason(""); setSuspensionType("ONE_DAY"); }}
-								className="rounded-xl p-2 transition hover:bg-surfaceVariant">
-								<AlertTriangle className="h-5 w-5 text-error" />
+								key={opt.value}
+								type="button"
+								onClick={() => setSuspensionType(opt.value)}
+								className={`rounded-xl border px-3 py-2.5 text-left transition ${
+									suspensionType === opt.value
+										? opt.value === "PERMANENT"
+											? "border-error bg-errorLight text-error"
+											: "border-primary bg-primaryLight text-primary"
+										: "border-outlineVariant bg-surface text-textSecondary hover:bg-surfaceVariant"
+								}`}>
+								<div className="text-sm font-bold">{opt.label}</div>
+								<div className="mt-0.5 text-xs opacity-70">{opt.description}</div>
 							</button>
-						</div>
-
-						<div className="space-y-5 p-5">
-							<p className="text-sm text-textSecondary">
-								Suspending <span className="font-semibold text-textPrimary">{user.name}</span> will
-								immediately invalidate their active session.
-							</p>
-
-							{/* Duration */}
-							<div>
-								<label className="mb-2 block text-xs font-bold uppercase tracking-wider text-textTertiary">
-									Suspension Duration
-								</label>
-								<div className="grid grid-cols-2 gap-2">
-									{SUSPENSION_OPTIONS.map((opt) => (
-										<button
-											key={opt.value}
-											type="button"
-											onClick={() => setSuspensionType(opt.value)}
-											className={`rounded-xl border px-3 py-2.5 text-left transition ${
-												suspensionType === opt.value
-													? opt.value === "PERMANENT"
-														? "border-error bg-errorLight text-error"
-														: "border-primary bg-primaryLight text-primary"
-													: "border-outlineVariant bg-surface text-textSecondary hover:bg-surfaceVariant"
-											}`}>
-											<div className="text-sm font-bold">{opt.label}</div>
-											<div className="mt-0.5 text-xs opacity-70">{opt.description}</div>
-										</button>
-									))}
-								</div>
-								{suspensionType === "PERMANENT" && (
-									<div className="mt-2 flex items-start gap-2 rounded-xl bg-errorLight px-3 py-2.5">
-										<AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-error" />
-										<p className="text-xs text-error">
-											This account will be permanently deleted after a 15-day retention period.
-											This action cannot be undone.
-										</p>
-									</div>
-								)}
-							</div>
-
-							{/* Reason */}
-							<div>
-								<label className="mb-2 block text-xs font-bold uppercase tracking-wider text-textTertiary">
-									Suspension Reason <span className="text-error">*</span>
-								</label>
-								<textarea
-									value={suspensionReason}
-									onChange={(e) => setSuspensionReason(e.target.value)}
-									placeholder="Describe the policy violation or reason for suspension..."
-									className="w-full min-h-[100px] resize-none rounded-xl border border-outlineVariant bg-surface px-4 py-3 text-sm text-textPrimary outline-none focus:border-primary focus:ring-2 focus:ring-primary"
-								/>
-							</div>
-
-							<div className="flex gap-3">
-								<button
-									onClick={() => { setSuspendModalOpen(false); setSuspensionReason(""); setSuspensionType("ONE_DAY"); }}
-									className="flex-1 rounded-xl border border-outlineVariant bg-surface px-4 py-2.5 text-sm font-bold text-textSecondary transition hover:bg-surfaceVariant">
-									Cancel
-								</button>
-								<button
-									onClick={handleSuspend}
-									disabled={!suspensionReason.trim()}
-									className="flex-1 rounded-xl bg-error px-4 py-2.5 text-sm font-bold text-white transition hover:opacity-90 disabled:opacity-50">
-									{suspensionType === "PERMANENT" ? "Permanently Suspend" : "Suspend User"}
-								</button>
-							</div>
-						</div>
+						))}
 					</div>
+					{suspensionType === "PERMANENT" && (
+						<div className="mt-2 flex items-start gap-2 rounded-xl bg-errorLight px-3 py-2.5">
+							<AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-error" />
+							<p className="text-xs text-error">
+								This account will be permanently deleted after a 15-day retention period.
+								This action cannot be undone.
+							</p>
+						</div>
+					)}
 				</div>
-			)}
+			</ConfirmModal>
 
 			<ConfirmModal
 				isOpen={permanentConfirmOpen}

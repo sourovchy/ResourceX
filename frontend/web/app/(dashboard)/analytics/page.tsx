@@ -8,8 +8,9 @@ import {
 	Clock,
 	CheckCircle2,
 	Loader2,
-	RefreshCw,
 } from "lucide-react";
+import { useAutoRefresh } from "@/hooks/useAutoRefresh";
+import { Skeleton, StatCardSkeleton } from "@/components/ui/Skeleton";
 import {
 	analyticsService,
 	AnalyticsResponse,
@@ -217,7 +218,6 @@ function ChartCard({
 export default function AdminAnalyticsPage() {
 	const [analytics, setAnalytics] = useState<AnalyticsResponse | null>(null);
 	const [loading, setLoading] = useState(true);
-	const [refreshing, setRefreshing] = useState(false);
 	const [error, setError] = useState("");
 
 	const loadAnalytics = async () => {
@@ -248,11 +248,8 @@ export default function AdminAnalyticsPage() {
 		// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, []);
 
-	const handleRefresh = async () => {
-		setRefreshing(true);
-		await loadAnalytics();
-		setRefreshing(false);
-	};
+	// Auto-refresh platform metrics on tab focus + moderate polling
+	useAutoRefresh(loadAnalytics, { intervalMs: 60_000 });
 
 	const summary = analytics?.summary;
 
@@ -340,9 +337,24 @@ export default function AdminAnalyticsPage() {
 	if (loading) {
 		return (
 			<div className="w-full space-y-6 px-4 pb-20 sm:px-6 lg:px-8">
-				<div className="flex min-h-[60vh] flex-col items-center justify-center gap-3 text-textSecondary">
-					<Loader2 className="h-6 w-6 animate-spin text-primary" />
-					<span className="text-sm font-medium">Loading analytics data…</span>
+				<div>
+					<Skeleton className="h-8 w-40" />
+					<Skeleton className="mt-2 h-4 w-72" />
+				</div>
+				<div className="grid grid-cols-2 gap-4 xl:grid-cols-4">
+					{Array.from({ length: 4 }).map((_, i) => (
+						<StatCardSkeleton key={i} />
+					))}
+				</div>
+				<div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+					{Array.from({ length: 4 }).map((_, i) => (
+						<div
+							key={i}
+							className="rounded-xl border border-borderLight bg-surface p-5 shadow-sm">
+							<Skeleton className="h-4 w-40" />
+							<Skeleton className="mt-6 h-40 w-full" />
+						</div>
+					))}
 				</div>
 			</div>
 		);
@@ -361,19 +373,6 @@ export default function AdminAnalyticsPage() {
 						period.
 					</p>
 				</div>
-
-				<button
-					type="button"
-					onClick={handleRefresh}
-					disabled={refreshing}
-					className="inline-flex w-full items-center justify-center gap-2 rounded-xl border border-outlineVariant bg-surface px-4 py-2 text-sm font-semibold text-textSecondary transition hover:bg-surfaceVariant disabled:opacity-60 sm:w-auto">
-					{refreshing ? (
-						<Loader2 className="h-4 w-4 animate-spin" />
-					) : (
-						<RefreshCw className="h-4 w-4" />
-					)}
-					Refresh
-				</button>
 			</div>
 
 			{/* Error banner – consistent */}

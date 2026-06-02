@@ -12,11 +12,22 @@ const inter = Inter({ subsets: ["latin"] });
 export const metadata: Metadata = {
 	title: "ResourceX",
 	description: "Cross-Campus Resource Sharing Platform",
+	icons: {
+		icon: [
+			{ url: "/icon.svg", type: "image/svg+xml" }
+		],
+		shortcut: ["/icon.svg"],
+		apple: [
+			{ url: "/icon.svg" }
+		],
+	},
+	manifest: "/manifest.json",
 };
 
 export const viewport = {
 	width: "device-width",
 	initialScale: 1,
+	themeColor: "#da7756",
 };
 
 export default function RootLayout({

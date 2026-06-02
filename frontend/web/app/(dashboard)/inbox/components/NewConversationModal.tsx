@@ -1,12 +1,14 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { X, Search, Loader2, MessageSquare, ChevronLeft, Send } from "lucide-react";
 import api from "@/lib/api";
 import { useToast } from "@/context/ToastContext";
 import { extractErrorMessage } from "@/lib/errorUtils";
 import { chatService } from "../services/chatService";
 import { getFileUrl } from "@/lib/api";
+import { useDialog } from "@/hooks/useDialog";
 
 interface UserResult {
 	userId: number;
@@ -91,13 +93,25 @@ export default function NewConversationModal({
 		}
 	};
 
-	if (!isOpen) return null;
+	const dialogRef = useDialog({ open: isOpen, onClose, closeOnEsc: !sending });
+	const [mounted, setMounted] = useState(false);
+	useEffect(() => setMounted(true), []);
 
-	return (
-		<div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-			<div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={onClose} />
+	if (!isOpen || !mounted) return null;
 
-			<div className="relative z-10 flex max-h-[80vh] w-full max-w-md flex-col overflow-hidden rounded-2xl border border-borderLight bg-surface shadow-2xl">
+	return createPortal(
+		<div className="fixed inset-0 z-[100] flex items-end justify-center p-3 sm:items-center sm:p-4">
+			<div
+				className="absolute inset-0 bg-black/50 backdrop-blur-sm animate-in fade-in duration-200"
+				onClick={onClose}
+			/>
+
+			<div
+				ref={dialogRef}
+				role="dialog"
+				aria-modal="true"
+				tabIndex={-1}
+				className="relative z-10 flex max-h-[80vh] w-full max-w-md flex-col overflow-hidden rounded-2xl border border-borderLight bg-surface shadow-2xl outline-none animate-in fade-in zoom-in-95 duration-200">
 				{/* Header */}
 				<div className="flex items-center gap-2 border-b border-borderLight p-4">
 					{selected && (
@@ -214,6 +228,7 @@ export default function NewConversationModal({
 					</div>
 				)}
 			</div>
-		</div>
+		</div>,
+		document.body,
 	);
 }

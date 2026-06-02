@@ -1,16 +1,17 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import StatCard from "@/components/cards/StatCard";
 import api from "@/lib/api";
+import { useAutoRefresh } from "@/hooks/useAutoRefresh";
+import { ListRowSkeleton } from "@/components/ui/Skeleton";
 import {
 	Users,
 	PackageOpen,
 	UserPlus,
 	Clock,
 	ArrowRight,
-	Loader2,
 	DollarSign,
 	AlertCircle,
 	TrendingUp,
@@ -81,57 +82,52 @@ export default function AdminHomePage() {
 	const [loading, setLoading] = useState(true);
 	const [error, setError] = useState("");
 
-	useEffect(() => {
-		let active = true;
+	const loadDashboard = useCallback(async (silent = false) => {
+		try {
+			if (!silent) setLoading(true);
+			setError("");
 
-		async function loadDashboard() {
-			try {
-				setLoading(true);
-				setError("");
+			const [statsRes, pendingRes, auditRes] = await Promise.all([
+				api.get<DashboardStats>("/admin/dashboard").catch(() => ({ data: { totalUsers: 0, activeBookings: 0, revenue: 0, pendingApprovals: 0 } as DashboardStats })),
+				api.get<{ content?: PendingUser[] }>("/admin/pending-users").catch(() => ({ data: { content: [] as PendingUser[] } })),
+				api.get("/trust/admin/audit-log").catch(() => ({ data: [] })),
+			]);
 
-				const [statsRes, pendingRes, auditRes] = await Promise.all([
-					api.get<DashboardStats>("/admin/dashboard").catch(() => ({ data: { totalUsers: 0, activeBookings: 0, revenue: 0, pendingApprovals: 0 } as DashboardStats })),
-					api.get<{ content?: PendingUser[] }>("/admin/pending-users").catch(() => ({ data: { content: [] as PendingUser[] } })),
-					api.get("/trust/admin/audit-log").catch(() => ({ data: [] })),
-				]);
+			setStats(statsRes.data);
 
-				if (!active) return;
+			const pendingList = Array.isArray(pendingRes.data?.content)
+				? pendingRes.data.content
+				: [];
+			setPendingUsers(pendingList);
 
-				setStats(statsRes.data);
-
-				const pendingList = Array.isArray(pendingRes.data?.content)
-					? pendingRes.data.content
-					: [];
-				setPendingUsers(pendingList);
-
-				const auditRaw = auditRes.data;
-				const auditList = Array.isArray(auditRaw)
-					? auditRaw
-					: Array.isArray(auditRaw?.data)
-						? auditRaw.data
-						: Array.isArray(auditRaw?.content)
-							? auditRaw.content
-							: [];
-				setAuditLogs(auditList.map(normalizeAudit));
-			} catch (err) {
-				console.error(err);
-				if (active) setError("Could not load admin dashboard data.");
-			} finally {
-				if (active) setLoading(false);
-			}
+			const auditRaw = auditRes.data;
+			const auditList = Array.isArray(auditRaw)
+				? auditRaw
+				: Array.isArray(auditRaw?.data)
+					? auditRaw.data
+					: Array.isArray(auditRaw?.content)
+						? auditRaw.content
+						: [];
+			setAuditLogs(auditList.map(normalizeAudit));
+		} catch (err) {
+			console.error(err);
+			setError("Could not load admin dashboard data.");
+		} finally {
+			if (!silent) setLoading(false);
 		}
-
-		void loadDashboard();
-
-		return () => {
-			active = false;
-		};
 	}, []);
+
+	useEffect(() => {
+		void loadDashboard();
+	}, [loadDashboard]);
+
+	// Auto-refresh admin summary silently on tab focus + moderate polling
+	useAutoRefresh(() => loadDashboard(true), { intervalMs: 60_000 });
 
 	// Removed full page loader in favor of skeleton state
 
 	return (
-		<div className="page-enter space-y-6 pb-20 sm:pb-0">
+		<div className="space-y-6 pb-20 sm:pb-0">
 			{/* Welcome strip (simplified for admin) */}
 			<div className="flex flex-col gap-4 rounded-xl border border-borderLight bg-surface p-5 shadow-sm sm:p-6">
 				<div className="min-w-0">
@@ -205,7 +201,7 @@ export default function AdminHomePage() {
 
 					<div className="flex-1 divide-y divide-borderLight overflow-y-auto max-h-[480px]">
 						{loading ? (
-							<div className="flex justify-center py-8"><Loader2 className="h-6 w-6 animate-spin text-textSecondary" /></div>
+							<ListRowSkeleton count={4} />
 						) : pendingUsers.length === 0 ? (
 							<div className="flex flex-col items-center justify-center gap-2 px-5 py-10 text-center">
 								<Clock className="h-8 w-8 text-borderLight" />
@@ -231,7 +227,7 @@ export default function AdminHomePage() {
 											</div>
 										</div>
 										<Link
-											href={`/users/${user.id}`}
+											href={`/users/${user.id}?type=pending`}
 											className="shrink-0 text-xs font-bold text-primary hover:underline">
 											Review
 										</Link>
@@ -259,7 +255,7 @@ export default function AdminHomePage() {
 					</div>
 					<div className="flex-1 divide-y divide-borderLight overflow-y-auto max-h-[480px]">
 						{loading ? (
-							<div className="flex justify-center py-8"><Loader2 className="h-6 w-6 animate-spin text-textSecondary" /></div>
+							<ListRowSkeleton count={4} />
 						) : auditLogs.length === 0 ? (
 							<div className="px-4 py-12 text-center text-sm text-textTertiary">
 								No audit logs found.

@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useEffect, useMemo, useState } from "react";
+import { createPortal } from "react-dom";
 
 import TrustBadge from "@/components/TrustBadge";
 
@@ -12,15 +13,17 @@ import {
   Search,
   X,
   Loader2,
-  RefreshCw,
   ExternalLink,
   ChevronRight,
   Filter,
+  AlertCircle,
 } from "lucide-react";
 import Link from "next/link";
+import { useAutoRefresh } from "@/hooks/useAutoRefresh";
 
 import api from "@/lib/api";
 import { extractErrorMessage, logErrorDetails } from "@/lib/errorUtils";
+import { useToast } from "@/context/ToastContext";
 
 interface UserTrust {
   id: string | number;
@@ -68,6 +71,7 @@ function formatDate(value?: string) {
 type FilterRange = "ALL" | "BELOW_50" | "50_79" | "80_99" | "100";
 
 export default function AdminTrustScoresPage() {
+  const { toast } = useToast();
   const [users, setUsers] = useState<UserTrust[]>([]);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
@@ -115,6 +119,9 @@ export default function AdminTrustScoresPage() {
   useEffect(() => {
     fetchData();
   }, []);
+
+  // Auto-refresh on tab focus + moderate polling
+  useAutoRefresh(fetchData, { intervalMs: 60_000 });
 
   const filteredUsers = useMemo(() => {
     const searchStr = search.trim().toLowerCase();
@@ -167,10 +174,11 @@ export default function AdminTrustScoresPage() {
       setAdjustVal("");
 
       setAdjustReason("");
+      toast(`Trust score ${amount > 0 ? "increased" : "decreased"} by ${Math.abs(amount)}.`);
     } catch (err) {
-      console.error(err);
-
-      setError("Failed to update trust score.");
+      const msg = extractErrorMessage(err);
+      setError(msg);
+      toast(msg, "error");
     } finally {
       setSubmitting(false);
     }
@@ -195,26 +203,22 @@ export default function AdminTrustScoresPage() {
             tracking.
           </p>
         </div>
-
-        <button
-          onClick={fetchData}
-          className="flex w-full items-center justify-center gap-2 rounded-xl border border-outlineVariant bg-surface px-4 py-2 text-sm font-semibold text-textSecondary transition hover:bg-surfaceVariant sm:w-auto"
-        >
-          <RefreshCw className="h-4 w-4" />
-          Refresh
-        </button>
       </div>
 
-      {error && (
-        <div className="rounded-xl border border-error/40 bg-errorLight px-4 py-3 text-sm font-medium text-error">
+      {/* Page-level errors only — hidden while the modal is open so the message is
+          never trapped behind the modal backdrop (it renders inside the modal instead). */}
+      {error && !adjustUser && (
+        <div
+          role="alert"
+          className="rounded-xl border border-error/40 bg-errorLight px-4 py-3 text-sm font-medium text-error">
           {error}
         </div>
       )}
 
       {/* Manual Override Modal */}
-      {adjustUser && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-          <div className="w-full max-w-md space-y-4 rounded-2xl border border-borderLight bg-surface p-4 shadow-2xl sm:max-w-lg sm:p-6">
+      {adjustUser && createPortal(
+        <div className="fixed inset-0 z-[100] flex items-end justify-center bg-black/50 p-3 backdrop-blur-sm animate-in fade-in duration-200 sm:items-center sm:p-4">
+          <div className="flex max-h-[90dvh] w-full max-w-md flex-col space-y-4 overflow-y-auto rounded-2xl border border-borderLight bg-surface p-4 shadow-xl sm:max-w-lg sm:p-6">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <h3 className="text-lg font-bold text-textPrimary">
                 Adjust Trust Score
@@ -246,7 +250,10 @@ export default function AdminTrustScoresPage() {
               <input
                 type="number"
                 value={adjustVal}
-                onChange={(e) => setAdjustVal(e.target.value)}
+                onChange={(e) => {
+                  setAdjustVal(e.target.value);
+                  if (error) setError("");
+                }}
                 placeholder="+10 or -5"
                 className="mt-1.5 w-full min-w-0 rounded-xl border border-outlineVariant bg-surfaceVariant px-3 py-2.5 text-sm text-textPrimary outline-none transition focus:ring-2 focus:ring-primary"
               />
@@ -258,14 +265,21 @@ export default function AdminTrustScoresPage() {
               <input
                 type="text"
                 value={adjustReason}
-                onChange={(e) => setAdjustReason(e.target.value)}
+                onChange={(e) => {
+                  setAdjustReason(e.target.value);
+                  if (error) setError("");
+                }}
                 placeholder="Explain the manual override..."
+                aria-invalid={Boolean(error)}
                 className="mt-1.5 w-full min-w-0 rounded-xl border border-outlineVariant bg-surfaceVariant px-3 py-2.5 text-sm text-textPrimary outline-none transition focus:ring-2 focus:ring-primary"
               />
             </div>
             {error && (
-              <div className="rounded-lg border border-error/40 bg-errorLight px-3 py-2 text-sm font-medium text-error animate-slide-down">
-                {error}
+              <div
+                role="alert"
+                className="flex items-start gap-2 rounded-lg border border-error/40 bg-errorLight px-3 py-2 text-sm font-medium text-error animate-in fade-in slide-in-from-top-1 duration-200">
+                <AlertCircle className="mt-0.5 h-4 w-4 flex-shrink-0" />
+                <span className="break-words">{error}</span>
               </div>
             )}
             <div className="flex flex-col gap-3 sm:flex-row">
@@ -277,14 +291,19 @@ export default function AdminTrustScoresPage() {
               </button>
               <button
                 onClick={applyAdjustment}
-                disabled={submitting}
-                className="flex-1 rounded-xl bg-primary py-2.5 text-sm font-bold text-onPrimary transition hover:opacity-90 disabled:opacity-60"
+                disabled={
+                  submitting ||
+                  !adjustVal.trim() ||
+                  !adjustReason.trim()
+                }
+                className="flex-1 rounded-xl bg-primary py-2.5 text-sm font-bold text-onPrimary transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
               >
                 {submitting ? "Applying..." : "Apply & Log"}
               </button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body,
       )}
 
       {/* Controls: Search and Filters */}
@@ -361,6 +380,7 @@ export default function AdminTrustScoresPage() {
                   
                   <button
                     onClick={() => {
+                      setError("");
                       setAdjustUser(u);
                       setAdjustVal("");
                       setAdjustReason("");

@@ -108,12 +108,12 @@ export default function EarningsPage() {
 	}
 
 	return (
-		<div className="w-full space-y-5 px-3 pb-16 sm:px-4 sm:pb-20 lg:px-0">
-			<div className="space-y-0.5">
-				<h1 className="text-xl font-bold tracking-tight text-textPrimary sm:text-2xl">
+		<div className="w-full space-y-6 px-4 pb-16 sm:px-6 sm:pb-20 lg:space-y-8 lg:px-8">
+			<div className="space-y-1">
+				<h1 className="text-2xl font-bold tracking-tight text-textPrimary sm:text-3xl lg:text-4xl">
 					Earnings Dashboard
 				</h1>
-				<p className="text-sm text-textSecondary">
+				<p className="text-sm text-textSecondary sm:text-base lg:text-lg">
 					Your rental income summary from completed bookings.
 				</p>
 			</div>
@@ -125,7 +125,7 @@ export default function EarningsPage() {
 			)}
 
 			{/* Stat cards */}
-			<div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+			<div className="grid grid-cols-1 gap-5 sm:grid-cols-3 lg:gap-6">
 				{[
 					{
 						icon: <DollarSign className="h-5 w-5" />,
@@ -148,7 +148,7 @@ export default function EarningsPage() {
 				].map(({ icon, iconBg, label, value }) => (
 					<div
 						key={label}
-						className="rounded-2xl border border-borderLight bg-surface p-4 shadow-sm sm:p-6">
+						className="rounded-2xl border border-borderLight bg-surface p-5 shadow-sm transition-all duration-200 hover:shadow-md sm:p-6 lg:p-8">
 						<div className={`mb-3 inline-flex h-10 w-10 items-center justify-center rounded-xl ${iconBg}`}>
 							{icon}
 						</div>
@@ -170,7 +170,7 @@ export default function EarningsPage() {
 
 			{/* Monthly bar chart */}
 			{monthlySeries.length > 0 && (
-				<div className="rounded-2xl border border-borderLight bg-surface p-4 shadow-sm sm:p-6">
+				<div className="rounded-2xl border border-borderLight bg-surface p-5 shadow-sm sm:p-6 lg:p-8">
 					<div className="mb-4 flex items-center gap-2">
 						<BarChart3 className="h-5 w-5 text-primary" />
 						<h2 className="font-bold text-textPrimary">Monthly Earnings</h2>
@@ -200,13 +200,13 @@ export default function EarningsPage() {
 
 			{/* Per-rental breakdown */}
 			{completedRows.length > 0 && (
-				<div className="rounded-2xl border border-borderLight bg-surface p-4 shadow-sm sm:p-6">
-					<h2 className="mb-4 font-bold text-textPrimary">Completed Rentals</h2>
+				<div className="rounded-2xl border border-borderLight bg-surface p-5 shadow-sm sm:p-6 lg:p-8">
+					<h2 className="mb-4 font-bold text-textPrimary sm:text-lg">Completed Rentals</h2>
 					<div className="divide-y divide-borderLight">
 						{completedRows.map((row) => (
 							<div
 								key={row.bookingId}
-								className="flex flex-col gap-1 py-4 sm:flex-row sm:items-center sm:justify-between">
+								className="flex flex-col gap-1 rounded-xl px-4 py-4 transition-colors hover:bg-surfaceVariant/50 sm:flex-row sm:items-center sm:justify-between -mx-4">
 								<div className="min-w-0">
 									<p className="truncate text-sm font-bold text-textPrimary">
 										{row.itemTitle}

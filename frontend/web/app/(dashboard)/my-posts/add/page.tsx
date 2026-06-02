@@ -177,8 +177,8 @@ export default function AddItemPage() {
   }
 
   return (
-    <div className="mx-auto max-w-3xl space-y-5 px-3 pb-16 sm:px-4 sm:pb-20 lg:px-0">
-      <h1 className="text-xl font-bold tracking-tight text-textPrimary sm:text-2xl">
+    <div className="mx-auto max-w-4xl space-y-6 px-4 pb-16 sm:px-6 sm:pb-20 lg:space-y-8 lg:px-8">
+      <h1 className="text-2xl font-bold tracking-tight text-textPrimary sm:text-3xl lg:text-4xl">
         Add New Item
       </h1>
 
@@ -190,11 +190,11 @@ export default function AddItemPage() {
 
       <form
         onSubmit={handleSubmit}
-        className="space-y-5 rounded-2xl border border-borderLight bg-surface p-4 shadow-sm sm:p-6 md:p-8"
+        className="space-y-6 rounded-2xl border border-borderLight bg-surface p-5 shadow-sm transition-shadow duration-200 hover:shadow-md sm:p-8 lg:p-10"
       >
         {/* Basic Info */}
-        <div className="space-y-3 sm:space-y-4">
-          <h2 className="border-b border-borderLight pb-2 text-xs font-bold uppercase tracking-wider text-textSecondary sm:text-sm">
+        <div className="space-y-4 sm:space-y-5">
+          <h2 className="border-b border-borderLight pb-3 text-sm font-bold uppercase tracking-wider text-textSecondary sm:text-base">
             Basic Info
           </h2>
 
@@ -278,8 +278,8 @@ export default function AddItemPage() {
         </div>
 
         {/* Pricing & Deposit */}
-        <div className="space-y-3 sm:space-y-4">
-          <h2 className="border-b border-borderLight pb-2 text-sm font-bold uppercase tracking-wider text-textSecondary">
+        <div className="space-y-4 sm:space-y-5">
+          <h2 className="border-b border-borderLight pb-3 text-sm font-bold uppercase tracking-wider text-textSecondary sm:text-base">
             Pricing & Deposit
           </h2>
 
@@ -325,8 +325,8 @@ export default function AddItemPage() {
         </div>
 
         {/* Photos */}
-        <div className="space-y-3 sm:space-y-4">
-          <h2 className="border-b border-borderLight pb-2 text-sm font-bold uppercase tracking-wider text-textSecondary">
+        <div className="space-y-4 sm:space-y-5">
+          <h2 className="border-b border-borderLight pb-3 text-sm font-bold uppercase tracking-wider text-textSecondary sm:text-base">
             Photos
           </h2>
 
@@ -375,7 +375,7 @@ export default function AddItemPage() {
         <button
           type="submit"
           disabled={isLoading || uploading}
-          className="mt-6 w-full rounded-xl bg-primary py-3.5 font-bold text-white shadow-sm transition-colors hover:bg-primaryDark disabled:cursor-not-allowed disabled:opacity-50 sm:mt-8 sm:py-4"
+          className="mt-8 w-full rounded-xl bg-primary py-4 text-base font-bold text-white shadow-sm transition-all hover:bg-primaryDark hover:shadow-md active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50 sm:mt-10 sm:py-5 lg:text-lg"
         >
           {uploading || isLoading ? (
             <span className="flex items-center justify-center gap-2">

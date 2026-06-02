@@ -1,4 +1,5 @@
 import type { Config } from "tailwindcss";
+import tailwindcssAnimate from "tailwindcss-animate";
 import { lightThemeColors } from "./theme/colors";
 import { typography } from "./theme/typography";
 import { spacing } from "./theme/spacing";
@@ -87,6 +88,6 @@ const config: Config = {
 			spacing: convertSpacing(spacing),
 		},
 	},
-	plugins: [],
+	plugins: [tailwindcssAnimate],
 };
 export default config;

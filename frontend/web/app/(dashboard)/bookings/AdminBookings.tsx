@@ -1,19 +1,20 @@
 "use client";
 
 import React, { useEffect, useMemo, useState } from "react";
-import Link from "next/link";
+import { createPortal } from "react-dom";
 import {
 	Search,
 	CalendarCheck,
 	AlertTriangle,
 	Loader2,
 	X,
-	RefreshCw,
 } from "lucide-react";
 import api from "@/lib/api";
 import { extractErrorMessage, logErrorDetails } from "@/lib/errorUtils";
 import { formatShortDate } from "@/lib/dateUtils";
 import { DataTable } from "@/components/ui/DataTable";
+import { useAutoRefresh } from "@/hooks/useAutoRefresh";
+import { useToast } from "@/context/ToastContext";
 import { Select } from "@/components/ui/Select";
 
 type FilterType =
@@ -128,6 +129,7 @@ export default function AdminBookingsPage() {
 	const [error, setError] = useState<string | null>(null);
 	const [pageIndex, setPageIndex] = useState(0);
 	const [totalPages, setTotalPages] = useState(0);
+	const { toast } = useToast();
 
 	const fetchBookings = async (page: number) => {
 		try {
@@ -155,6 +157,9 @@ export default function AdminBookingsPage() {
 	useEffect(() => {
 		fetchBookings(pageIndex);
 	}, [pageIndex]);
+
+	// Auto-refresh: on tab focus + light polling (overdue bookings are time-sensitive)
+	useAutoRefresh(() => fetchBookings(pageIndex), { intervalMs: 45_000 });
 
 	const filteredBookings = useMemo(() => {
 		const searchStr = search.trim().toLowerCase();
@@ -206,9 +211,11 @@ export default function AdminBookingsPage() {
 			await api.patch(overrideActionEndpoint(overrideStatus));
 			await fetchBookings(pageIndex);
 			setOverrideId(null);
+			toast("Booking status updated.");
 		} catch (err) {
-			console.error(err);
-			setError("Could not update booking status.");
+			const msg = extractErrorMessage(err);
+			setError(msg);
+			toast(msg, "error");
 		} finally {
 			setSubmitting(false);
 		}
@@ -236,13 +243,6 @@ export default function AdminBookingsPage() {
 				</div>
 
 				<div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-					<button
-						onClick={() => fetchBookings(pageIndex)}
-						className="inline-flex w-full items-center justify-center gap-2 rounded-xl border border-outlineVariant bg-surface px-4 py-2 text-sm font-semibold text-textSecondary transition hover:bg-surfaceVariant sm:w-auto">
-						<RefreshCw className="h-4 w-4" />
-						Refresh
-					</button>
-
 					{overdueCount > 0 && (
 						<div className="flex w-full items-center justify-center gap-2 rounded-xl border border-warning/40 bg-warningLight px-4 py-2 text-sm font-bold text-warning shadow-sm sm:w-auto">
 							<AlertTriangle className="h-4 w-4" />
@@ -288,9 +288,9 @@ export default function AdminBookingsPage() {
 				</div>
 			</div>
 
-			{overrideId !== null && (
-				<div className="fixed inset-0 z-50 flex items-end justify-center bg-black/50 p-3 sm:items-center sm:p-4">
-					<div className="w-full max-w-sm space-y-4 rounded-2xl border border-borderLight bg-surface p-5 shadow-2xl sm:p-6">
+			{overrideId !== null && createPortal(
+				<div className="fixed inset-0 z-[100] flex items-end justify-center bg-black/50 p-3 backdrop-blur-sm animate-in fade-in duration-200 sm:items-center sm:p-4">
+					<div className="flex max-h-[90dvh] w-full max-w-sm flex-col space-y-4 overflow-y-auto rounded-2xl border border-borderLight bg-surface p-5 shadow-xl sm:p-6">
 						<div className="flex items-center justify-between">
 							<h3 className="text-lg font-bold text-textPrimary">
 								Override Status
@@ -328,7 +328,8 @@ export default function AdminBookingsPage() {
 							</button>
 						</div>
 					</div>
-				</div>
+				</div>,
+				document.body,
 			)}
 
 			<div className="mb-4 px-1 text-xs text-textTertiary sm:px-0">
@@ -396,11 +397,6 @@ export default function AdminBookingsPage() {
 								header: "Actions",
 								cell: (b) => (
 									<div className="flex items-center gap-3">
-										<Link
-											href={`/bookings/${b.bookingId}`}
-											className="text-xs font-bold text-textSecondary transition hover:text-primary">
-											View
-										</Link>
 										<button
 											onClick={() => openOverrideModal(b)}
 											className="text-xs font-bold text-primary transition hover:underline">

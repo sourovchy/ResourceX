@@ -17,6 +17,8 @@ import {
 import api from "@/lib/api";
 import { formatShortDate } from "@/lib/dateUtils";
 import { PageEmpty } from "@/components/ui/PageEmpty";
+import { useAutoRefresh } from "@/hooks/useAutoRefresh";
+import { ListRowSkeleton } from "@/components/ui/Skeleton";
 
 const PAGE_SIZE = 15;
 
@@ -154,6 +156,14 @@ export default function NotificationsPage() {
 		};
 	}, []);
 
+	// Refresh the newest page + unread count when returning to the tab.
+	// (Focus-only: a polling reset would disrupt reading; the header bell already
+	// keeps the unread badge live.)
+	useAutoRefresh(() => {
+		void loadPage(0);
+		void fetchUnreadCount();
+	});
+
 	const loadMore = async () => {
 		setLoadingMore(true);
 		try {
@@ -230,11 +240,8 @@ export default function NotificationsPage() {
 
 			{/* List */}
 			{loading ? (
-				<div className="flex flex-col overflow-hidden rounded-2xl border border-borderLight bg-surface shadow-sm">
-					<div className="flex items-center justify-center gap-2 p-12 text-textSecondary">
-						<Loader2 className="h-5 w-5 animate-spin text-primary" />
-						Loading notifications…
-					</div>
+				<div className="overflow-hidden rounded-2xl border border-borderLight bg-surface p-2 shadow-sm">
+					<ListRowSkeleton count={6} />
 				</div>
 			) : error ? (
 				<div className="flex flex-col overflow-hidden rounded-2xl border border-borderLight bg-surface shadow-sm">

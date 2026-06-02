@@ -10,6 +10,7 @@ import { extractErrorMessage } from "@/lib/errorUtils";
 import { chatService } from "../services/chatService";
 import type { BlockStatus } from "../types/chat";
 import { getFileUrl } from "@/lib/api";
+import { useDialog } from "@/hooks/useDialog";
 
 interface ConversationUser {
 	userId: number;
@@ -46,6 +47,15 @@ export default function UserInfoModal({
 	const [confirmOpen, setConfirmOpen] = useState(false);
 	const [working, setWorking] = useState(false);
 
+	// Drawer hosts a nested ConfirmModal, so don't trap focus here; defer Esc to
+	// the confirm dialog while it's open.
+	const drawerRef = useDialog({
+		open: true,
+		onClose,
+		closeOnEsc: !confirmOpen,
+		trapFocus: false,
+	});
+
 	const handleConfirm = async () => {
 		setWorking(true);
 		try {
@@ -66,12 +76,17 @@ export default function UserInfoModal({
 		<>
 			{/* Backdrop */}
 			<div
-				className="fixed inset-0 z-40 bg-black/30 backdrop-blur-sm"
+				className="fixed inset-0 z-40 bg-black/30 backdrop-blur-sm animate-in fade-in duration-200"
 				onClick={onClose}
 			/>
 
 			{/* Panel */}
-			<div className="fixed right-0 top-0 z-50 flex h-full w-full max-w-full flex-col border-l border-borderLight bg-surface shadow-2xl sm:w-80">
+			<div
+				ref={drawerRef}
+				role="dialog"
+				aria-modal="true"
+				tabIndex={-1}
+				className="fixed right-0 top-0 z-50 flex h-full w-full max-w-full flex-col border-l border-borderLight bg-surface shadow-2xl outline-none animate-in fade-in slide-in-from-right-8 duration-300 sm:w-80">
 				{/* Header */}
 				<div className="flex items-center justify-between border-b border-borderLight p-3 sm:p-4">
 					<h3 className="text-sm font-bold text-textPrimary sm:text-base">Conversation Info</h3>

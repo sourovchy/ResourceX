@@ -105,18 +105,18 @@ export default function MyPostsPage() {
 	}
 
 	return (
-		<div className="w-full space-y-5 px-3 pb-16 sm:px-4 sm:pb-20 lg:px-0">
-			<div className="flex flex-col items-start justify-between gap-3 sm:flex-row sm:items-center sm:gap-4">
+		<div className="w-full space-y-6 px-4 pb-16 sm:px-6 sm:pb-20 lg:space-y-8 lg:px-8">
+			<div className="flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-center">
 				<div>
-					<h1 className="text-xl font-bold tracking-tight text-textPrimary sm:text-2xl">My Posts</h1>
-					<p className="mt-1 text-sm text-textSecondary sm:text-base">
+					<h1 className="text-2xl font-bold tracking-tight text-textPrimary sm:text-3xl lg:text-4xl">My Posts</h1>
+					<p className="mt-2 text-sm text-textSecondary sm:text-base lg:text-lg">
 						Manage the items you are renting out.
 					</p>
 				</div>
 				<Link
 					href="/my-posts/add"
-					className="flex w-full items-center justify-center gap-2 rounded-xl bg-primary px-5 py-2.5 text-sm font-bold text-white shadow-sm transition-colors hover:bg-primaryDark sm:w-auto">
-					<PlusCircle className="h-4 w-4" /> Add New Item
+					className="flex w-full items-center justify-center gap-2 rounded-xl bg-primary px-6 py-3 text-sm font-bold text-white shadow-sm transition-all hover:bg-primaryDark active:scale-[0.98] sm:w-auto sm:py-3.5 sm:text-base">
+					<PlusCircle className="h-5 w-5" /> Add New Item
 				</Link>
 			</div>
 
@@ -138,14 +138,14 @@ export default function MyPostsPage() {
 					</Link>
 				</div>
 			) : (
-				<div className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-5 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 lg:gap-6">
+				<div className="grid grid-cols-1 gap-5 sm:grid-cols-2 sm:gap-6 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 xl:gap-8">
 					{posts.map((post) => {
 						const requestCount = pendingRequestsByItem[post.itemId] ?? 0;
 						return (
 							<div
 								key={post.itemId}
-								className="flex flex-col overflow-hidden rounded-lg border border-borderLight bg-surface shadow-sm">
-								<div className="relative h-40 w-full bg-surfaceVariant sm:h-44 md:h-48">
+								className="group flex flex-col overflow-hidden rounded-2xl border border-borderLight bg-surface shadow-sm transition-all duration-200 hover:-translate-y-1 hover:shadow-md">
+								<div className="relative h-44 w-full bg-surfaceVariant sm:h-48 md:h-52">
 									<SafeImage
 										src={post.imageUrls?.[0]}
 										alt={post.title}
@@ -164,12 +164,12 @@ export default function MyPostsPage() {
 									</div>
 								</div>
 
-								<div className="flex flex-1 flex-col p-4 sm:p-5">
-									<h3 className="mb-3 line-clamp-1 text-base font-bold text-textPrimary sm:text-lg">
+								<div className="flex flex-1 flex-col p-5 sm:p-6">
+									<h3 className="mb-4 line-clamp-1 text-lg font-bold text-textPrimary transition-colors group-hover:text-primary sm:text-xl">
 										{post.title}
 									</h3>
-									<div className="mb-4 rounded-xl bg-surfaceVariant p-3">
-										<div className="mb-1 text-[10px] font-semibold text-textSecondary sm:text-xs">
+									<div className="mb-5 rounded-xl bg-surfaceVariant/50 p-4 transition-colors group-hover:bg-surfaceVariant">
+										<div className="mb-1 text-xs font-semibold tracking-wider text-textSecondary uppercase">
 											Price
 										</div>
 										<div className="font-extrabold text-primary">
@@ -187,16 +187,16 @@ export default function MyPostsPage() {
 										</Link>
 									)}
 
-									<div className="mt-auto flex gap-2 border-t border-borderLight pt-4">
+									<div className="mt-auto flex gap-3 border-t border-borderLight pt-5">
 										<Link
 											href={`/my-posts/edit/${post.itemId}`}
-											className="rounded-lg bg-primaryLight px-3 py-2 text-xs font-bold text-primary">
-											<Edit className="inline h-3.5 w-3.5" /> Edit
+											className="flex flex-1 items-center justify-center gap-1.5 rounded-xl bg-primaryLight px-3 py-2.5 text-sm font-bold text-primary transition-all hover:bg-primaryLight/80 active:scale-[0.98]">
+											<Edit className="h-4 w-4" /> Edit
 										</Link>
 										<button
 											onClick={() => setDeleteTarget(post)}
-											className="ml-auto rounded-lg bg-errorLight px-3 py-2 text-xs font-bold text-error">
-											<Trash2 className="inline h-3.5 w-3.5" />
+											className="flex items-center justify-center rounded-xl bg-errorLight px-4 py-2.5 text-sm font-bold text-error transition-all hover:bg-errorLight/80 active:scale-[0.98]">
+											<Trash2 className="h-4 w-4" />
 										</button>
 									</div>
 								</div>

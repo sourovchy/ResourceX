@@ -7,7 +7,6 @@ import {
 	UserPlus,
 	Trash2,
 	Loader2,
-	RefreshCw,
 	AlertCircle,
 	ArrowUp,
 	ArrowDown,
@@ -15,6 +14,7 @@ import {
 	EyeOff,
 } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
+import { useAutoRefresh } from "@/hooks/useAutoRefresh";
 import api from "@/lib/api";
 import { useToast } from "@/context/ToastContext";
 import { ConfirmModal } from "@/components/ui/ConfirmModal";
@@ -65,7 +65,6 @@ export default function StaffManagementPage() {
 	const [staff, setStaff] = useState<StaffMember[]>([]);
 	const [isLoading, setIsLoading] = useState(true);
 	const [isSubmitting, setIsSubmitting] = useState(false);
-	const [isRefreshing, setIsRefreshing] = useState(false);
 	const [error, setError] = useState<string | null>(null);
 	const [success, setSuccess] = useState<string | null>(null);
 	const [removingId, setRemovingId] = useState<string | null>(null);
@@ -149,13 +148,15 @@ export default function StaffManagementPage() {
 			setStaff([]);
 		} finally {
 			setIsLoading(false);
-			setIsRefreshing(false);
 		}
 	}, []);
 
 	useEffect(() => {
 		void loadStaff(pageIndex);
 	}, [loadStaff, pageIndex]);
+
+	// Auto-refresh staff list on tab focus + moderate polling
+	useAutoRefresh(() => loadStaff(pageIndex), { intervalMs: 60_000 });
 
 	const handleChange = (field: keyof CreateStaffForm, value: string) => {
 		setForm((prev) => ({ ...prev, [field]: value }));
@@ -279,11 +280,6 @@ export default function StaffManagementPage() {
 		} else {
 			await executeDemoteStaff(member);
 		}
-	};
-
-	const handleRefresh = async () => {
-		setIsRefreshing(true);
-		await loadStaff(pageIndex);
 	};
 
 	return (
@@ -517,16 +513,6 @@ export default function StaffManagementPage() {
 								</p>
 							</div>
 
-							<button
-								type="button"
-								onClick={handleRefresh}
-								disabled={isRefreshing}
-								className="inline-flex items-center justify-center gap-2 rounded-xl border border-borderLight bg-surface px-4 py-2 text-sm font-medium text-textPrimary transition hover:bg-surfaceVariant disabled:cursor-not-allowed disabled:opacity-70">
-								<RefreshCw
-									className={`h-4 w-4 ${isRefreshing ? "animate-spin" : ""}`}
-								/>
-								Refresh
-							</button>
 						</div>
 
 						<div className="overflow-x-auto rounded-2xl">

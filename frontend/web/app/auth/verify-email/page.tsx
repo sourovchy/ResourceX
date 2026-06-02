@@ -4,6 +4,8 @@ import React, { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ArrowRight, MailCheck, RefreshCw } from "lucide-react";
+import { LogoIcon } from "@/components/ui/Logo";
+import AuthProgressOverlay, { AuthProgress } from "@/components/auth/AuthProgressOverlay";
 import api from "@/lib/api";
 import {
 	PENDING_EMAIL_KEY,
@@ -23,6 +25,7 @@ export default function EmailVerificationPage() {
 	const [error, setError] = useState("");
 	const [message, setMessage] = useState("");
 	const [loading, setLoading] = useState(false);
+	const [progress, setProgress] = useState<AuthProgress | null>(null);
 	const [resending, setResending] = useState(false);
 	const [timer, setTimer] = useState(0);
 	const [cooldownAnchor, setCooldownAnchor] = useState<number | null>(null);
@@ -121,6 +124,7 @@ export default function EmailVerificationPage() {
 		setLoading(true);
 
 		try {
+			setProgress({ message: "Verifying code…", state: "loading" });
 			const res = await api.post("/otp/verify", { email, otp });
 			const data = res.data;
 
@@ -132,8 +136,13 @@ export default function EmailVerificationPage() {
 			localStorage.removeItem(PENDING_EMAIL_KEY);
 			localStorage.removeItem("otp_resend_perma_disabled");
 			localStorage.removeItem(`otp_resend_attempts_${email}`);
+
+			setProgress({ message: "Email verified", state: "success" });
+			await new Promise((r) => setTimeout(r, 750));
+			setProgress({ message: "Redirecting…", state: "loading" });
 			router.replace("/auth/pending-approval");
 		} catch (err: any) {
+			setProgress(null);
 			const msg =
 				err?.response?.data?.message || err?.message || "Verification failed";
 			setError(msg);
@@ -208,6 +217,7 @@ export default function EmailVerificationPage() {
 
 	return (
 		<div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-background px-4 py-8 sm:px-6 lg:px-8">
+			<AuthProgressOverlay progress={progress} />
 			<div className="pointer-events-none absolute inset-0 overflow-hidden">
 				<div className="absolute left-[-10%] top-[-10%] h-72 w-72 rounded-full bg-primary opacity-20 blur-3xl sm:h-96 sm:w-96" />
 				<div className="absolute bottom-[-10%] right-[-10%] h-72 w-72 rounded-full bg-accent opacity-20 blur-3xl sm:h-[30rem] sm:w-[30rem]" />
@@ -217,7 +227,7 @@ export default function EmailVerificationPage() {
 				<div className="rounded-2xl border border-borderLight bg-surface p-5 shadow-xl sm:p-6 md:p-8">
 					<div className="mb-6 text-center sm:mb-8">
 						<div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full border border-primary/20 bg-primaryLight sm:h-16 sm:w-16">
-							<MailCheck className="h-6 w-6 text-primary sm:h-7 sm:w-7" />
+							<LogoIcon size={32} />
 						</div>
 						<h1 className="text-2xl font-bold leading-tight text-textPrimary sm:text-3xl">
 							Verify Email

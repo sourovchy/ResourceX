@@ -5,6 +5,7 @@ import React, {
 	useMemo,
 	useState,
 } from "react";
+import { createPortal } from "react-dom";
 
 import {
 	DollarSign,
@@ -13,11 +14,14 @@ import {
 	Edit2,
 	X,
 	Loader2,
-	RefreshCw,
+	AlertCircle,
 } from "lucide-react";
 
 import api from "@/lib/api";
 import { formatShortDate } from "@/lib/dateUtils";
+import { useAutoRefresh } from "@/hooks/useAutoRefresh";
+import { useToast } from "@/context/ToastContext";
+import { extractErrorMessage } from "@/lib/errorUtils";
 
 type PenaltyStatus =
 	| "PENDING"
@@ -167,6 +171,7 @@ function formatDate(
 }
 
 export default function AdminPenaltiesPage() {
+	const { toast } = useToast();
 	const [penalties, setPenalties] =
 		useState<Penalty[]>([]);
 
@@ -240,6 +245,9 @@ export default function AdminPenaltiesPage() {
 		fetchPenalties();
 	}, []);
 
+	// Auto-refresh on tab focus + light polling
+	useAutoRefresh(fetchPenalties, { intervalMs: 45_000 });
+
 	const pending =
 		useMemo(() => {
 			return penalties.filter(
@@ -263,12 +271,11 @@ export default function AdminPenaltiesPage() {
 				);
 
 				await fetchPenalties();
+				toast("Penalty applied.");
 			} catch (err) {
-				console.error(err);
-
-				setError(
-					"Failed to approve penalty.",
-				);
+				const msg = extractErrorMessage(err);
+				setError(msg);
+				toast(msg, "error");
 			} finally {
 				setSubmitting(false);
 			}
@@ -288,12 +295,11 @@ export default function AdminPenaltiesPage() {
 				);
 
 				await fetchPenalties();
+				toast("Penalty waived.");
 			} catch (err) {
-				console.error(err);
-
-				setError(
-					"Failed to waive penalty.",
-				);
+				const msg = extractErrorMessage(err);
+				setError(msg);
+				toast(msg, "error");
 			} finally {
 				setSubmitting(false);
 			}
@@ -340,12 +346,11 @@ export default function AdminPenaltiesPage() {
 				setModifyAmount(
 					"",
 				);
+				toast("Penalty amount updated.");
 			} catch (err) {
-				console.error(err);
-
-				setError(
-					"Failed to modify penalty.",
-				);
+				const msg = extractErrorMessage(err);
+				setError(msg);
+				toast(msg, "error");
 			} finally {
 				setSubmitting(false);
 			}
@@ -375,15 +380,6 @@ export default function AdminPenaltiesPage() {
 				</div>
 
 				<div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-					<button
-						onClick={
-							fetchPenalties
-						}
-						className="flex items-center gap-2 rounded-xl border border-outlineVariant bg-surface px-4 py-2 text-sm font-semibold text-textSecondary transition hover:bg-surfaceVariant">
-						<RefreshCw className="h-4 w-4" />
-						Refresh
-					</button>
-
 					{pending >
 						0 && (
 							<div className="flex items-center gap-2 rounded-xl border border-warning/40 bg-warningLight px-4 py-2 text-sm font-bold text-warning">
@@ -397,16 +393,20 @@ export default function AdminPenaltiesPage() {
 				</div>
 			</div>
 
-			{error && (
-				<div className="rounded-xl border border-error/40 bg-errorLight px-4 py-3 text-sm font-medium text-error">
+			{/* Page-level errors only — hidden while the modal is open so the message
+			    is never trapped behind the modal backdrop (it renders inside instead). */}
+			{error && !modifyId && (
+				<div
+					role="alert"
+					className="rounded-xl border border-error/40 bg-errorLight px-4 py-3 text-sm font-medium text-error">
 					{error}
 				</div>
 			)}
 
 			{/* Modify Modal */}
-			{modifyId && (
-				<div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-					<div className="w-full max-w-sm space-y-4 rounded-2xl border border-borderLight bg-surface p-4 shadow-2xl sm:p-6">
+			{modifyId && createPortal(
+				<div className="fixed inset-0 z-[100] flex items-end justify-center bg-black/50 p-3 backdrop-blur-sm animate-in fade-in duration-200 sm:items-center sm:p-4">
+					<div className="flex max-h-[90dvh] w-full max-w-sm flex-col space-y-4 overflow-y-auto rounded-2xl border border-borderLight bg-surface p-4 shadow-xl sm:p-6">
 						<div className="flex items-center justify-between">
 							<h3 className="text-lg font-bold text-textPrimary">
 								Modify
@@ -440,16 +440,27 @@ export default function AdminPenaltiesPage() {
 								}
 								onChange={(
 									e,
-								) =>
+								) => {
 									setModifyAmount(
 										e
 											.target
 											.value,
-									)
-								}
+									);
+									if (error) setError("");
+								}}
+								aria-invalid={Boolean(error)}
 								className="w-full rounded-xl border border-outlineVariant bg-surfaceVariant py-2.5 pl-8 pr-4 text-sm text-textPrimary outline-none transition focus:ring-2 focus:ring-primary"
 							/>
 						</div>
+
+						{error && (
+							<div
+								role="alert"
+								className="flex items-start gap-2 rounded-xl border border-error/40 bg-errorLight px-3 py-2 text-sm font-medium text-error animate-in fade-in slide-in-from-top-1 duration-200">
+								<AlertCircle className="mt-0.5 h-4 w-4 flex-shrink-0" />
+								<span className="break-words">{error}</span>
+							</div>
+						)}
 
 						<div className="flex flex-col gap-3 sm:flex-row">
 							<button
@@ -467,16 +478,18 @@ export default function AdminPenaltiesPage() {
 									modifyPenalty
 								}
 								disabled={
-									submitting
+									submitting ||
+									!modifyAmount.trim()
 								}
-								className="flex-1 rounded-xl bg-primary py-2.5 text-sm font-bold text-onPrimary transition hover:opacity-90 disabled:opacity-60">
+								className="flex-1 rounded-xl bg-primary py-2.5 text-sm font-bold text-onPrimary transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60">
 								{submitting
 									? "Applying..."
 									: "Apply"}
 							</button>
 						</div>
 					</div>
-				</div>
+				</div>,
+				document.body,
 			)}
 
 			<div className="space-y-4">
@@ -593,6 +606,7 @@ export default function AdminPenaltiesPage() {
 
 											<button
 												onClick={() => {
+													setError("");
 													setModifyId(
 														p.id,
 													);

@@ -4,6 +4,7 @@ import React, { useMemo } from "react";
 import AuthGuard from "@/components/auth/AuthGuard";
 import AppShell from "@/components/layout/AppShell";
 import { useAuth } from "@/context/AuthContext";
+import { PageLoader } from "@/components/ui/PageLoader";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
 import { type AccessibleRole } from "@/lib/auth";
@@ -163,11 +164,7 @@ export default function DashboardLayout({
     }, [currentRole]);
 
     if (loading) {
-        return (
-            <div className="flex min-h-screen items-center justify-center bg-background px-4 text-center text-sm text-textSecondary">
-                Loading dashboard...
-            </div>
-        );
+        return <PageLoader message="Loading dashboard..." />;
     }
 
     if (!currentRole || !user) {

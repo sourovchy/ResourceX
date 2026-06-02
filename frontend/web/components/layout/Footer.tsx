@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { Facebook, Github, Instagram, Linkedin, Mail, Bug } from "lucide-react";
+import { Logo } from "@/components/ui/Logo";
 
 const socialLinks = [
 	{ name: "Facebook",  href: "https://www.facebook.com",  icon: Facebook  },
@@ -37,13 +38,8 @@ export default function Footer() {
 
 					{/* Brand */}
 					<div className="space-y-4">
-						<Link href="/" className="inline-flex items-center gap-2.5 group">
-							<div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary text-sm font-black text-onPrimary transition-transform group-hover:scale-105">
-								RX
-							</div>
-							<span className="text-base font-black tracking-tight text-textPrimary">
-								ResourceX
-							</span>
+						<Link href="/" className="inline-flex items-center group">
+							<Logo size={36} className="transition-transform group-hover:scale-105" />
 						</Link>
 						<p className="max-w-xs text-sm leading-relaxed text-textSecondary">
 							Empowering campus communities with a trusted student-to-student

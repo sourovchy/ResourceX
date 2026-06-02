@@ -9,6 +9,8 @@ import { ConfirmModal } from "@/components/ui/ConfirmModal";
 import { useToast } from "@/context/ToastContext";
 import { formatDateRange } from "@/lib/dateUtils";
 import { extractErrorMessage } from "@/lib/errorUtils";
+import { useAutoRefresh } from "@/hooks/useAutoRefresh";
+import { Skeleton } from "@/components/ui/Skeleton";
 
 // Backend statuses: PENDING | APPROVED | COMPLETED | CANCELLED | REJECTED
 const STATUS_STYLES: Record<string, { label: string; className: string }> = {
@@ -46,6 +48,9 @@ export default function StudentBookings() {
 
 	useEffect(() => { load(); }, []);
 
+	// Reflect owner approvals/rejections when returning to the tab
+	useAutoRefresh(load, { intervalMs: 60_000 });
+
 	const filtered = useMemo(() => {
 		if (activeTab === "All") return bookings;
 		const key = activeTab.toUpperCase();
@@ -69,9 +74,22 @@ export default function StudentBookings() {
 
 	if (loading) {
 		return (
-			<div className="flex min-h-[60vh] flex-col items-center justify-center gap-3 px-4 text-center">
-				<Loader2 className="h-10 w-10 animate-spin text-primary" />
-				<p className="text-sm font-medium text-textSecondary">Loading your bookings…</p>
+			<div className="mx-auto max-w-4xl space-y-5 px-3 pb-6 sm:space-y-6 sm:px-0">
+				<Skeleton className="h-7 w-40" />
+				<div className="space-y-4">
+					{Array.from({ length: 4 }).map((_, i) => (
+						<div
+							key={i}
+							className="flex flex-col gap-4 rounded-2xl border border-borderLight bg-surface p-4 shadow-sm sm:flex-row sm:gap-5 sm:p-5">
+							<Skeleton className="h-40 w-full shrink-0 rounded-xl sm:h-24 sm:w-24" />
+							<div className="flex-1 space-y-3">
+								<Skeleton className="h-4 w-1/2" />
+								<Skeleton className="h-3 w-2/3" />
+								<Skeleton className="h-3 w-1/3" />
+							</div>
+						</div>
+					))}
+				</div>
 			</div>
 		);
 	}
