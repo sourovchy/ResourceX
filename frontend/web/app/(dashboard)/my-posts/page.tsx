@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 import { ConfirmModal } from "@/components/ui/ConfirmModal";
 import { useToast } from "@/context/ToastContext";
+import ItemCard from "@/components/cards/ItemCard";
 
 type Item = {
 	itemId: number;
@@ -138,69 +139,51 @@ export default function MyPostsPage() {
 					</Link>
 				</div>
 			) : (
-				<div className="grid grid-cols-1 gap-5 sm:grid-cols-2 sm:gap-6 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 xl:gap-8">
+				<div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 xl:gap-5">
 					{posts.map((post) => {
 						const requestCount = pendingRequestsByItem[post.itemId] ?? 0;
 						return (
-							<div
+							<ItemCard
 								key={post.itemId}
-								className="group flex flex-col overflow-hidden rounded-2xl border border-borderLight bg-surface shadow-sm transition-all duration-200 hover:-translate-y-1 hover:shadow-md">
-								<div className="relative h-44 w-full bg-surfaceVariant sm:h-48 md:h-52">
-									<SafeImage
-										src={post.imageUrls?.[0]}
-										alt={post.title}
-										fill
-										className="object-cover"
-										sizes="(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 33vw"
-									/>
-									<div className="absolute left-3 top-3">
-										<span
-											className={`rounded-lg px-2 py-1 text-[10px] font-bold shadow-sm backdrop-blur-md sm:px-2.5 sm:text-xs ${
-												STATUS_COLOR[post.status] ??
-												"border border-borderLight bg-surfaceVariant text-textSecondary"
-											}`}>
-											{post.status}
-										</span>
-									</div>
-								</div>
-
-								<div className="flex flex-1 flex-col p-5 sm:p-6">
-									<h3 className="mb-4 line-clamp-1 text-lg font-bold text-textPrimary transition-colors group-hover:text-primary sm:text-xl">
-										{post.title}
-									</h3>
-									<div className="mb-5 rounded-xl bg-surfaceVariant/50 p-4 transition-colors group-hover:bg-surfaceVariant">
-										<div className="mb-1 text-xs font-semibold tracking-wider text-textSecondary uppercase">
-											Price
+								item={{
+									id: String(post.itemId),
+									title: post.title,
+									status: post.status,
+									pricePerDay: post.dailyRate,
+									image: post.imageUrls?.[0],
+								}}
+								href={`/borrow/item/${post.itemId}`}
+								actionsSlot={
+									<div className="flex flex-col gap-2">
+										{requestCount > 0 && (
+											<Link
+												href={`/my-posts/requests?postId=${post.itemId}`}
+												className="flex items-center justify-between rounded-lg bg-warningLight px-2 py-1 text-[10px] font-bold text-warningDark transition hover:opacity-80"
+											>
+												<span>{requestCount} requests</span>
+												<span>View</span>
+											</Link>
+										)}
+										<div className="flex items-center gap-2">
+											<Link
+												href={`/my-posts/edit/${post.itemId}`}
+												className="flex flex-1 items-center justify-center gap-1 rounded-lg bg-primaryLight py-1.5 text-xs font-bold text-primary transition-all hover:bg-primaryLight/80"
+											>
+												<Edit className="h-3 w-3" /> Edit
+											</Link>
+											<button
+												onClick={(e) => {
+													e.preventDefault();
+													setDeleteTarget(post);
+												}}
+												className="flex items-center justify-center rounded-lg bg-errorLight px-3 py-1.5 text-xs font-bold text-error transition-all hover:bg-errorLight/80"
+											>
+												<Trash2 className="h-3 w-3" />
+											</button>
 										</div>
-										<div className="font-extrabold text-primary">
-											৳ {post.dailyRate}
-											<span className="text-[10px] text-textSecondary sm:text-xs">/d</span>
-										</div>
 									</div>
-
-									{requestCount > 0 && (
-										<Link
-											href={`/my-posts/requests?postId=${post.itemId}`}
-											className="mb-4 flex items-center justify-between rounded-xl bg-warningLight px-4 py-2.5 text-sm font-bold text-warningDark transition hover:opacity-80">
-											<span>{requestCount} pending requests</span>
-											<span>View</span>
-										</Link>
-									)}
-
-									<div className="mt-auto flex gap-3 border-t border-borderLight pt-5">
-										<Link
-											href={`/my-posts/edit/${post.itemId}`}
-											className="flex flex-1 items-center justify-center gap-1.5 rounded-xl bg-primaryLight px-3 py-2.5 text-sm font-bold text-primary transition-all hover:bg-primaryLight/80 active:scale-[0.98]">
-											<Edit className="h-4 w-4" /> Edit
-										</Link>
-										<button
-											onClick={() => setDeleteTarget(post)}
-											className="flex items-center justify-center rounded-xl bg-errorLight px-4 py-2.5 text-sm font-bold text-error transition-all hover:bg-errorLight/80 active:scale-[0.98]">
-											<Trash2 className="h-4 w-4" />
-										</button>
-									</div>
-								</div>
-							</div>
+								}
+							/>
 						);
 					})}
 				</div>

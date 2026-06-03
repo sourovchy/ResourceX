@@ -17,7 +17,6 @@ import {
 	CheckCircle2,
 	Loader2,
 	MessageSquare,
-	Tag,
 } from "lucide-react";
 
 type Item = {
@@ -225,65 +224,6 @@ export default function ProfilePage() {
 							label="Avg Rating"
 							value={avgRating.toFixed(1)}
 						/>
-					</div>
-
-					{/* Active listings preview */}
-					<div className="space-y-4 rounded-lg border border-borderLight bg-surface p-4 sm:p-6">
-						<div className="mb-2 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-							<h2 className="text-lg font-bold text-textPrimary">
-								My Active Listings
-							</h2>
-							<Link
-								href="/my-posts"
-								className="text-sm font-bold text-primary hover:underline">
-								Manage All
-							</Link>
-						</div>
-
-						{activeListings.length === 0 ? (
-							<div className="py-8 text-sm text-textSecondary">
-								You have no active listings yet.{" "}
-								<Link
-									href="/my-posts/add"
-									className="font-bold text-primary hover:underline">
-									Create one
-								</Link>
-								.
-							</div>
-						) : (
-							<div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-								{activeListings.slice(0, 4).map((item) => (
-									<Link
-										key={item.itemId}
-										href={`/borrow/item/${item.itemId}`}
-										className="group flex flex-col gap-2 overflow-hidden rounded-xl border border-borderLight bg-surface p-2 transition-all hover:border-primary/40 hover:shadow-md">
-										<div className="relative aspect-[4/3] w-full overflow-hidden rounded-lg bg-surfaceVariant">
-											{item.imageUrls?.[0] ? (
-												<SafeImage
-													src={item.imageUrls[0]}
-													alt={item.title ?? "Listing"}
-													fill
-													className="object-cover transition-transform duration-300 group-hover:scale-105"
-													sizes="(max-width: 640px) 45vw, 22vw"
-												/>
-											) : (
-												<div className="flex h-full items-center justify-center">
-													<Tag className="h-6 w-6 text-outlineVariant" />
-												</div>
-											)}
-										</div>
-										<p className="line-clamp-2 text-xs font-bold leading-tight text-textPrimary group-hover:text-primary">
-											{item.title ?? "Untitled"}
-										</p>
-										{item.dailyRate != null && (
-											<p className="text-[11px] font-semibold text-primary">
-												৳&thinsp;{Number(item.dailyRate).toLocaleString()}/day
-											</p>
-										)}
-									</Link>
-								))}
-							</div>
-						)}
 					</div>
 
 					<div className="space-y-4 rounded-lg border border-borderLight bg-surface p-4 sm:p-6">

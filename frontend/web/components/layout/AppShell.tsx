@@ -1,11 +1,11 @@
 "use client";
 
-import React, { useMemo, useState } from "react";
+import React, { useMemo, useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useTheme } from "@/context/ThemeContext";
 import { useAuth } from "@/context/AuthContext";
-import { Sun, Moon, Menu, LogOut, X } from "lucide-react";
+import { Sun, Moon, Menu, LogOut, X, ChevronDown } from "lucide-react";
 import SidebarToggle from "./SidebarToggle";
 import NotifBell from "@/components/misc/NotifBell";
 import SafeImage from "@/components/ui/SafeImage";
@@ -13,6 +13,7 @@ import { getFileUrl } from "@/lib/api";
 import { Logo, LogoIcon } from "@/components/ui/Logo";
 import LogoNav from "./LogoNav";
 import PageTransition from "./PageTransition";
+import { type NavItem } from "@/config/nav";
 
 interface TooltipState {
 	label: string;
@@ -24,7 +25,7 @@ export default function AppShell({
 	navItems,
 }: {
 	children: React.ReactNode;
-	navItems: any[];
+	navItems: NavItem[];
 	role?: "admin" | "student" | "moderator" | "super_admin";
 }) {
 	const pathname = usePathname();
@@ -33,6 +34,34 @@ export default function AppShell({
 	const [collapsed, setCollapsed] = useState(true);
 	const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
 	const [tooltip, setTooltip] = useState<TooltipState | null>(null);
+	const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>({});
+	const [hoveredGroup, setHoveredGroup] = useState<string | null>(null);
+
+	// Auto-expand the group that contains the active route.
+	useEffect(() => {
+		setExpandedGroups((prev) => {
+			const newExpanded = { ...prev };
+			let changed = false;
+			navItems.forEach((item) => {
+				if (
+					item.subItems?.some(
+						(sub) => pathname === sub.href || pathname.startsWith(sub.href + "/"),
+					) &&
+					!newExpanded[item.label]
+				) {
+					newExpanded[item.label] = true;
+					changed = true;
+				}
+			});
+			return changed ? newExpanded : prev;
+		});
+	}, [pathname, navItems]);
+
+	const toggleGroup = (label: string, e: React.MouseEvent) => {
+		e.preventDefault();
+		e.stopPropagation();
+		setExpandedGroups((prev) => ({ ...prev, [label]: !prev[label] }));
+	};
 
 	const isMessagingRoute = pathname.startsWith("/inbox") || pathname.startsWith("/messages");
 
@@ -127,41 +156,124 @@ export default function AppShell({
 
 				{/* Nav — scrolls independently; overflow-x: visible so tooltips escape */}
 				<nav
-					className="flex-1 overflow-y-auto overflow-x-visible px-3 space-y-1 pb-4"
+					className="flex-1 overflow-y-auto overflow-x-visible px-3 py-2 space-y-0.5"
 					style={{ overscrollBehavior: "contain" }}
 				>
-					{navItems.map(({ href, icon: Icon, label }) => {
-						const active = isActive(href);
+					{navItems.map(({ href, icon: Icon, label, subItems }) => {
+						const hasSub = !!subItems && subItems.length > 0;
+						// A group is active when its own route OR any child route matches.
+						const childActive =
+							hasSub &&
+							subItems!.some(
+								(sub) => pathname === sub.href || pathname.startsWith(sub.href + "/"),
+							);
+						const groupActive = isActive(href) || childActive;
+						// Expanded when pinned open by a click OR while the group is hovered.
+						const expanded =
+							hasSub &&
+							!collapsed &&
+							(!!expandedGroups[label] || hoveredGroup === label);
+
 						return (
-							<Link
+							<div
 								key={href}
-								href={href}
-								onClick={() => setMobileSidebarOpen(false)}
-								onMouseEnter={(e) => showTooltip(e, label)}
-								onMouseLeave={hideTooltip}
-								className="block"
+								className="flex flex-col"
+								onMouseEnter={() => hasSub && setHoveredGroup(label)}
+								onMouseLeave={() => hasSub && setHoveredGroup((cur) => (cur === label ? null : cur))}
 							>
-								<div
-									className={`flex w-full items-center gap-3 rounded-xl p-3 transition-all duration-200 ${
-										active
-											? "bg-primaryLight text-primary font-medium"
-											: "text-textSecondary hover:bg-surfaceVariant hover:text-textPrimary"
-									} ${collapsed ? "md:justify-center" : "justify-start"}`}
-								>
-									<Icon
-										className={`h-5 w-5 shrink-0 ${active ? "text-primary" : ""}`}
-									/>
-									<span
-										className={`whitespace-nowrap transition-all duration-300 ${
-											collapsed
-												? "md:opacity-0 md:w-0 md:overflow-hidden"
-												: "opacity-100"
+								<div className="relative group/nav flex items-center w-full">
+									<Link
+										href={href}
+										onClick={() => { if (!hasSub) setMobileSidebarOpen(false); }}
+										onMouseEnter={(e) => showTooltip(e, label)}
+										onMouseLeave={hideTooltip}
+										className={`flex w-full items-center gap-3 rounded-xl p-2.5 text-sm transition-all duration-200 ${
+											groupActive
+												? "bg-primaryLight text-primary font-semibold"
+												: "font-medium text-textSecondary hover:bg-surfaceVariant hover:text-textPrimary"
+										} ${collapsed ? "md:justify-center" : ""} ${hasSub && !collapsed ? "pr-10" : ""}`}
+									>
+										<Icon
+											className={`h-5 w-5 shrink-0 transition-colors ${
+												groupActive
+													? "text-primary"
+													: "text-textSecondary group-hover/nav:text-textPrimary"
+											}`}
+										/>
+										<span
+											className={`whitespace-nowrap truncate transition-all duration-300 ${
+												collapsed
+													? "md:opacity-0 md:w-0 md:overflow-hidden"
+													: "opacity-100"
+											}`}
+										>
+											{label}
+										</span>
+									</Link>
+									{hasSub && !collapsed && (
+										<button
+											onClick={(e) => toggleGroup(label, e)}
+											aria-label={`${expanded ? "Collapse" : "Expand"} ${label}`}
+											aria-expanded={expanded}
+											className={`absolute right-2 rounded-md p-1.5 transition-colors ${
+												groupActive
+													? "text-primary hover:bg-primary/10"
+													: "text-textTertiary hover:bg-borderLight hover:text-textPrimary"
+											}`}
+										>
+											<ChevronDown
+												className={`h-4 w-4 transition-transform duration-300 ${expanded ? "rotate-180" : ""}`}
+											/>
+										</button>
+									)}
+								</div>
+
+								{/* Nested sub-items — animated height via grid-rows trick */}
+								{hasSub && !collapsed && (
+									<div
+										className={`grid transition-all duration-300 ease-in-out ${
+											expanded ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0"
 										}`}
 									>
-										{label}
-									</span>
-								</div>
-							</Link>
+										<div className="overflow-hidden">
+											<div className="ml-[1.375rem] mt-0.5 flex flex-col gap-0.5 border-l border-borderLight pl-3">
+												{subItems!.map((sub) => {
+													const SubIcon = sub.icon;
+													const subActive =
+														pathname === sub.href ||
+														pathname.startsWith(sub.href + "/");
+													return (
+														<Link
+															key={sub.href}
+															href={sub.href}
+															onClick={() => setMobileSidebarOpen(false)}
+															className={`group/sub relative flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-[13px] transition-all duration-200 ${
+																subActive
+																	? "bg-primaryLight/60 font-medium text-primary"
+																	: "text-textSecondary hover:bg-surfaceVariant hover:text-textPrimary"
+															}`}
+														>
+															{/* active accent on the indent rail */}
+															{subActive && (
+																<span className="absolute -left-[13px] top-1/2 h-4 w-0.5 -translate-y-1/2 rounded-full bg-primary" />
+															)}
+															<SubIcon
+																strokeWidth={1.75}
+																className={`h-4 w-4 shrink-0 transition-colors ${
+																	subActive
+																		? "text-primary"
+																		: "text-textTertiary group-hover/sub:text-textSecondary"
+																}`}
+															/>
+															<span className="truncate">{sub.label}</span>
+														</Link>
+													);
+												})}
+											</div>
+										</div>
+									</div>
+								)}
+							</div>
 						);
 					})}
 				</nav>

@@ -3,6 +3,7 @@
 import React, { useEffect, useState, useCallback } from "react";
 import Link from "next/link";
 import SafeImage from "@/components/ui/SafeImage";
+import ItemCard from "@/components/cards/ItemCard";
 import {
 	Heart,
 	Search,
@@ -99,83 +100,38 @@ export default function WishlistPage() {
 			</div>
 
 			{wishlist.length > 0 ? (
-				<div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 sm:gap-5">
+				<div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 xl:gap-5">
 					{wishlist.map(({ wishlistId, item }) => (
-						<div
+						<ItemCard
 							key={wishlistId}
-							className="group relative flex flex-col overflow-hidden rounded-2xl border border-borderLight bg-surface shadow-sm transition-shadow hover:shadow-md">
-							<button
-								onClick={() => handleRemove(item.itemId)}
-								disabled={removing === item.itemId}
-								className="absolute right-3 top-3 z-10 flex h-8 w-8 items-center justify-center rounded-full bg-surface/90 text-textSecondary shadow transition hover:bg-error hover:text-white"
-								aria-label="Remove from wishlist">
-								{removing === item.itemId ? (
-									<Loader2 className="h-4 w-4 animate-spin" />
-								) : (
-									<X className="h-4 w-4" />
-								)}
-							</button>
-
-							<Link href={`/borrow/item/${item.itemId}`} className="block">
-								<div className="relative h-44 w-full bg-surfaceVariant">
-									{item.imageUrls?.[0] ? (
-										<SafeImage
-											src={item.imageUrls[0]}
-											alt={item.title}
-											fill
-											className="object-cover"
-										/>
+							item={{
+								id: String(item.itemId),
+								title: item.title,
+								category: item.category ?? "General",
+								pricePerDay: item.dailyRate ?? 0,
+								deposit: item.deposit ?? undefined,
+								owner: item.owner?.name ?? "Campus Provider",
+								trustScore: item.owner?.studentProfile?.trustScore ?? 0,
+								image: item.imageUrls?.[0],
+							}}
+							topRightSlot={
+								<button
+									onClick={(e) => {
+										e.preventDefault();
+										handleRemove(item.itemId);
+									}}
+									disabled={removing === item.itemId}
+									className="flex h-7 w-7 items-center justify-center rounded-full bg-surface/90 text-textSecondary shadow transition hover:bg-error hover:text-white"
+									aria-label="Remove from wishlist"
+								>
+									{removing === item.itemId ? (
+										<Loader2 className="h-3 w-3 animate-spin" />
 									) : (
-										<div className="flex h-full items-center justify-center">
-											<Tag className="h-12 w-12 text-textTertiary opacity-30" />
-										</div>
+										<X className="h-3 w-3" />
 									)}
-								</div>
-
-								<div className="p-4">
-									<p className="text-xs font-semibold uppercase tracking-wider text-primary">
-										{item.category ?? "General"}
-									</p>
-									<h3 className="mt-1 line-clamp-2 font-semibold text-textPrimary">
-										{item.title}
-									</h3>
-									{item.owner?.userId ? (
-										<Link
-											href={`/profile/${item.owner.userId}`}
-											onClick={(e) => e.stopPropagation()}
-											className="mt-1 block truncate text-sm text-textSecondary transition-colors hover:text-primary">
-											by {item.owner.name ?? "Campus Provider"}
-										</Link>
-									) : (
-										<p className="mt-1 text-sm text-textSecondary">
-											by {item.owner?.name ?? "Campus Provider"}
-										</p>
-									)}
-
-									<div className="mt-3 flex items-center justify-between">
-										<p className="font-extrabold text-primary">
-											৳{Number(item.dailyRate).toLocaleString()}
-											<span className="text-xs font-normal text-textSecondary">
-												/day
-											</span>
-										</p>
-										{item.deposit != null && Number(item.deposit) > 0 && (
-											<span className="flex items-center gap-1 rounded-full bg-primaryLight px-2 py-0.5 text-xs font-medium text-primary">
-												<Shield className="h-3 w-3" />
-												৳{Number(item.deposit).toLocaleString()} deposit
-											</span>
-										)}
-									</div>
-
-									<div className="mt-2 flex items-center gap-1 text-xs text-textTertiary">
-										<Star className="h-3 w-3 text-warning" />
-										<span>
-											{item.owner?.studentProfile?.trustScore ?? "—"} trust score
-										</span>
-									</div>
-								</div>
-							</Link>
-						</div>
+								</button>
+							}
+						/>
 					))}
 				</div>
 			) : (

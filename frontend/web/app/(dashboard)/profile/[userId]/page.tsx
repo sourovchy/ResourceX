@@ -23,6 +23,7 @@ import {
 	ProfileSkeleton,
 	Skeleton,
 } from "@/components/ui/Skeleton";
+import ItemCard from "@/components/cards/ItemCard";
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
 
@@ -288,46 +289,18 @@ export default function PublicProfilePage({
 							</p>
 						</div>
 					) : (
-						<div className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4">
+						<div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 xl:gap-5">
 							{items.map((item) => (
-								<Link
+								<ItemCard
 									key={item.itemId}
-									href={`/borrow/item/${item.itemId}`}
-									className="group flex flex-col gap-2 overflow-hidden rounded-2xl border border-borderLight bg-surface p-3 shadow-sm transition-all hover:border-primary/40 hover:shadow-md">
-									{/* Image */}
-									<div className="relative aspect-[4/3] w-full overflow-hidden rounded-xl bg-surfaceVariant">
-										{item.imageUrls[0] ? (
-											<SafeImage
-												src={item.imageUrls[0]}
-												alt={item.title}
-												fill
-												className="object-cover transition-transform duration-300 group-hover:scale-105"
-												sizes="(max-width: 640px) 45vw, 30vw"
-											/>
-										) : (
-											<div className="flex h-full items-center justify-center">
-												<Tag className="h-8 w-8 text-outlineVariant" />
-											</div>
-										)}
-									</div>
-
-									{/* Info */}
-									<div className="min-w-0">
-										{item.category && (
-											<p className="mb-0.5 truncate text-[10px] font-bold uppercase tracking-wider text-textSecondary">
-												{item.category}
-											</p>
-										)}
-										<p className="line-clamp-2 text-sm font-bold leading-tight text-textPrimary group-hover:text-primary">
-											{item.title}
-										</p>
-										{item.dailyRate != null && (
-											<p className="mt-1 text-xs font-semibold text-primary">
-												৳&thinsp;{Number(item.dailyRate).toLocaleString()}/day
-											</p>
-										)}
-									</div>
-								</Link>
+									item={{
+										id: String(item.itemId),
+										title: item.title,
+										category: item.category ?? "General",
+										pricePerDay: item.dailyRate ?? 0,
+										image: item.imageUrls?.[0],
+									}}
+								/>
 							))}
 						</div>
 					)}
