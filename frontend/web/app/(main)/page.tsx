@@ -163,7 +163,7 @@ export default function LandingPage() {
               Built for campus life
             </h2>
             <p className="mt-2 text-sm text-textSecondary">
-              Everything you need, nothing you don't.
+              Everything you need, nothing you don&apos;t.
             </p>
           </div>
 
@@ -196,7 +196,7 @@ export default function LandingPage() {
               Frequently asked questions
             </h2>
             <p className="mt-2 text-sm text-textSecondary">
-              Got questions? We've got answers.
+              Got questions? We&apos;ve got answers.
             </p>
           </div>
 
