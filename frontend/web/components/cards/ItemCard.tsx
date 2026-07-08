@@ -1,165 +1,191 @@
 import React from "react";
 import Link from "next/link";
-import Image from "next/image";
-import { ImageIcon, Shield, Star } from "lucide-react";
+import { Star } from "lucide-react";
+import TrustBadge from "@/components/TrustBadge";
+import SafeImage from "@/components/ui/SafeImage";
+import Avatar from "@/components/ui/Avatar";
+import { TiltCard } from "@/components/ui/TiltCard";
 
 interface ItemCardProps {
-	item: {
-		id: string;
-		title: string;
-		image?: string;
-		category?: string;
-		condition?: string;
-		status?: string;
-		rating?: number;
-		reviews?: number;
-		pricePerDay: number;
-		deposit?: number;
-		owner?: string;
-		trustScore?: number;
-		href?: string;
-	};
-	href?: string;
-	actionsSlot?: React.ReactNode; // e.g. for Edit/Delete buttons
-	topRightSlot?: React.ReactNode; // e.g. for Wishlist Remove button
+  item: {
+    id: string;
+    title: string;
+    image?: string;
+    category?: string;
+    condition?: string;
+    status?: string;
+    rating?: number;
+    reviews?: number;
+    pricePerDay: number;
+    deposit?: number;
+    owner?: string;
+    ownerAvatar?: string | null;
+    trustScore?: number | null;
+    availabilityScope?: string;
+    href?: string;
+  };
+  href?: string;
+  actionsSlot?: React.ReactNode; // e.g. for Edit/Delete buttons
+  topRightSlot?: React.ReactNode; // e.g. for Wishlist Remove button
 }
 
 const ItemCard = ({ item, href, actionsSlot, topRightSlot }: ItemCardProps) => {
-	const badgeStyles = {
-		category: "bg-blue-100/90 text-blue-800",
-	};
-	const conditionStyles: Record<string, string> = {
-		excellent: "bg-emerald-100/90 text-emerald-800",
-		"like new": "bg-blue-100/90 text-blue-800",
-		good: "bg-amber-100/90 text-amber-800",
-		fair: "bg-orange-100/90 text-orange-800",
-	};
+  const badgeStyles = {
+    category: "bg-primaryLight text-primary border border-primary/20",
+  };
+  const conditionStyles: Record<string, string> = {
+    excellent: "bg-successLight text-successDark border border-success/20",
+    "like new": "bg-successLight text-successDark border border-success/20",
+    good: "bg-warningLight text-warningDark border border-warning/20",
+    fair: "bg-errorLight text-errorDark border border-error/20",
+    poor: "bg-errorLight text-errorDark border border-error/20",
+  };
 
-	const statusStyles: Record<string, string> = {
-		AVAILABLE: "bg-emerald-100/90 text-emerald-800",
-		UNAVAILABLE: "bg-amber-100/90 text-amber-800",
-		BLOCKED: "bg-red-100/90 text-red-800",
-		PENDING: "bg-blue-100/90 text-blue-800",
-	};
+  const statusStyles: Record<string, string> = {
+    AVAILABLE: "bg-successLight text-successDark border border-success/20",
+    PENDING: "bg-warningLight text-warningDark border border-warning/20",
+    BOOKED: "bg-primaryLight text-primary border border-primary/20",
+    UNAVAILABLE: "bg-surfaceVariant text-textSecondary border border-border",
+    BLOCKED: "bg-errorLight text-errorDark border border-error/20",
+    DELETED: "bg-errorLight text-errorDark border border-error/20",
+  };
 
-	const itemHref = href || item.href || `/borrow/item/${item.id}`;
+  const itemHref = href || item.href || `/borrow/item/${item.id}`;
 
-	return (
-		<Link
-			href={itemHref}
-			className="group flex h-full min-w-0 flex-col overflow-hidden rounded-2xl border border-borderLight bg-surface transition-all hover:border-primary/40 hover:shadow-md"
-		>
-			{/* Image Wrapper */}
-			<div className="relative aspect-[4/3] w-full overflow-hidden bg-surfaceVariant">
-				{item.image ? (
-					<Image
-						src={item.image}
-						alt={item.title}
-						fill
-						className="object-cover transition-transform duration-300 group-hover:scale-105"
-						sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 20vw"
-					/>
-				) : (
-					<div className="flex h-full w-full items-center justify-center text-textTertiary">
-						<ImageIcon className="h-8 w-8 opacity-50" />
-					</div>
-				)}
+  return (
+    <TiltCard
+      maxTilt={6}
+      glare={true}
+      className="group relative flex h-full min-w-0 flex-col overflow-hidden rounded-2xl border border-borderLight bg-surface shadow-md transition-colors duration-300 hover:border-primary/40 hover:shadow-lg"
+    >
+      {/* Stretched overlay link — the whole-card click target. Kept as a sibling
+          (not a wrapper) so interactive slots can sit above it without nesting
+          anchors inside an anchor. */}
+      <Link
+        href={itemHref}
+        aria-label={item.title}
+        className="absolute inset-0 z-10 rounded-2xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
+      />
 
-				<div className="absolute inset-0 bg-black/5 transition-opacity group-hover:opacity-0" />
+      <div className="flex h-full flex-col">
+        {/* Image Wrapper */}
+        <div className="relative aspect-[4/3] w-full overflow-hidden bg-surfaceVariant">
+          <SafeImage
+            src={item.image}
+            alt={item.title}
+            fill
+            className="object-cover transition-transform duration-300 group-hover:scale-105"
+            sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 20vw"
+          />
 
-				{/* Badges / Slots */}
-				{topRightSlot && (
-					<div className="absolute right-2 top-2 z-10">
-						{topRightSlot}
-					</div>
-				)}
+          <div className="absolute inset-0 bg-black/5 transition-opacity group-hover:opacity-0" />
 
-				{!topRightSlot && item.condition && (
-					<div className="absolute right-2 top-2 z-10">
-						<span
-							className={`rounded-md px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider shadow-sm backdrop-blur-md sm:px-2 sm:text-[10px] ${
-								conditionStyles[item.condition.toLowerCase()] ||
-								"bg-surface/90 text-textSecondary"
-							}`}
-						>
-							{item.condition}
-						</span>
-					</div>
-				)}
+          {/* Badges / Slots */}
+          {topRightSlot && (
+            <div className="absolute right-2 top-2 z-20">{topRightSlot}</div>
+          )}
 
-				{(item.status || item.category) && (
-					<div className="absolute left-2 top-2 z-10">
-						{item.status ? (
-							<span
-								className={`rounded-md px-1.5 py-0.5 text-[10px] font-bold shadow-sm backdrop-blur-md sm:px-2 sm:text-xs ${
-									statusStyles[item.status.toUpperCase()] ||
-									"bg-surface/90 text-textSecondary"
-								}`}
-							>
-								{item.status}
-							</span>
-						) : (
-							<span
-								className={`rounded-md px-1.5 py-0.5 text-[10px] font-bold shadow-sm backdrop-blur-md sm:px-2 sm:text-xs ${badgeStyles.category}`}
-							>
-								{item.category}
-							</span>
-						)}
-					</div>
-				)}
-			</div>
+          {!topRightSlot && item.condition && (
+            <div className="absolute right-2 top-2 z-10">
+              <span
+                className={`rounded-md px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider shadow-sm backdrop-blur-md sm:px-2 sm:text-[10px] ${
+                  conditionStyles[item.condition.toLowerCase()] ||
+                  "bg-surface/90 text-textSecondary"
+                }`}
+              >
+                {item.condition}
+              </span>
+            </div>
+          )}
 
-			{/* Content */}
-			<div className="flex flex-1 flex-col p-3 sm:p-4">
-				<h3 className="line-clamp-2 min-h-[2.5rem] break-words text-sm font-bold leading-tight text-textPrimary transition-colors group-hover:text-primary">
-					{item.title}
-				</h3>
+          {(item.status || item.category) && (
+            <div className="absolute left-2 top-2 z-10">
+              {item.status ? (
+                <span
+                  className={`rounded-md px-1.5 py-0.5 text-[10px] font-bold shadow-sm backdrop-blur-md sm:px-2 sm:text-xs ${
+                    statusStyles[item.status.toUpperCase()] ||
+                    "bg-surface/90 text-textSecondary"
+                  }`}
+                >
+                  {item.status}
+                </span>
+              ) : (
+                <span
+                  className={`rounded-md px-1.5 py-0.5 text-[10px] font-bold shadow-sm backdrop-blur-md sm:px-2 sm:text-xs ${badgeStyles.category}`}
+                >
+                  {item.category}
+                </span>
+              )}
+            </div>
+          )}
+        </div>
 
-				<div className="mt-2 flex items-baseline gap-1">
-					<span className="text-sm font-extrabold text-primary sm:text-base">
-						৳ {item.pricePerDay}
-					</span>
-					<span className="text-[10px] font-semibold text-textSecondary sm:text-xs">
-						/day
-					</span>
-				</div>
+        {/* Content */}
+        <div className="relative flex flex-1 flex-col p-3 sm:p-4">
+          <h3 className="line-clamp-2 min-h-[2.5rem] break-words text-sm font-bold leading-tight text-textPrimary transition-colors group-hover:text-primary">
+            {item.title}
+          </h3>
 
-				{typeof item.rating === "number" && (
-					<div className="mt-1 flex items-center gap-1">
-						<Star className="h-3 w-3 fill-warning text-warning" />
-						<span className="text-xs font-bold">{item.rating}</span>
-						<span className="text-[10px] text-textTertiary">({item.reviews ?? 0})</span>
-					</div>
-				)}
+          {/* Owner (Compact) */}
+          {item.owner && (
+            <div className="mt-2 flex items-center gap-1.5">
+              <Avatar src={item.ownerAvatar} name={item.owner} size={20} />
+              <div className="flex items-center gap-1.5 min-w-0">
+                <span className="truncate text-[11px] font-medium text-textSecondary sm:text-xs">
+                  {item.owner}
+                </span>
+              </div>
+            </div>
+          )}
 
-				{/* Owner / Trust Score (Compact) */}
-				{item.owner && (
-					<div className="mt-3 flex items-center justify-between border-t border-borderLight pt-3">
-						<div className="flex min-w-0 items-center gap-1.5">
-							<div className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-primaryLight text-[9px] font-bold text-primary">
-								{item.owner.charAt(0).toUpperCase()}
-							</div>
-							<span className="truncate text-xs font-medium text-textSecondary">
-								{item.owner}
-							</span>
-						</div>
-						{item.trustScore != null && (
-							<div className="flex shrink-0 items-center gap-0.5 text-[10px] font-bold text-success">
-								<Shield className="h-3 w-3" />
-								{item.trustScore}
-							</div>
-						)}
-					</div>
-				)}
+          {/* Rating Block */}
+          <div className="mt-2 flex items-center gap-1.5 min-h-[1.25rem]">
+            {typeof item.rating === "number" &&
+            item.reviews &&
+            item.reviews > 0 ? (
+              <>
+                <Star className="h-3.5 w-3.5 fill-warning text-warning shrink-0" />
+                <span className="text-xs font-bold text-textPrimary">
+                  {item.rating.toFixed(1)}
+                </span>
+                <span className="text-[10px] text-textTertiary">
+                  ({item.reviews})
+                </span>
+              </>
+            ) : (
+              <span className="text-[11px] text-textTertiary italic">
+                No reviews yet
+              </span>
+            )}
+          </div>
 
-				{actionsSlot && (
-					<div className="mt-3 border-t border-borderLight pt-3">
-						{actionsSlot}
-					</div>
-				)}
-			</div>
-		</Link>
-	);
+          <div className="mt-1 flex items-baseline gap-1">
+            <span className="text-sm font-extrabold text-primary sm:text-base">
+              ৳ {item.pricePerDay}
+            </span>
+            <span className="text-[10px] font-semibold text-textSecondary sm:text-xs">
+              /day
+            </span>
+          </div>
+
+          {item.availabilityScope && (
+            <div className="mt-1.5 flex items-center gap-1 text-[10px] font-semibold text-textSecondary sm:text-xs">
+              <span className="text-primary">📍</span>
+              {item.availabilityScope === "CAMPUS_AND_OUTSIDE"
+                ? "Campus & Outside Campus"
+                : "Campus Only"}
+            </div>
+          )}
+
+          {actionsSlot && (
+            <div className="relative z-20 mt-3 border-t border-borderLight pt-3">
+              {actionsSlot}
+            </div>
+          )}
+        </div>
+      </div>
+    </TiltCard>
+  );
 };
 
 export default ItemCard;

@@ -4,42 +4,42 @@ import com.resourcex.resourcex.dto.response.StudentProfileResponse;
 import com.resourcex.resourcex.dto.response.UserResponse;
 import com.resourcex.resourcex.entity.StudentProfile;
 import com.resourcex.resourcex.entity.User;
-import com.resourcex.resourcex.entity.UserRole;
 
 import java.util.Collections;
 import java.util.List;
 
+/**
+ * Maps {@link User} to {@link UserResponse}. Role is the user's single role.
+ *
+ * <p>Avatar URL and suspension details are NOT resolved here (they require the files
+ * table and the student's restriction record). Callers that need them resolve and set
+ * them on the returned response — see {@code AvatarUrlResolver} and
+ * {@code StudentRestrictionManager}. {@code avatarFileId} is always populated so clients
+ * can build the URL directly if needed.
+ */
 public class UserMapper {
 
     private UserMapper() {
     }
 
     public static UserResponse toResponse(User user) {
-        return toResponse(user, Collections.emptyList(), null);
+        StudentProfile profile = null;
+        try {
+            profile = user.getStudentProfile();
+        } catch (Exception e) {
+            // Lazy initialization or no session, ignore
+        }
+        return toResponse(user, profile);
     }
 
-    public static UserResponse toResponse(
-            User user,
-            List<UserRole> userRoles) {
-        return toResponse(user, userRoles, null);
-    }
-
-    public static UserResponse toResponse(
-            User user,
-            List<UserRole> userRoles,
-            StudentProfile studentProfile) {
-
+    public static UserResponse toResponse(User user, StudentProfile studentProfile) {
         if (user == null) {
             return null;
         }
 
-        List<String> roles = userRoles == null
-                ? Collections.emptyList()
-                : userRoles.stream()
-                        .map(UserRole::getRole)
-                        .filter(role -> role != null && role.getName() != null)
-                        .map(role -> role.getName())
-                        .toList();
+        List<String> roles = (user.getRole() != null && user.getRole().getName() != null)
+                ? List.of(user.getRole().getName())
+                : Collections.emptyList();
 
         StudentProfileResponse profile = studentProfile == null
                 ? null
@@ -53,6 +53,7 @@ public class UserMapper {
                         .trustScore(studentProfile.getTrustScore())
                         .emailVerified(studentProfile.getEmailVerified())
                         .phoneVerified(studentProfile.getPhoneVerified())
+                        .rejectionReason(studentProfile.getRejectionReason())
                         .build();
 
         return UserResponse.builder()
@@ -63,12 +64,7 @@ public class UserMapper {
                 .studentProfile(profile)
                 .roles(roles)
                 .createdAt(user.getCreatedAt())
-                .avatarUrl(user.getAvatarUrl())
-                .suspensionType(user.getSuspensionType())
-                .suspensionReason(user.getSuspensionReason())
-                .suspendedAt(user.getSuspendedAt())
-                .suspendedUntil(user.getSuspendedUntil())
-                .scheduledDeletionAt(user.getScheduledDeletionAt())
+                .avatarFileId(user.getAvatarFileId())
                 .build();
     }
 }

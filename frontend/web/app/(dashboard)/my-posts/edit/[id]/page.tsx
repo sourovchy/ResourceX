@@ -3,12 +3,15 @@
 import React, { useEffect, useState } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
-import { UploadCloud, CheckCircle2, Loader2, X } from "lucide-react";
+import { UploadCloud, CheckCircle2, X } from "lucide-react";
 import api from "@/lib/api";
 import type { ItemResponse } from "@/types/item";
 import { useImageUpload } from "@/hooks/useImageUpload";
 import { Select } from "@/components/ui/Select";
 import { SearchableCombobox } from "@/components/ui/SearchableCombobox";
+import Button from "@/components/ui/Button";
+import { Field, Input, Textarea } from "@/components/ui/Field";
+import { PageLoader } from "@/components/ui/PageLoader";
 
 export default function EditItemPage() {
 	const params = useParams();
@@ -24,7 +27,7 @@ export default function EditItemPage() {
 	const [condition, setCondition] = useState("");
 	const [desc, setDesc] = useState("");
 	const [price, setPrice] = useState("");
-	const [deposit, setDeposit] = useState("");
+	const [availability, setAvailability] = useState("CAMPUS_ONLY");
 
 	const [categories, setCategories] = useState<{ id: string | number; name: string }[]>([]);
 	const [isCategoriesLoading, setIsCategoriesLoading] = useState(true);
@@ -89,7 +92,7 @@ export default function EditItemPage() {
 				setCondition(item.itemCondition ?? "");
 				setDesc(item.description ?? "");
 				setPrice(item.dailyRate != null ? String(item.dailyRate) : "");
-				setDeposit(item.deposit != null ? String(item.deposit) : "");
+				setAvailability(item.availabilityScope ?? "CAMPUS_ONLY");
 
 				if (item.imageUrls?.length) {
 					setPreviews(
@@ -127,8 +130,8 @@ export default function EditItemPage() {
 				itemCondition: condition,
 				description: desc,
 				dailyRate: Number.parseFloat(price),
-				deposit: deposit ? Number.parseFloat(deposit) : null,
 				imageUrls,
+				availabilityScope: availability,
 			};
 
 			await api.put(`/items/${id}`, payload);
@@ -144,14 +147,7 @@ export default function EditItemPage() {
 	};
 
 	if (isFetching) {
-		return (
-			<div className="mx-auto flex max-w-3xl flex-col items-center justify-center space-y-3 px-3 py-16 text-center sm:px-4 sm:py-20">
-				<Loader2 className="h-8 w-8 animate-spin text-primary sm:h-10 sm:w-10" />
-				<p className="text-sm font-medium text-textSecondary sm:text-base">
-					Loading item details...
-				</p>
-			</div>
-		);
+		return <PageLoader message="Loading item details..." />;
 	}
 
 	if (submitted) {
@@ -166,10 +162,8 @@ export default function EditItemPage() {
 				<p className="text-sm text-textSecondary sm:text-base">
 					Your item has been updated successfully.
 				</p>
-				<Link
-					href="/my-posts"
-					className="mt-4 inline-block rounded-xl bg-primary px-5 py-3 text-sm font-bold text-white shadow-sm transition-colors hover:bg-primaryDark sm:px-6">
-					Back to My Posts
+				<Link href="/my-posts" className="mt-4 inline-block">
+					<Button className="px-5 py-3 sm:px-6">Back to My Posts</Button>
 				</Link>
 			</div>
 		);
@@ -177,9 +171,9 @@ export default function EditItemPage() {
 
 	return (
 		<div className="mx-auto max-w-4xl space-y-6 px-4 pb-16 sm:px-6 sm:pb-20 lg:space-y-8 lg:px-8">
-			<div>
-				<h1 className="text-2xl font-bold tracking-tight text-textPrimary sm:text-3xl lg:text-4xl">
-					Edit Item
+			<div className="mb-2">
+				<h1 className="mt-1 text-3xl font-normal italic leading-tight text-textPrimary sm:text-4xl">
+					Edit <span className="text-primary font-bold">item.</span>
 				</h1>
 			</div>
 
@@ -197,21 +191,16 @@ export default function EditItemPage() {
 						Basic Info
 					</h2>
 
-					<div className="space-y-2">
-						<label className="text-sm font-bold text-textPrimary">Title</label>
-						<input
+					<Field label="Title">
+						<Input
 							value={title}
 							onChange={(e) => setTitle(e.target.value)}
-							className="w-full rounded-xl border border-borderLight bg-surface px-4 py-3 text-sm text-textPrimary transition"
 							maxLength={100}
 						/>
-					</div>
+					</Field>
 
 					<div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-						<div className="space-y-2">
-							<label className="text-sm font-bold text-textPrimary">
-								Category
-							</label>
+						<Field label="Category" error={categoriesError}>
 							<SearchableCombobox
 								value={category}
 								onChange={setCategory}
@@ -222,15 +211,9 @@ export default function EditItemPage() {
 								required
 								loading={isCategoriesLoading}
 							/>
-							{categoriesError && (
-								<p className="mt-1 text-xs text-error">{categoriesError}</p>
-							)}
-						</div>
+						</Field>
 
-						<div className="space-y-2">
-							<label className="text-sm font-bold text-textPrimary">
-								Condition
-							</label>
+						<Field label="Condition">
 							<Select
 								value={condition}
 								onChange={setCondition}
@@ -242,65 +225,83 @@ export default function EditItemPage() {
 								placeholder="Select Condition"
 								required
 							/>
-						</div>
+						</Field>
 					</div>
 
-					<div className="space-y-2">
-						<label className="text-sm font-bold text-textPrimary">
-							Description
-						</label>
-						<textarea
+					<Field label="Description">
+						<Textarea
 							value={desc}
 							onChange={(e) => setDesc(e.target.value)}
 							rows={4}
-							className="w-full resize-none rounded-xl border border-borderLight bg-surface px-4 py-3 text-sm text-textPrimary transition"
 							maxLength={1000}
 						/>
+					</Field>
+				</div>
+
+				<div className="space-y-4 sm:space-y-5">
+					<h2 className="border-b border-borderLight pb-3 text-sm font-bold uppercase tracking-wider text-textSecondary sm:text-base">
+						Rental Availability
+					</h2>
+
+					<div className="space-y-3">
+						<label className="text-sm font-bold text-textPrimary block">Where are you willing to rent this item?</label>
+						
+						<div className="space-y-3">
+							<label className={`flex cursor-pointer gap-3 rounded-xl border p-4 transition-all ${availability === "CAMPUS_ONLY" || !availability ? "border-primary bg-primaryLight/30" : "border-borderLight hover:border-primary/50"}`}>
+								<div className="flex h-5 items-center">
+									<input
+										type="radio"
+										name="availability"
+										value="CAMPUS_ONLY"
+										checked={availability === "CAMPUS_ONLY" || !availability}
+										onChange={(e) => setAvailability(e.target.value)}
+										className="h-4 w-4 border-gray-300 text-primary focus:ring-primary"
+									/>
+								</div>
+								<div>
+									<span className="block text-sm font-bold text-textPrimary">Campus Only</span>
+									<span className="block text-xs text-textSecondary mt-0.5">You will only meet renters inside university campus.</span>
+								</div>
+							</label>
+
+							<label className={`flex cursor-pointer gap-3 rounded-xl border p-4 transition-all ${availability === "CAMPUS_AND_OUTSIDE" ? "border-primary bg-primaryLight/30" : "border-borderLight hover:border-primary/50"}`}>
+								<div className="flex h-5 items-center">
+									<input
+										type="radio"
+										name="availability"
+										value="CAMPUS_AND_OUTSIDE"
+										checked={availability === "CAMPUS_AND_OUTSIDE"}
+										onChange={(e) => setAvailability(e.target.value)}
+										className="h-4 w-4 border-gray-300 text-primary focus:ring-primary"
+									/>
+								</div>
+								<div>
+									<span className="block text-sm font-bold text-textPrimary">Campus & Outside Campus</span>
+									<span className="block text-xs text-textSecondary mt-0.5">You are willing to meet renters both inside and outside campus.</span>
+								</div>
+							</label>
+						</div>
 					</div>
 				</div>
 
 				<div className="space-y-4 sm:space-y-5">
 					<h2 className="border-b border-borderLight pb-3 text-sm font-bold uppercase tracking-wider text-textSecondary sm:text-base">
-						Pricing & Deposit
+						Pricing
 					</h2>
 
-					<div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-						<div className="space-y-2">
-							<label className="text-sm font-bold text-textPrimary">
-								Daily Rental Rate
-							</label>
-							<p className="text-xs text-textSecondary">
-								Enter rental cost per day. Example: 500 = ৳500/day
-							</p>
-							<input
-								value={price}
-								onChange={(e) => setPrice(e.target.value)}
-								type="number"
-								min="0"
-								max="100000"
-								className="w-full rounded-xl border border-borderLight bg-surface px-4 py-3 text-sm text-textPrimary transition"
-								placeholder="e.g. 500"
-							/>
-						</div>
-
-						<div className="space-y-2">
-							<label className="text-sm font-bold text-textPrimary">
-								Security Deposit
-							</label>
-							<p className="text-xs text-textSecondary">
-								Optional refundable amount before renting
-							</p>
-							<input
-								value={deposit}
-								onChange={(e) => setDeposit(e.target.value)}
-								type="number"
-								min="0"
-								max="100000"
-								className="w-full rounded-xl border border-borderLight bg-surface px-4 py-3 text-sm text-textPrimary transition"
-								placeholder="e.g. 100"
-							/>
-						</div>
-					</div>
+					<Field
+						label="Daily Rental Rate"
+						hint="Enter rental cost per day. Example: 500 = ৳500/day"
+					>
+						<Input
+							value={price}
+							onChange={(e) => setPrice(e.target.value)}
+							type="number"
+							min="0"
+							max="100000"
+							placeholder="e.g. 500"
+						/>
+					</Field>
 				</div>
 
 				<div className="space-y-4 sm:space-y-5">
@@ -332,6 +333,7 @@ export default function EditItemPage() {
 								<div
 									key={i}
 									className="relative aspect-square overflow-hidden rounded-xl border border-borderLight bg-surfaceVariant">
+									{/* eslint-disable-next-line @next/next/no-img-element -- blob/object-URL preview; next/image cannot optimize these */}
 									<img
 										src={p.url}
 										alt=""
@@ -351,20 +353,14 @@ export default function EditItemPage() {
 					)}
 				</div>
 
-				<button
+				<Button
 					type="submit"
 					disabled={isLoading || uploading}
-					className={`mt-8 w-full rounded-xl py-4 text-base font-bold shadow-sm transition-all hover:shadow-md active:scale-[0.98] sm:mt-10 sm:py-5 lg:text-lg ${
-						isLoading || uploading
-							? "cursor-not-allowed bg-outlineVariant text-textSecondary"
-							: "bg-primary text-white hover:bg-primaryDark"
-					}`}>
-					{uploading
-						? "Uploading images..."
-						: isLoading
-							? "Saving..."
-							: "Save Changes"}
-				</button>
+					loading={uploading || isLoading}
+					className="mt-8 w-full py-4 text-base font-bold shadow-sm sm:mt-10 sm:py-5 lg:text-lg"
+				>
+					{uploading ? "Uploading images..." : isLoading ? "Saving..." : "Save Changes"}
+				</Button>
 			</form>
 		</div>
 	);

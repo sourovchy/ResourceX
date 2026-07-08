@@ -5,7 +5,6 @@ import com.resourcex.resourcex.dto.response.UserResponse;
 import com.resourcex.resourcex.dto.response.UserSearchResponse;
 import com.resourcex.resourcex.entity.StudentProfile;
 import com.resourcex.resourcex.entity.User;
-import com.resourcex.resourcex.entity.UserRole;
 import com.resourcex.resourcex.exception.ResourceNotFoundException;
 import com.resourcex.resourcex.exception.UnauthorizedException;
 import com.resourcex.resourcex.mapper.UserMapper;
@@ -35,9 +34,10 @@ public class UserServiceImpl implements UserService {
     private final UserRepository userRepository;
     private final StudentProfileRepository studentProfileRepository;
     private final org.springframework.security.crypto.password.PasswordEncoder passwordEncoder;
-    private final com.resourcex.resourcex.repository.UserRoleRepository userRoleRepository;
     private final com.resourcex.resourcex.service.FileStorageService fileStorageService;
     private final FileMetadataRepository fileMetadataRepository;
+    private final com.resourcex.resourcex.service.AvatarUrlResolver avatarUrlResolver;
+    private final com.resourcex.resourcex.service.StudentRestrictionManager restrictionManager;
 
     @Override
     @Transactional(readOnly = true)
@@ -59,7 +59,7 @@ public class UserServiceImpl implements UserService {
                             .userId(u.getUserId())
                             .name(u.getName())
                             .email(u.getEmail())
-                            .avatarUrl(u.getAvatarUrl())
+                            .avatarUrl(avatarUrlResolver.resolve(u.getAvatarFileId()))
                             .department(sp != null ? sp.getDepartment() : null)
                             .trustScore(sp != null ? sp.getTrustScore() : null)
                             .build();
@@ -70,19 +70,32 @@ public class UserServiceImpl implements UserService {
     @Override
     public UserResponse getCurrentUser() {
         User user = resolveCurrentUser();
-        List<UserRole> userRoles = userRoleRepository.findAllByUser(user);
         StudentProfile studentProfile = studentProfileRepository.findByUser(user).orElse(null);
-        return UserMapper.toResponse(user, userRoles, studentProfile);
+        return enrich(UserMapper.toResponse(user, studentProfile), user);
+    }
+
+    /** Fills the response fields that UserMapper leaves blank: avatar URL + suspension details. */
+    private UserResponse enrich(UserResponse response, User user) {
+        if (response == null) {
+            return null;
+        }
+        response.setAvatarUrl(avatarUrlResolver.resolve(user.getAvatarFileId()));
+        restrictionManager.find(user.getUserId()).ifPresent(r -> {
+            response.setSuspensionReason(r.getSuspensionReason());
+            response.setSuspendedAt(r.getSuspendedAt());
+            response.setSuspendedUntil(r.getSuspendedUntil());
+            response.setScheduledDeletionAt(r.getScheduledDeletionAt());
+        });
+        return response;
     }
 
     @Override
     public UserResponse getUserById(Long userId) {
         return userRepository.findById(userId)
                 .map(user -> {
-                    List<UserRole> userRoles = userRoleRepository.findAllByUser(user);
                     StudentProfile studentProfile = studentProfileRepository.findByUser(user).orElse(null);
-                    UserResponse response = UserMapper.toResponse(user, userRoles, studentProfile);
-                    
+                    UserResponse response = enrich(UserMapper.toResponse(user, studentProfile), user);
+
                     Authentication auth = SecurityContextHolder.getContext().getAuthentication();
                     boolean isPrivileged = auth != null && auth.getAuthorities().stream()
                             .anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN") || 
@@ -97,7 +110,6 @@ public class UserServiceImpl implements UserService {
                             response.getStudentProfile().setStudentId(null);
                             response.getStudentProfile().setIdCardFileId(null);
                         }
-                        response.setSuspensionType(null);
                         response.setSuspensionReason(null);
                         response.setSuspendedAt(null);
                         response.setSuspendedUntil(null);
@@ -125,9 +137,8 @@ public class UserServiceImpl implements UserService {
         );
         return userRepository.findAllExcludingRoles(excludedRoles, pageable)
                 .map(user -> {
-                    List<UserRole> userRoles = userRoleRepository.findAllByUser(user);
                     StudentProfile studentProfile = studentProfileRepository.findByUser(user).orElse(null);
-                    return UserMapper.toResponse(user, userRoles, studentProfile);
+                    return enrich(UserMapper.toResponse(user, studentProfile), user);
                 });
     }
 
@@ -137,9 +148,8 @@ public class UserServiceImpl implements UserService {
         User user = resolveCurrentUser();
         applyUpdate(user, request, true);
         User savedUser = userRepository.save(user);
-        List<UserRole> userRoles = userRoleRepository.findAllByUser(savedUser);
         StudentProfile studentProfile = studentProfileRepository.findByUser(savedUser).orElse(null);
-        return UserMapper.toResponse(savedUser, userRoles, studentProfile);
+        return enrich(UserMapper.toResponse(savedUser, studentProfile), savedUser);
     }
 
     @Override
@@ -183,17 +193,7 @@ public class UserServiceImpl implements UserService {
         boolean emailOrPhoneChanged = false;
 
         if (request.getEmail() != null && !request.getEmail().isBlank() && !request.getEmail().equalsIgnoreCase(user.getEmail())) {
-            // Check if user is student
-            boolean isStudent = userRoleRepository.findAllByUser(user).stream()
-                    .anyMatch(role -> role.getRole().getName().equalsIgnoreCase(RoleConstants.ROLE_USER));
-            if (isStudent) {
-                throw new com.resourcex.resourcex.exception.ForbiddenException("Students are not allowed to change their email address");
-            }
-            if (userRepository.existsByEmailIgnoreCase(request.getEmail())) {
-                throw new com.resourcex.resourcex.exception.ConflictException("Email is already in use");
-            }
-            user.setEmail(request.getEmail().trim());
-            emailOrPhoneChanged = true;
+            throw new com.resourcex.resourcex.exception.ForbiddenException("Changing email address is not allowed for security reasons");
         }
 
         if (request.getPhone() != null && !request.getPhone().isBlank()) {
@@ -219,33 +219,33 @@ public class UserServiceImpl implements UserService {
         }
 
         if (request.getAvatarUrl() != null && !request.getAvatarUrl().isBlank()) {
+            // Request carries the servable URL "/api/files/{storedName}"; resolve it to the file id,
+            // since avatars now live in the files table (single source of truth).
             String newAvatarUrl = request.getAvatarUrl().trim();
-            // Delete old avatar file when replacing with a new one
-            if (user.getAvatarUrl() != null && !user.getAvatarUrl().equals(newAvatarUrl)) {
+            String newStoredName = newAvatarUrl.substring(newAvatarUrl.lastIndexOf('/') + 1);
+            Long newFileId = fileMetadataRepository.findByStoredName(newStoredName)
+                    .map(com.resourcex.resourcex.entity.FileMetadata::getFileId)
+                    .orElse(null);
+
+            Long oldFileId = user.getAvatarFileId();
+            // Delete the previous avatar file when replacing it with a different one.
+            if (oldFileId != null && !oldFileId.equals(newFileId)) {
                 try {
-                    String oldUrl = user.getAvatarUrl();
-                    String storedName = oldUrl.substring(oldUrl.lastIndexOf('/') + 1);
-                    // Delete directly via the authenticated principal
-                    Object principal = SecurityContextHolder.getContext().getAuthentication().getPrincipal();
-                    if (principal instanceof org.springframework.security.core.userdetails.UserDetails) {
-                        fileStorageService.deleteFile(storedName, (org.springframework.security.core.userdetails.UserDetails) principal);
-                    } else {
-                        // Fallback: delete file metadata and physical file directly
-                        fileMetadataRepository.findByStoredName(storedName).ifPresent(metadata -> {
-                            try {
-                                java.nio.file.Path filePath = java.nio.file.Paths.get("uploads").toAbsolutePath().normalize().resolve(storedName);
-                                java.nio.file.Files.deleteIfExists(filePath);
-                            } catch (Exception ex) {
-                                log.warn("Failed to delete old avatar file from disk: {}", storedName, ex);
-                            }
-                            fileMetadataRepository.delete(metadata);
-                        });
-                    }
+                    fileMetadataRepository.findById(oldFileId).ifPresent(metadata -> {
+                        try {
+                            java.nio.file.Path filePath = java.nio.file.Paths.get("uploads")
+                                    .toAbsolutePath().normalize().resolve(metadata.getStoredName());
+                            java.nio.file.Files.deleteIfExists(filePath);
+                        } catch (Exception ex) {
+                            log.warn("Failed to delete old avatar file from disk: {}", metadata.getStoredName(), ex);
+                        }
+                        fileMetadataRepository.delete(metadata);
+                    });
                 } catch (Exception e) {
-                    log.warn("Failed to delete old avatar: {}", user.getAvatarUrl(), e);
+                    log.warn("Failed to delete old avatar file id {}", oldFileId, e);
                 }
             }
-            user.setAvatarUrl(newAvatarUrl);
+            user.setAvatarFileId(newFileId);
         }
     }
 }

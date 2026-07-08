@@ -53,6 +53,9 @@ backend/src/main/resources/application.properties
 # Ignore common application property files (local/test/prod) anywhere in the repo
 **/application*.properties
 application.properties
+# Exception: production profile config is secret-free (env-var refs only) and
+# must be committed so Railway picks it up on deploy.
+!**/application-production.properties
 
 # Environment and secret files
 .env
@@ -108,3 +111,11 @@ markdown/
 .DS_Store
 Thumbs.db
 
+
+# Tool artifacts
+__pycache__/
+generated_tree.txt
+
+# Local editor / assistant caches (kept locally, never committed)
+.claude/
+.puku/

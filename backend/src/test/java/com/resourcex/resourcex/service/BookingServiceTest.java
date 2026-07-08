@@ -37,6 +37,12 @@ class BookingServiceTest {
     @Mock ItemRepository itemRepository;
     @Mock UserRepository userRepository;
     @Mock AuditLogService auditLogService;
+    @Mock NotificationService notificationService;
+    @Mock com.resourcex.resourcex.service.impl.BookingTrustHandler bookingTrustHandler;
+    @Mock com.resourcex.resourcex.service.impl.ItemAvailabilityService itemAvailabilityService;
+    @Mock com.resourcex.resourcex.service.impl.BookingMaintenanceService bookingMaintenanceService;
+    @Mock com.resourcex.resourcex.security.AccountAccessGuard accountAccessGuard;
+    @Mock StudentRestrictionManager restrictionManager;
     @InjectMocks BookingServiceImpl bookingService;
 
     private User owner;
@@ -69,8 +75,6 @@ class BookingServiceTest {
                 .totalPrice(new BigDecimal("300.00"))
                 .status(Booking.BookingStatus.PENDING)
                 .build();
-
-        mockSecurityContext(renter.getEmail());
     }
 
     // ─── createBooking ────────────────────────────────────────────────────────
@@ -90,6 +94,7 @@ class BookingServiceTest {
 
     @Test
     void createBooking_deletedItemIsRejected() {
+        mockSecurityContext(renter.getEmail());
         item.setStatus(Item.ItemStatus.DELETED);
         given(itemRepository.findByIdWithLock(item.getItemId())).willReturn(Optional.of(item));
         given(userRepository.findByEmailIgnoreCase(renter.getEmail())).willReturn(Optional.of(renter));
@@ -103,6 +108,7 @@ class BookingServiceTest {
 
     @Test
     void createBooking_overlappingDatesAreRejected() {
+        mockSecurityContext(renter.getEmail());
         given(itemRepository.findByIdWithLock(item.getItemId())).willReturn(Optional.of(item));
         given(userRepository.findByEmailIgnoreCase(renter.getEmail())).willReturn(Optional.of(renter));
         given(bookingRepository.findOverlappingBookings(any(), any(), any()))
@@ -128,9 +134,10 @@ class BookingServiceTest {
 
     @Test
     void approveBooking_rejectsNonPendingBooking() {
+        mockSecurityContext(owner.getEmail());
         pendingBooking.setStatus(Booking.BookingStatus.APPROVED);
         given(bookingRepository.findById(100L)).willReturn(Optional.of(pendingBooking));
-        given(userRepository.findByEmailIgnoreCase(renter.getEmail())).willReturn(Optional.of(renter));
+        given(userRepository.findByEmailIgnoreCase(owner.getEmail())).willReturn(Optional.of(owner));
 
         assertThatThrownBy(() -> bookingService.approveBooking(100L))
                 .isInstanceOf(ConflictException.class)
@@ -149,19 +156,21 @@ class BookingServiceTest {
 
     @Test
     void rejectBooking_rejectsNonPendingBooking() {
+        mockSecurityContext(owner.getEmail());
         pendingBooking.setStatus(Booking.BookingStatus.CANCELLED);
         given(bookingRepository.findById(100L)).willReturn(Optional.of(pendingBooking));
-        given(userRepository.findByEmailIgnoreCase(renter.getEmail())).willReturn(Optional.of(renter));
+        given(userRepository.findByEmailIgnoreCase(owner.getEmail())).willReturn(Optional.of(owner));
 
         assertThatThrownBy(() -> bookingService.rejectBooking(100L, "test"))
                 .isInstanceOf(ConflictException.class)
-                .hasMessageContaining("Only pending bookings can be rejected");
+                .hasMessageContaining("Only pending bookings can be declined");
     }
 
     // ─── cancelBooking ────────────────────────────────────────────────────────
 
     @Test
     void cancelBooking_completedBookingCannotBeCancelled() {
+        mockSecurityContext(renter.getEmail());
         pendingBooking.setStatus(Booking.BookingStatus.COMPLETED);
         given(bookingRepository.findById(100L)).willReturn(Optional.of(pendingBooking));
         given(userRepository.findByEmailIgnoreCase(renter.getEmail())).willReturn(Optional.of(renter));

@@ -15,6 +15,26 @@ export function formatDateRange(
 	return `${s} – ${e}`;
 }
 
+export function formatTime(date: string | Date | null | undefined): string {
+	if (!date) return "";
+	const d = typeof date === "string" ? new Date(date) : date;
+	if (isNaN(d.getTime())) return "";
+	return d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+}
+
+export function formatDateTime(date: string | Date | null | undefined): string {
+	if (!date) return "-";
+	const d = typeof date === "string" ? new Date(date) : date;
+	if (isNaN(d.getTime())) return "-";
+	return d.toLocaleString(undefined, {
+		year: "numeric",
+		month: "short",
+		day: "numeric",
+		hour: "2-digit",
+		minute: "2-digit",
+	});
+}
+
 export function formatRelativeTime(date: string | Date | null | undefined): string {
 	if (!date) return "—";
 	const d = typeof date === "string" ? new Date(date) : date;

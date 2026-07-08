@@ -2,12 +2,16 @@
 
 import React, { useEffect, useState } from "react";
 import Link from "next/link";
-import { Mail, Loader2 } from "lucide-react";
+import { Mail } from "lucide-react";
 import { LogoIcon } from "@/components/ui/Logo";
+import { Button } from "@/components/ui/Button";
 import AuthProgressOverlay, { AuthProgress } from "@/components/auth/AuthProgressOverlay";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
 import api from "@/lib/api";
+import { Reveal } from "@/components/ui/Reveal";
+import { TiltCard } from "@/components/ui/TiltCard";
+import { PageLoader } from "@/components/ui/PageLoader";
 
 export default function ForgotPasswordPage() {
 	const router = useRouter();
@@ -25,7 +29,7 @@ export default function ForgotPasswordPage() {
 		}
 	}, [authLoading, user, router]);
 
-	if (authLoading || user) return null;
+	if (authLoading || user) return <PageLoader message="Verifying session..." fullScreen />;
 
 	const handleSubmit = async (e: React.FormEvent) => {
 		e.preventDefault();
@@ -60,53 +64,50 @@ export default function ForgotPasswordPage() {
 	};
 
 	return (
-		<div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-background px-4 py-8 sm:px-6 lg:px-8">
+		<div className="graph-grid relative flex min-h-screen items-center justify-center overflow-hidden bg-background px-4 py-8 sm:px-6 lg:px-8">
 			<AuthProgressOverlay progress={progress} />
-			<div className="pointer-events-none absolute inset-0 overflow-hidden">
-				<div className="absolute left-[-10%] top-[-10%] h-72 w-72 rounded-full bg-primary opacity-20 blur-3xl sm:h-96 sm:w-96" />
-				<div className="absolute bottom-[-10%] right-[-10%] h-72 w-72 rounded-full bg-accent opacity-20 blur-3xl sm:h-[30rem] sm:w-[30rem]" />
-			</div>
 
-			<div className="relative z-10 w-full max-w-md px-1 sm:px-0">
-				<div className="rounded-2xl border border-borderLight bg-surface p-5 shadow-xl sm:p-6 md:p-8">
+			<Reveal className="relative z-10 w-full max-w-md px-1 sm:px-0">
+				<TiltCard className="glass-surface rounded-2xl p-5 shadow-md sm:p-6 md:p-8">
 					<div className="mb-6 text-center sm:mb-8">
-						<div className="mb-3 flex justify-center">
+						<div className="mb-4 flex justify-center">
 							<LogoIcon size={48} />
 						</div>
 
 						<h1 className="text-2xl font-bold tracking-tight text-textPrimary sm:text-3xl">
-							Forgot Password
+							Forgot <span className="text-gradient-brand italic">password.</span>
 						</h1>
 
-						<p className="mt-2 text-sm text-textSecondary sm:text-base">
-							Enter your email address and we&apos;ll send you a link to reset your password.
+						<p className="mt-2 text-sm text-textSecondary">
+							Enter your email and we&apos;ll send a code to reset your password.
 						</p>
 					</div>
 
 					<form className="space-y-4 sm:space-y-5" onSubmit={handleSubmit}>
 						{error && (
-							<div className="rounded-lg border border-error bg-errorLight px-3 py-2 text-sm text-error">
+							<div role="alert" className="rounded-xl border border-error/40 bg-errorLight px-3 py-2 text-sm font-medium text-errorDark">
 								{error}
 							</div>
 						)}
 
 						{message && (
-							<div className="rounded-lg border border-success bg-successLight px-3 py-2 text-sm text-successDark">
+							<div role="status" className="rounded-xl border border-success/40 bg-successLight px-3 py-2 text-sm font-medium text-successDark">
 								{message}
 							</div>
 						)}
 
 						<div className="space-y-1.5">
-							<label className="block text-sm font-medium text-textPrimary">
-								Email
+							<label htmlFor="fp-email" className="block text-[11px] font-bold uppercase tracking-[0.1em] text-primary">
+								Email <span className="text-error">*</span>
 							</label>
 							<div className="relative">
 								<Mail className="absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-textTertiary" />
 								<input
+									id="fp-email"
 									type="email"
 									value={email}
 									onChange={(e) => setEmail(e.target.value)}
-									className="w-full rounded-lg border border-outlineVariant bg-surface py-3 pl-10 pr-4 text-textPrimary outline-none transition-all focus:border-primary focus:ring-2 focus:ring-primary"
+									className="w-full rounded-xl border border-border bg-card py-3 pl-10 pr-4 text-textPrimary outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20 placeholder:text-textTertiary"
 									placeholder="Enter your email"
 									maxLength={100}
 									required
@@ -114,23 +115,19 @@ export default function ForgotPasswordPage() {
 							</div>
 						</div>
 
-						<button
-							type="submit"
-							disabled={loading}
-							className="mt-2 flex w-full items-center justify-center gap-2 rounded-lg bg-primary px-4 py-3 font-medium text-onPrimary shadow-md transition-colors hover:bg-primaryDark hover:shadow-lg focus:ring-4 focus:ring-primaryLight outline-none disabled:cursor-not-allowed disabled:opacity-70">
-							{loading ? (
-								<Loader2 className="h-5 w-5 animate-spin" />
-							) : (
-								"Send Reset Link"
-							)}
-						</button>
+						<Button type="submit" loading={loading} fullWidth className="mt-2">
+							{loading ? "Sending…" : "Send Reset Link"}
+						</Button>
 					</form>
 
-					<div className="mt-6 text-center sm:mt-8">
-						
-					</div>
-				</div>
-			</div>
+					<p className="mt-6 text-center text-sm text-textSecondary sm:mt-8">
+						Remembered it?{" "}
+						<Link href="/auth/login" className="font-semibold text-primary transition-colors hover:text-primaryDark">
+							Back to login
+						</Link>
+					</p>
+				</TiltCard>
+			</Reveal>
 		</div>
 	);
 }

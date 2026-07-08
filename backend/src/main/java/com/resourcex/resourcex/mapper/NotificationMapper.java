@@ -30,8 +30,6 @@ public class NotificationMapper {
 
                 .notificationType(notification.getNotificationType())
 
-                .title(notification.getTitle())
-
                 .message(notification.getMessage())
 
                 .relatedEntityType(notification.getRelatedEntityType())
@@ -40,17 +38,9 @@ public class NotificationMapper {
 
                 .isRead(notification.getIsRead())
 
-                .createdByUserId(
-                        notification.getCreatedBy() != null
-                                ? notification.getCreatedBy().getUserId()
-                                : null
-                )
+                .createdByUserId(null)
 
-                .createdByUserName(
-                        notification.getCreatedBy() != null
-                                ? notification.getCreatedBy().getName()
-                                : null
-                )
+                .createdByUserName(null)
 
                 .createdAt(notification.getCreatedAt())
 

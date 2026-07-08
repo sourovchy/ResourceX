@@ -20,6 +20,7 @@ import { useToast } from "@/context/ToastContext";
 import { ConfirmModal } from "@/components/ui/ConfirmModal";
 import { Select } from "@/components/ui/Select";
 import { DataTable, ColumnDef } from "@/components/ui/DataTable";
+import { TiltCard } from "@/components/ui/TiltCard";
 
 type StaffRole = "ADMIN" | "MODERATOR" | "SUPER_ADMIN";
 
@@ -126,7 +127,12 @@ export default function StaffManagementPage() {
 			const payload = response.data;
 			
 			let members = [];
-			if (payload?.data?.content) {
+			if (payload?.content) {
+				// Raw Spring Page — current API shape (success responses are unwrapped).
+				members = payload.content;
+				setTotalPages(payload.totalPages || 0);
+				setTotalStaff(payload.totalElements || 0);
+			} else if (payload?.data?.content) {
 				members = payload.data.content;
 				setTotalPages(payload.data.totalPages || 0);
 				setTotalStaff(payload.data.totalElements || 0);
@@ -283,7 +289,7 @@ export default function StaffManagementPage() {
 	};
 
 	return (
-		<div className="w-full space-y-6 px-3 pb-16 sm:space-y-8 sm:px-6 lg:px-8">
+		<div className="w-full space-y-6 px-3 pb-16 sm:space-y-8 sm:px-6 lg:px-8 graph-grid page-enter">
 			<ConfirmModal
 				isOpen={confirmTarget !== null}
 				isDestructive={confirmTarget?.type === "remove"}
@@ -311,16 +317,12 @@ export default function StaffManagementPage() {
 				onCancel={() => setConfirmTarget(null)}
 			/>
 			<div className="space-y-8">
-				<section className="rounded-3xl border border-borderLight bg-surface p-6 shadow-sm">
+				<section className="glass-surface relative overflow-hidden rounded-2xl p-6 shadow-sm">
 					<div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
 						<div className="max-w-3xl">
-							<div className="inline-flex items-center gap-2 rounded-full bg-primary/10 px-4 py-2 text-sm font-semibold text-primary">
-								<Shield className="h-4 w-4" />
-								Super Admin Control Panel
-							</div>
-							<h1 className="mt-4 text-3xl font-bold text-textPrimary tracking-tight">
-								Staff Management
-							</h1>
+							<h2 className="mt-0.5 text-3xl font-bold tracking-tighter text-textPrimary">
+								Staff <span className="text-gradient-brand italic">Management.</span>
+							</h2>
 							<p className="mt-3 text-sm leading-6 text-textSecondary">
 								Create and manage admin and moderator users from one secure
 								interface.
@@ -350,7 +352,8 @@ export default function StaffManagementPage() {
 				)}
 
 				<div className="grid gap-6 lg:grid-cols-[minmax(0,420px)_minmax(0,1fr)]">
-					<section className="rounded-3xl border border-borderLight bg-surface p-4 shadow-sm sm:p-6 lg:sticky lg:top-6 lg:self-start">
+					<TiltCard maxTilt={3} glare={true} className="lg:sticky lg:top-6 lg:self-start">
+						<section className="rounded-3xl border border-borderLight bg-surface p-4 shadow-sm sm:p-6 h-full">
 						<div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
 							<div>
 								<h2 className="text-xl font-semibold text-textPrimary">
@@ -490,7 +493,7 @@ export default function StaffManagementPage() {
 							<button
 								type="submit"
 								disabled={isSubmitting}
-								className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-primary px-4 text-sm font-semibold text-onPrimary shadow-sm transition hover:bg-primaryDark disabled:cursor-not-allowed disabled:opacity-70">
+								className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-full bg-primary px-4 text-sm font-bold italic text-onPrimary shadow-sm transition hover:bg-primaryDark disabled:cursor-not-allowed disabled:opacity-70">
 								{isSubmitting ? (
 									<Loader2 className="h-4 w-4 animate-spin" />
 								) : (
@@ -499,9 +502,11 @@ export default function StaffManagementPage() {
 								{isSubmitting ? "Creating Account..." : "Create Account"}
 							</button>
 						</form>
-					</section>
+						</section>
+					</TiltCard>
 
-					<section className="rounded-3xl border border-borderLight bg-card p-4 shadow-sm sm:p-6 min-w-0">
+					<TiltCard maxTilt={1.5} glare={true} className="h-full">
+						<section className="rounded-3xl border border-borderLight bg-card p-4 shadow-sm sm:p-6 min-w-0 h-full">
 						<div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
 							<div>
 								<h2 className="text-xl font-semibold text-textPrimary">
@@ -555,24 +560,18 @@ export default function StaffManagementPage() {
 											
 											return (
 												<div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
-													{isSelfSuperAdmin ? (
-														<span className="inline-flex items-center px-4 py-2 text-sm font-medium text-slate-400 bg-slate-50 border border-slate-200 rounded-xl cursor-not-allowed">
-															Cannot delete self
-														</span>
-													) : (
-														<button
-															type="button"
-															onClick={() => void handleRemoveStaff(member)}
-															disabled={removingId === member.id}
-															className="inline-flex items-center gap-2 rounded-xl border border-rose-200 bg-rose-50 px-4 py-2 text-sm font-medium text-rose-700 transition hover:bg-rose-100 disabled:cursor-not-allowed disabled:opacity-50">
-															{removingId === member.id ? (
-																<Loader2 className="h-4 w-4 animate-spin" />
-															) : (
-																<Trash2 className="h-4 w-4" />
-															)}
-															Delete
-														</button>
-													)}
+													<button
+														type="button"
+														onClick={() => void handleRemoveStaff(member)}
+														disabled={isSelfSuperAdmin || removingId === member.id}
+														className="inline-flex items-center gap-2 rounded-xl border border-rose-200 bg-rose-50 px-4 py-2 text-sm font-medium text-rose-700 transition hover:bg-rose-100 disabled:cursor-not-allowed disabled:opacity-50">
+														{removingId === member.id ? (
+															<Loader2 className="h-4 w-4 animate-spin" />
+														) : (
+															<Trash2 className="h-4 w-4" />
+														)}
+														Delete
+													</button>
 												</div>
 											);
 										}
@@ -587,7 +586,8 @@ export default function StaffManagementPage() {
 								emptyDescription="Use the form to add the first admin or moderator account."
 							/>
 						</div>
-					</section>
+						</section>
+					</TiltCard>
 				</div>
 			</div>
 		</div>
@@ -618,14 +618,17 @@ function Field({
 
 function StatCard({ title, value }: { title: string; value: number }) {
 	return (
-		<div className="w-full rounded-2xl border border-borderLight bg-surfaceVariant px-4 py-4 text-left shadow-sm sm:min-w-[180px]">
-			<div className="text-xs font-semibold uppercase tracking-[0.16em] text-textSecondary">
+		<TiltCard
+			maxTilt={6}
+			glare={true}
+			className="w-full rounded-2xl border border-borderLight bg-surfaceVariant px-4 py-4 text-left shadow-sm sm:min-w-[180px] transition-all duration-300 hover:border-primary/40 hover:shadow-md hover:bg-surfaceVariant/80">
+			<div className="text-xs font-semibold uppercase tracking-[0.16em] text-textSecondary relative z-10">
 				{title}
 			</div>
-			<div className="mt-2 text-3xl font-bold leading-none text-textPrimary">
+			<div className="mt-2 text-3xl font-bold leading-none text-textPrimary relative z-10">
 				{value}
 			</div>
-		</div>
+		</TiltCard>
 	);
 }
 

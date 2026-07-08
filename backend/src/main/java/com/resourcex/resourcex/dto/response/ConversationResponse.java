@@ -25,8 +25,6 @@ public class ConversationResponse {
     private Boolean participantTwoIsStaff;
     private String participantTwoAvatarUrl;
 
-    private Long bookingId;
-    private Long disputeId;
 
     private Long lastMessageId;
     private String lastMessageContent;

@@ -35,14 +35,14 @@ export const Pagination: React.FC<PaginationProps> = ({ pageIndex, totalPages, o
                 <button
                     onClick={() => onPageChange(pageIndex - 1)}
                     disabled={pageIndex === 0}
-                    className="relative inline-flex flex-1 items-center justify-center px-4 py-2.5 text-sm font-medium text-textPrimary bg-white border border-border rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="relative inline-flex flex-1 items-center justify-center px-4 py-2.5 text-sm font-medium text-textPrimary bg-surface border border-borderLight rounded-full hover:bg-surfaceVariant enabled:active:scale-[0.96] transition-all duration-200 ease-out disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                     Previous
                 </button>
                 <button
                     onClick={() => onPageChange(pageIndex + 1)}
                     disabled={pageIndex >= totalPages - 1}
-                    className="relative inline-flex flex-1 items-center justify-center px-4 py-2.5 text-sm font-medium text-textPrimary bg-white border border-border rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="relative inline-flex flex-1 items-center justify-center px-4 py-2.5 text-sm font-medium text-textPrimary bg-surface border border-borderLight rounded-full hover:bg-surfaceVariant enabled:active:scale-[0.96] transition-all duration-200 ease-out disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                     Next
                 </button>
@@ -54,11 +54,11 @@ export const Pagination: React.FC<PaginationProps> = ({ pageIndex, totalPages, o
                     </p>
                 </div>
                 <div>
-                    <nav className="relative z-0 inline-flex flex-wrap rounded-md shadow-sm -space-x-px max-w-full overflow-x-auto" aria-label="Pagination">
+                    <nav className="relative z-0 inline-flex flex-wrap items-center gap-1 sm:gap-2 max-w-full overflow-x-auto" aria-label="Pagination">
                         <button
                             onClick={() => onPageChange(pageIndex - 1)}
                             disabled={pageIndex === 0}
-                            className="relative inline-flex items-center px-3 py-2 rounded-l-md border border-border bg-white text-sm font-medium text-textSecondary hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                            className="relative inline-flex items-center px-3 py-2 rounded-full border border-borderLight bg-surface text-sm font-medium text-textSecondary hover:bg-surfaceVariant enabled:active:scale-[0.96] transition-all duration-200 ease-out disabled:opacity-50 disabled:cursor-not-allowed"
                         >
                             <span className="sr-only">Previous</span>
                             <ChevronLeft className="h-5 w-5" aria-hidden="true" />
@@ -68,12 +68,12 @@ export const Pagination: React.FC<PaginationProps> = ({ pageIndex, totalPages, o
                             <>
                                 <button
                                     onClick={() => onPageChange(0)}
-                                    className="relative inline-flex items-center px-3 sm:px-4 py-2 border border-border bg-white text-sm font-medium text-textSecondary hover:bg-gray-50"
+                                    className="relative inline-flex items-center px-3.5 sm:px-4 py-2 rounded-full border border-borderLight bg-surface text-sm font-medium text-textSecondary hover:bg-surfaceVariant enabled:active:scale-[0.96] transition-all duration-200 ease-out"
                                 >
                                     1
                                 </button>
                                 {pages[0] > 1 && (
-                                    <span className="relative inline-flex items-center px-3 sm:px-4 py-2 border border-border bg-gray-50 text-sm font-medium text-textSecondary">
+                                    <span className="relative inline-flex items-center px-2 py-2 text-sm font-medium text-textTertiary">
                                         ...
                                     </span>
                                 )}
@@ -85,10 +85,10 @@ export const Pagination: React.FC<PaginationProps> = ({ pageIndex, totalPages, o
                                 key={page}
                                 onClick={() => onPageChange(page)}
                                 aria-current={page === pageIndex ? "page" : undefined}
-                                className={`relative inline-flex items-center px-3 sm:px-4 py-2 border text-sm font-medium whitespace-nowrap
+                                className={`relative inline-flex items-center px-3.5 sm:px-4 py-2 rounded-full border text-sm font-medium whitespace-nowrap enabled:active:scale-[0.96] transition-all duration-200 ease-out
                                     ${page === pageIndex 
-                                        ? "z-10 bg-primaryLight border-primary text-primary" 
-                                        : "bg-white border-border text-textSecondary hover:bg-gray-50"
+                                        ? "z-10 bg-primary border-primary text-onPrimary shadow-sm font-bold" 
+                                        : "bg-surface border-borderLight text-textSecondary hover:bg-surfaceVariant"
                                     }
                                 `}
                             >
@@ -99,13 +99,13 @@ export const Pagination: React.FC<PaginationProps> = ({ pageIndex, totalPages, o
                         {pages[pages.length - 1] < totalPages - 1 && (
                             <>
                                 {pages[pages.length - 1] < totalPages - 2 && (
-                                    <span className="relative inline-flex items-center px-3 sm:px-4 py-2 border border-border bg-gray-50 text-sm font-medium text-textSecondary">
+                                    <span className="relative inline-flex items-center px-2 py-2 text-sm font-medium text-textTertiary">
                                         ...
                                     </span>
                                 )}
                                 <button
                                     onClick={() => onPageChange(totalPages - 1)}
-                                    className="relative inline-flex items-center px-3 sm:px-4 py-2 border border-border bg-white text-sm font-medium text-textSecondary hover:bg-gray-50"
+                                    className="relative inline-flex items-center px-3.5 sm:px-4 py-2 rounded-full border border-borderLight bg-surface text-sm font-medium text-textSecondary hover:bg-surfaceVariant enabled:active:scale-[0.96] transition-all duration-200 ease-out"
                                 >
                                     {totalPages}
                                 </button>
@@ -115,7 +115,7 @@ export const Pagination: React.FC<PaginationProps> = ({ pageIndex, totalPages, o
                         <button
                             onClick={() => onPageChange(pageIndex + 1)}
                             disabled={pageIndex >= totalPages - 1}
-                            className="relative inline-flex items-center px-3 py-2 rounded-r-md border border-border bg-white text-sm font-medium text-textSecondary hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                            className="relative inline-flex items-center px-3 py-2 rounded-full border border-borderLight bg-surface text-sm font-medium text-textSecondary hover:bg-surfaceVariant enabled:active:scale-[0.96] transition-all duration-200 ease-out disabled:opacity-50 disabled:cursor-not-allowed"
                         >
                             <span className="sr-only">Next</span>
                             <ChevronRight className="h-5 w-5" aria-hidden="true" />

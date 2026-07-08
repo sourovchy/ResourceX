@@ -36,6 +36,7 @@ public class MessageServiceImpl implements MessageService {
     private final MessageValidator messageValidator;
     private final SimpMessagingTemplate messagingTemplate;
     private final NotificationService notificationService;
+    private final com.resourcex.resourcex.security.AccountAccessGuard accountAccessGuard;
 
     @Override
     @Transactional
@@ -43,6 +44,10 @@ public class MessageServiceImpl implements MessageService {
         messageValidator.validateRequest(request);
 
         User currentUser = getAuthenticatedUser(currentUserEmail);
+
+        // Only approved (ACTIVE) accounts may send messages.
+        accountAccessGuard.requireActive(currentUser);
+
         Conversation conversation = getConversationForUser(conversationId, currentUser.getUserId());
 
         User receiver = getOtherParticipant(conversation, currentUser.getUserId());
@@ -56,7 +61,6 @@ public class MessageServiceImpl implements MessageService {
         Message message = Message.builder()
                 .conversation(conversation)
                 .senderUser(currentUser)
-                .receiverUser(receiver)
                 .content(request.getContent().trim())
                 .isRead(false)
                 .build();
@@ -81,7 +85,6 @@ public class MessageServiceImpl implements MessageService {
         notificationService.createMessageNotification(
                 receiver.getUserId(),
                 conversation.getConversationId(),
-                "New message from " + currentUser.getName(),
                 preview,
                 currentUser.getUserId()
         );
@@ -97,11 +100,7 @@ public class MessageServiceImpl implements MessageService {
 
         markConversationAsRead(currentUserEmail, conversationId);
 
-        LocalDateTime clearedAt = conversation.getParticipantOneUser().getUserId().equals(currentUser.getUserId())
-                ? conversation.getParticipantOneClearedAt()
-                : conversation.getParticipantTwoClearedAt();
-
-        return messageRepository.findVisibleMessagesForUser(conversation.getConversationId(), clearedAt)
+        return messageRepository.findVisibleMessagesForUser(conversation.getConversationId(), null)
                 .stream()
                 .map(messageMapper::toResponse)
                 .toList();
@@ -115,8 +114,7 @@ public class MessageServiceImpl implements MessageService {
 
         messageRepository.markConversationMessagesAsRead(
                 conversation.getConversationId(),
-                currentUser.getUserId(),
-                LocalDateTime.now()
+                currentUser.getUserId()
         );
     }
 
@@ -130,7 +128,7 @@ public class MessageServiceImpl implements MessageService {
 
         messageValidator.validateMessageOwnership(message, currentUser.getUserId());
 
-        messageRepository.markMessageAsRead(message.getMessageId(), currentUser.getUserId(), LocalDateTime.now());
+        messageRepository.markMessageAsRead(message.getMessageId(), currentUser.getUserId());
     }
 
     private Conversation getConversationForUser(Long conversationId, Long currentUserId) {

@@ -3,7 +3,8 @@
 import React, { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import SafeImage from "@/components/ui/SafeImage";
-import { AlertTriangle, ArrowRight, Clock, Loader2 } from "lucide-react";
+import { Card } from "@/components/ui/Card";
+import { AlertTriangle, ArrowRight, CalendarX, Clock, Loader2 } from "lucide-react";
 import api from "@/lib/api";
 import { ConfirmModal } from "@/components/ui/ConfirmModal";
 import { useToast } from "@/context/ToastContext";
@@ -12,26 +13,31 @@ import { extractErrorMessage } from "@/lib/errorUtils";
 import { useAutoRefresh } from "@/hooks/useAutoRefresh";
 import { Skeleton } from "@/components/ui/Skeleton";
 
-// Backend statuses: PENDING | APPROVED | COMPLETED | CANCELLED | REJECTED
-const STATUS_STYLES: Record<string, { label: string; className: string }> = {
-	PENDING:   { label: "Awaiting Owner Response", className: "bg-warningLight text-warningDark" },
-	APPROVED:  { label: "Approved",  className: "bg-primaryLight text-primaryDark" },
-	COMPLETED: { label: "Completed", className: "bg-successLight text-successDark" },
-	CANCELLED: { label: "Cancelled", className: "bg-errorLight text-errorDark" },
-	REJECTED:  { label: "Rejected",  className: "bg-errorLight text-error" },
-};
+import { StatusBadge } from "@/components/ui/StatusBadge";
+import { PageEmpty } from "@/components/ui/PageEmpty";
+import BookingCard from "@/components/cards/BookingCard";
+import { Select } from "@/components/ui/Select";
+import { useAuth } from "@/context/AuthContext";
+import { reviewService } from "@/lib/services/reviewService";
+import { ReviewModal } from "@/components/review/ReviewModal";
 
-const TABS = ["All", "Pending", "Approved", "Completed", "Cancelled"] as const;
+const TABS = ["All", "Pending", "Approved", "Completed", "Rejected"] as const;
 type Tab = (typeof TABS)[number];
 
 export default function StudentBookings() {
 	const { toast } = useToast();
+	const { user } = useAuth();
 	const [bookings, setBookings] = useState<any[]>([]);
+	const [reviewedBookingIds, setReviewedBookingIds] = useState<Set<number>>(new Set());
 	const [loading, setLoading] = useState(true);
 	const [error, setError] = useState<string | null>(null);
 	const [activeTab, setActiveTab] = useState<Tab>("All");
+	const [sortBy, setSortBy] = useState<"recent" | "oldest">("recent");
 	const [actionLoading, setActionLoading] = useState<number | null>(null);
 	const [cancelTarget, setCancelTarget] = useState<number | null>(null);
+	
+	const [reviewModalOpen, setReviewModalOpen] = useState(false);
+	const [selectedBookingForReview, setSelectedBookingForReview] = useState<any>(null);
 
 	const load = async () => {
 		setLoading(true);
@@ -39,6 +45,11 @@ export default function StudentBookings() {
 		try {
 			const res = await api.get("/bookings/me");
 			setBookings(Array.isArray(res.data) ? res.data : []);
+
+			if (user) {
+				const userReviews = await reviewService.getReviewsByReviewerId(user.userId);
+				setReviewedBookingIds(new Set(userReviews.map((r) => r.bookingId)));
+			}
 		} catch (err) {
 			setError(extractErrorMessage(err));
 		} finally {
@@ -46,17 +57,42 @@ export default function StudentBookings() {
 		}
 	};
 
-	useEffect(() => { load(); }, []);
+	// We only want to reload when auto refresh tells us to
+	useEffect(() => {
+		if (user) {
+			load();
+		}
+		// eslint-disable-next-line react-hooks/exhaustive-deps
+	}, [user]);
 
 	// Reflect owner approvals/rejections when returning to the tab
 	useAutoRefresh(load, { intervalMs: 60_000 });
 
-	const filtered = useMemo(() => {
-		if (activeTab === "All") return bookings;
-		const key = activeTab.toUpperCase();
-		// "Approved" tab shows APPROVED bookings only
-		return bookings.filter((b) => b.status === key);
-	}, [bookings, activeTab]);
+	const filteredAndSorted = useMemo(() => {
+		let result = bookings;
+		if (activeTab !== "All") {
+			const key = activeTab.toUpperCase();
+			result = bookings.filter((b) => b.status === key);
+		}
+		
+		return result.sort((a, b) => {
+			const dateA = new Date(a.endDate || a.startDate || a.createdAt || 0);
+			const dateB = new Date(b.endDate || b.startDate || b.createdAt || 0);
+			return sortBy === "recent"
+				? dateB.getTime() - dateA.getTime()
+				: dateA.getTime() - dateB.getTime();
+		});
+	}, [bookings, activeTab, sortBy]);
+
+	const stats = useMemo(() => {
+		let completed = 0, rejected = 0;
+		for (const b of bookings) {
+			const s = (b.status || "").toUpperCase();
+			if (s === "COMPLETED") completed++;
+			if (s === "REJECTED") rejected++;
+		}
+		return { completed, rejected };
+	}, [bookings]);
 
 	const cancelBooking = async (bookingId: number) => {
 		setCancelTarget(null);
@@ -76,18 +112,16 @@ export default function StudentBookings() {
 		return (
 			<div className="mx-auto max-w-4xl space-y-5 px-3 pb-6 sm:space-y-6 sm:px-0">
 				<Skeleton className="h-7 w-40" />
-				<div className="space-y-4">
-					{Array.from({ length: 4 }).map((_, i) => (
-						<div
-							key={i}
-							className="flex flex-col gap-4 rounded-2xl border border-borderLight bg-surface p-4 shadow-sm sm:flex-row sm:gap-5 sm:p-5">
-							<Skeleton className="h-40 w-full shrink-0 rounded-xl sm:h-24 sm:w-24" />
-							<div className="flex-1 space-y-3">
-								<Skeleton className="h-4 w-1/2" />
-								<Skeleton className="h-3 w-2/3" />
-								<Skeleton className="h-3 w-1/3" />
+				<div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 xl:gap-5">
+					{Array.from({ length: 8 }).map((_, i) => (
+						<Card key={i} padding="none" className="flex flex-col overflow-hidden">
+							<Skeleton className="aspect-[4/3] w-full shrink-0" />
+							<div className="flex-1 space-y-3 p-3 sm:p-4">
+								<Skeleton className="h-4 w-3/4" />
+								<Skeleton className="h-3 w-1/2" />
+								<Skeleton className="h-3 w-full" />
 							</div>
-						</div>
+						</Card>
 					))}
 				</div>
 			</div>
@@ -95,23 +129,43 @@ export default function StudentBookings() {
 	}
 
 	return (
-		<div className="w-full space-y-5 px-3 pb-6 sm:space-y-6 sm:px-0 sm:pb-0">
-			<h1 className="text-xl font-bold text-textPrimary sm:text-2xl">My Bookings</h1>
+		<div className="w-full space-y-6 sm:space-y-8 px-3 pb-6 sm:px-0 sm:pb-0">
+			<div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+				<div className="min-w-0">
+					<h2 className="mt-1 text-3xl font-bold tracking-tighter text-textPrimary sm:text-5xl">
+						My <span className="text-gradient-brand italic">Bookings.</span>
+					</h2>
+					<div className="mt-3 flex flex-wrap gap-4 text-sm text-textSecondary">
+						<span>Completed Rentals: <strong className="text-textPrimary">{stats.completed}</strong></span>
+						<span>Rejected Requests: <strong className="text-textPrimary">{stats.rejected}</strong></span>
+					</div>
+				</div>
+			</div>
 
-			{/* Tab bar */}
-			<div className="flex overflow-x-auto border-b border-borderLight [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-				{TABS.map((tab) => (
-					<button
-						key={tab}
-						onClick={() => setActiveTab(tab)}
-						className={`whitespace-nowrap px-3 py-3 text-sm font-semibold transition-colors sm:px-4 ${
-							activeTab === tab
-								? "border-b-2 border-primary text-primary"
-								: "text-textSecondary hover:text-textPrimary"
-						}`}>
-						{tab}
-					</button>
-				))}
+			{/* Filters */}
+			<div className="relative z-50 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+				<div className="w-full sm:w-48 shrink-0">
+					<Select
+						value={activeTab}
+						onChange={(val) => setActiveTab(val as Tab)}
+						options={TABS.map((tab) => ({
+							value: tab,
+							label: tab === "All" ? "All Statuses" : tab,
+						}))}
+						placeholder="All Statuses"
+					/>
+				</div>
+
+				<div className="w-full sm:w-48 shrink-0">
+					<Select
+						value={sortBy}
+						onChange={(val) => setSortBy(val as "recent" | "oldest")}
+						options={[
+							{ value: "recent", label: "Most Recent" },
+							{ value: "oldest", label: "Oldest First" },
+						]}
+					/>
+				</div>
 			</div>
 
 			{error && (
@@ -121,108 +175,32 @@ export default function StudentBookings() {
 				</div>
 			)}
 
-			{filtered.length === 0 && !error && (
-				<div className="rounded-2xl border border-borderLight bg-surface px-4 py-16 text-center text-sm text-textSecondary">
-					{activeTab === "All"
-						? "You have no bookings yet."
-						: `No ${activeTab.toLowerCase()} bookings.`}
-				</div>
+			{filteredAndSorted.length === 0 && !error && (
+				<PageEmpty
+					icon={CalendarX}
+					title={activeTab === "All" ? "No bookings yet" : `No ${activeTab.toLowerCase()} bookings`}
+					description={
+						activeTab === "All"
+							? "Your booking requests will appear here once you reserve an item."
+							: "Try a different status filter to see your other bookings."
+					}
+				/>
 			)}
 
-			<div className="space-y-4 pb-2 sm:space-y-5">
-				{filtered.map((booking) => {
-					const rawStatus = (booking.status ?? "PENDING").toUpperCase();
-					const meta = STATUS_STYLES[rawStatus] ?? {
-						label: rawStatus,
-						className: "bg-surfaceVariant text-textSecondary",
-					};
-					const isProcessing = actionLoading === booking.bookingId;
-					const isPending   = rawStatus === "PENDING";
-					const isApproved  = rawStatus === "APPROVED";
-					const isCompleted = rawStatus === "COMPLETED";
-
-					return (
-						<div
-							key={booking.bookingId}
-							className="flex flex-col gap-4 rounded-2xl border border-borderLight bg-surface p-4 shadow-sm sm:flex-row sm:gap-5 sm:p-5">
-							{/* Item image */}
-							<div className="relative h-40 w-full shrink-0 overflow-hidden rounded-xl sm:h-24 sm:w-24">
-								<SafeImage
-									src={booking.item?.imageUrls?.[0]}
-									alt={booking.item?.title ?? "Item"}
-									fill
-									className="object-cover"
-								/>
-							</div>
-
-							{/* Info */}
-							<div className="flex-1 min-w-0">
-								<div className="mb-2 flex flex-wrap items-center gap-2">
-									<h2 className="font-bold text-textPrimary">
-										{booking.item?.title ?? "Unknown Item"}
-									</h2>
-									<span className={`rounded-md px-2.5 py-1 text-xs font-bold ${meta.className}`}>
-										{meta.label}
-									</span>
-								</div>
-
-								<div className="space-y-1.5 text-sm text-textSecondary">
-									<div className="flex items-center gap-2">
-										<Clock className="h-3.5 w-3.5 text-primary" />
-										{formatDateRange(booking.startDate, booking.endDate)}
-									</div>
-									<div>
-										From{" "}
-										<strong className="text-textPrimary">
-											{booking.item?.owner?.name ?? "Unknown Owner"}
-										</strong>
-									</div>
-									<div>
-										Total:{" "}
-										<strong className="text-primary">
-											৳&thinsp;{Number(booking.totalPrice).toLocaleString()}
-										</strong>
-									</div>
-									{booking.rejectionReason && rawStatus === "REJECTED" && (
-										<div className="mt-1 rounded-xl bg-errorLight/30 px-3 py-2 text-xs text-errorDark">
-											<strong>Reason:</strong> {booking.rejectionReason}
-										</div>
-									)}
-								</div>
-							</div>
-
-							{/* Actions */}
-							<div className="flex w-full flex-col gap-2 sm:w-auto">
-								{/* Cancel — only while PENDING */}
-								{isPending && (
-									<button
-										disabled={isProcessing}
-										onClick={() => setCancelTarget(booking.bookingId)}
-										className="w-full rounded-xl border border-errorLight bg-errorLight px-4 py-2 text-sm font-bold text-errorDark transition-colors hover:bg-error hover:text-white disabled:opacity-50 sm:w-auto">
-										{isProcessing ? (
-											<span className="flex items-center justify-center gap-1.5">
-												<Loader2 className="h-3.5 w-3.5 animate-spin" />
-												Cancelling…
-											</span>
-										) : (
-											"Cancel Request"
-										)}
-									</button>
-								)}
-
-								{/* Leave Review — only when COMPLETED */}
-								{isCompleted && (
-									<Link
-										href={`/borrow/review/${booking.bookingId}`}
-										className="flex items-center justify-center gap-1 rounded-xl border border-primaryLight bg-primaryLight px-4 py-2 text-sm font-bold text-primary transition-colors hover:bg-primary hover:text-white">
-										Leave Review
-										<ArrowRight className="h-3 w-3" />
-									</Link>
-								)}
-							</div>
-						</div>
-					);
-				})}
+			<div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 xl:gap-5 pb-2 stagger-children">
+				{filteredAndSorted.map((booking) => (
+					<BookingCard
+						key={booking.bookingId}
+						booking={booking}
+						isProcessing={actionLoading === booking.bookingId}
+						reviewed={reviewedBookingIds.has(booking.bookingId)}
+						onCancel={setCancelTarget}
+						onLeaveReview={(b) => {
+							setSelectedBookingForReview(b);
+							setReviewModalOpen(true);
+						}}
+					/>
+				))}
 			</div>
 
 			<ConfirmModal
@@ -235,6 +213,22 @@ export default function StudentBookings() {
 				onConfirm={() => cancelTarget !== null && cancelBooking(cancelTarget)}
 				onCancel={() => setCancelTarget(null)}
 			/>
+
+			{selectedBookingForReview && (
+				<ReviewModal
+					isOpen={reviewModalOpen}
+					onClose={() => {
+						setReviewModalOpen(false);
+						setTimeout(() => setSelectedBookingForReview(null), 300);
+					}}
+					bookingId={selectedBookingForReview.bookingId}
+					itemTitle={selectedBookingForReview.item?.title ?? "Unknown Item"}
+					itemImageUrl={selectedBookingForReview.item?.imageUrls?.[0] ?? null}
+					onSuccess={() => {
+						setReviewedBookingIds(prev => new Set(prev).add(selectedBookingForReview.bookingId));
+					}}
+				/>
+			)}
 		</div>
 	);
 }

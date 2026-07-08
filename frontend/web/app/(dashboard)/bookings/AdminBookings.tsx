@@ -6,16 +6,20 @@ import {
 	Search,
 	CalendarCheck,
 	AlertTriangle,
-	Loader2,
 	X,
+	Filter,
 } from "lucide-react";
 import api from "@/lib/api";
+import { Card } from "@/components/ui/Card";
 import { extractErrorMessage, logErrorDetails } from "@/lib/errorUtils";
 import { formatShortDate } from "@/lib/dateUtils";
 import { DataTable } from "@/components/ui/DataTable";
 import { useAutoRefresh } from "@/hooks/useAutoRefresh";
 import { useToast } from "@/context/ToastContext";
 import { Select } from "@/components/ui/Select";
+import { StatusBadge } from "@/components/ui/StatusBadge";
+import { PageLoader } from "@/components/ui/PageLoader";
+import { PageError } from "@/components/ui/PageError";
 
 type FilterType =
 	| "ALL"
@@ -23,7 +27,6 @@ type FilterType =
 	| "OVERDUE"
 	| "COMPLETED"
 	| "PENDING"
-	| "CANCELLED"
 	| "REJECTED";
 
 type BookingStatus =
@@ -58,28 +61,17 @@ interface BookingApiRow {
 	status?: string;
 }
 
-const STATUS_STYLES: Record<string, string> = {
-	ACTIVE: "bg-primaryLight text-primary",
-	OVERDUE: "bg-warningLight text-warning",
-	COMPLETED: "bg-successLight text-success",
-	PENDING: "bg-surfaceVariant text-textSecondary",
-	CANCELLED: "bg-errorLight text-error",
-	REJECTED: "bg-errorLight text-error",
-};
-
 const FILTERS: FilterType[] = [
 	"ALL",
 	"ACTIVE",
 	"OVERDUE",
 	"COMPLETED",
 	"PENDING",
-	"CANCELLED",
 	"REJECTED",
 ];
 
 const OVERRIDE_STATUS_OPTIONS: { value: BookingStatus; label: string }[] = [
 	{ value: "COMPLETED", label: "Complete" },
-	{ value: "CANCELLED", label: "Cancel (Admin)" },
 	{ value: "REJECTED", label: "Reject" },
 ];
 
@@ -197,7 +189,6 @@ export default function AdminBookingsPage() {
 	const overrideActionEndpoint = (status: BookingStatus): string => {
 		switch (status) {
 			case "COMPLETED": return `/bookings/${overrideId}/complete`;
-			case "CANCELLED": return `/bookings/${overrideId}/moderate-cancel`;
 			case "REJECTED": return `/bookings/${overrideId}/reject`;
 			default: throw new Error(`No admin action endpoint for status: ${status}`);
 		}
@@ -222,27 +213,28 @@ export default function AdminBookingsPage() {
 	};
 
 	if (loading) {
-		return (
-			<div className="flex min-h-[60vh] flex-col items-center justify-center gap-3 px-4 py-20 text-center">
-				<Loader2 className="h-10 w-10 animate-spin text-primary" />
-				<span className="text-sm text-textSecondary">Loading bookings...</span>
-			</div>
-		);
+		return <PageLoader message="Loading bookings..." />;
+	}
+
+	// Fetch failure with nothing to show → full-page error + retry.
+	// (Action/override errors keep their data and surface via toast.)
+	if (error && bookings.length === 0) {
+		return <PageError message={error} onRetry={() => fetchBookings(pageIndex)} />;
 	}
 
 	return (
-		<div className="w-full space-y-6 px-3 pb-6 sm:px-0 sm:pb-0">
-			<div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+		<div className="w-full space-y-6 px-3 pb-6 sm:px-0 sm:pb-0 graph-grid page-enter">
+			<div className="glass-surface relative overflow-hidden rounded-2xl p-6 shadow-sm flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
 				<div className="min-w-0">
-					<h1 className="text-xl font-bold text-textPrimary sm:text-2xl">
-						Booking Monitor
-					</h1>
-					<p className="mt-1 text-sm text-textSecondary">
+					<h2 className="mt-1 text-3xl font-bold tracking-tighter text-textPrimary sm:text-5xl">
+						Booking <span className="text-gradient-brand italic">Monitor.</span>
+					</h2>
+					<p className="mt-2 text-sm text-textSecondary">
 						Track all platform bookings and update statuses from the backend.
 					</p>
 				</div>
 
-				<div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+				<div className="flex flex-col gap-3 sm:flex-row sm:items-center self-start sm:self-auto">
 					{overdueCount > 0 && (
 						<div className="flex w-full items-center justify-center gap-2 rounded-xl border border-warning/40 bg-warningLight px-4 py-2 text-sm font-bold text-warning shadow-sm sm:w-auto">
 							<AlertTriangle className="h-4 w-4" />
@@ -252,13 +244,8 @@ export default function AdminBookingsPage() {
 				</div>
 			</div>
 
-			{error && (
-				<div className="mx-0 rounded-xl border border-error/30 bg-errorLight px-4 py-3 text-sm font-medium text-error sm:mx-0">
-					{error}
-				</div>
-			)}
-
-			<div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+			{/* Desktop View: search and filter buttons */}
+			<div className="hidden md:flex md:flex-col lg:flex-row lg:items-start lg:justify-between gap-4">
 				<div className="relative w-full shrink-0 lg:max-w-md">
 					<Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-textTertiary" />
 					<input
@@ -266,7 +253,7 @@ export default function AdminBookingsPage() {
 						value={search}
 						onChange={(e) => setSearch(e.target.value)}
 						placeholder="Search by ID, item, renter, or owner..."
-						className="w-full rounded-xl border border-outlineVariant bg-surface py-2.5 pl-9 pr-4 text-sm text-textPrimary outline-none transition focus:border-primary focus:ring-2 focus:ring-primary"
+						className="w-full rounded-xl border border-border bg-card py-2.5 pl-9 pr-4 text-sm text-textPrimary shadow-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20 placeholder:text-textTertiary"
 					/>
 				</div>
 
@@ -275,12 +262,10 @@ export default function AdminBookingsPage() {
 						<button
 							key={f}
 							onClick={() => setFilter(f)}
-							className={`rounded-xl border px-3 py-2 text-xs font-semibold whitespace-nowrap transition ${
+							className={`whitespace-nowrap rounded-full px-3 py-2 text-sm font-semibold transition-all sm:px-4 ${
 								filter === f
-									? f === "OVERDUE"
-										? "border-warning bg-warning text-white shadow"
-										: "border-primary bg-primary text-onPrimary shadow"
-									: "border-outlineVariant bg-surface text-textSecondary hover:bg-surfaceVariant"
+									? "bg-primary text-onPrimary shadow-sm"
+									: "border border-border bg-card text-textSecondary hover:border-primary/40 hover:text-textPrimary"
 							}`}>
 							{f}
 						</button>
@@ -288,9 +273,32 @@ export default function AdminBookingsPage() {
 				</div>
 			</div>
 
+			{/* Mobile View: Search input and select filter directly in a single row (always visible) */}
+			<div className="flex flex-row items-center gap-2 md:hidden">
+				<div className="relative flex-1">
+					<Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-textTertiary" />
+					<input
+						type="text"
+						value={search}
+						onChange={(e) => setSearch(e.target.value)}
+						placeholder="Search..."
+						className="w-full rounded-full border border-border bg-card py-2.5 pl-9 pr-4 text-sm text-textPrimary shadow-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20 placeholder:text-textTertiary"
+					/>
+				</div>
+
+				<div className="shrink-0">
+					<Select
+						value={filter}
+						onChange={(val) => setFilter(val as FilterType)}
+						options={FILTERS.map((f) => ({ value: f, label: f }))}
+						variant="pill"
+					/>
+				</div>
+			</div>
+
 			{overrideId !== null && createPortal(
 				<div className="fixed inset-0 z-[100] flex items-end justify-center bg-black/50 p-3 backdrop-blur-sm animate-in fade-in duration-200 sm:items-center sm:p-4">
-					<div className="flex max-h-[90dvh] w-full max-w-sm flex-col space-y-4 overflow-y-auto rounded-2xl border border-borderLight bg-surface p-5 shadow-xl sm:p-6">
+					<div className="flex max-h-[90dvh] w-full max-w-sm flex-col space-y-4 overflow-visible rounded-2xl border border-borderLight bg-surface p-5 shadow-xl sm:p-6">
 						<div className="flex items-center justify-between">
 							<h3 className="text-lg font-bold text-textPrimary">
 								Override Status
@@ -336,7 +344,7 @@ export default function AdminBookingsPage() {
 				Note: Search and filtering apply only to the current page.
 			</div>
 
-			<div className="overflow-x-auto rounded-2xl border border-borderLight bg-surface shadow-sm">
+			<Card padding="none" className="overflow-x-auto">
 				<div className="min-w-full">
 					<DataTable
 						columns={[
@@ -386,12 +394,7 @@ export default function AdminBookingsPage() {
 							},
 							{
 								header: "Status",
-								cell: (b) => (
-									<span
-										className={`rounded-full px-2.5 py-1 text-xs font-bold ${STATUS_STYLES[b.status]}`}>
-										{b.status}
-									</span>
-								),
+								cell: (b) => <StatusBadge status={b.status} />,
 							},
 							{
 								header: "Actions",
@@ -415,7 +418,7 @@ export default function AdminBookingsPage() {
 						emptyDescription="Try adjusting your search query or status filter."
 					/>
 				</div>
-			</div>
+			</Card>
 		</div>
 	);
 }

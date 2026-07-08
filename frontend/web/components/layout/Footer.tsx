@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Facebook, Github, Instagram, Linkedin, Mail, Bug } from "lucide-react";
+import { Facebook, Github, Instagram, Linkedin, Mail, Bug, ArrowUpRight } from "lucide-react";
 import { Logo } from "@/components/ui/Logo";
 
 const socialLinks = [
@@ -30,11 +30,11 @@ const quickLinks = [
 
 export default function Footer() {
 	return (
-		<footer className="border-t border-borderLight bg-surface">
+		<footer className="border-t border-border bg-surface">
 			<div className="mx-auto max-w-7xl px-6 py-12 lg:py-14">
 
 				{/* Top grid */}
-				<div className="grid gap-10 lg:grid-cols-[1.4fr_1fr_1fr]">
+				<div className="grid gap-10 md:grid-cols-3 lg:grid-cols-[1.4fr_1fr_1fr]">
 
 					{/* Brand */}
 					<div className="space-y-4">
@@ -49,16 +49,17 @@ export default function Footer() {
 
 					{/* Quick links */}
 					<div>
-						<h3 className="mb-4 text-xs font-semibold uppercase tracking-widest text-textTertiary">
+						<h3 className="mb-3 px-3 text-[10px] font-bold uppercase tracking-[1.5px] text-textTertiary">
 							Quick links
 						</h3>
-						<ul className="space-y-2.5">
+						<ul className="-mx-3 space-y-0.5">
 							{quickLinks.map(({ name, href }) => (
 								<li key={name}>
 									<Link
 										href={href}
-										className="text-sm text-textSecondary transition-colors hover:text-primary">
-										{name}
+										className="group flex items-center justify-between gap-2 rounded-lg px-3 py-2 text-sm font-medium text-textSecondary transition-colors hover:bg-surfaceVariant/60 hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40">
+										<span>{name}</span>
+										<ArrowUpRight className="h-4 w-4 shrink-0 text-textTertiary transition-all group-hover:translate-x-0.5 group-hover:-translate-y-0.5 group-hover:text-primary" />
 									</Link>
 								</li>
 							))}
@@ -67,17 +68,17 @@ export default function Footer() {
 
 					{/* Support */}
 					<div>
-						<h3 className="mb-4 text-xs font-semibold uppercase tracking-widest text-textTertiary">
+						<h3 className="mb-3 px-3 text-[10px] font-bold uppercase tracking-[1.5px] text-textTertiary">
 							Support
 						</h3>
-						<div className="space-y-2.5">
+						<div className="-mx-3 space-y-0.5">
 							{supportLinks.map(({ name, href, icon: Icon }) => (
 								<a
 									key={name}
 									href={href}
-									className="flex items-center gap-2.5 text-sm text-textSecondary transition-colors hover:text-primary">
-									<Icon className="h-4 w-4 shrink-0" />
-									{name}
+									className="group flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-medium text-textSecondary transition-colors hover:bg-surfaceVariant/60 hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40">
+									<Icon className="h-4 w-4 shrink-0 text-textTertiary transition-colors group-hover:text-primary" />
+									<span>{name}</span>
 								</a>
 							))}
 						</div>
@@ -89,8 +90,10 @@ export default function Footer() {
 
 				{/* Bottom row */}
 				<div className="flex flex-col items-center gap-4 sm:flex-row sm:justify-between">
-					<p className="text-xs text-textTertiary">
-						© {new Date().getFullYear()} ResourceX. All rights reserved.
+					<p className="text-xs text-textTertiary flex items-center gap-2">
+						<span>© {new Date().getFullYear()} ResourceX</span>
+						<span className="text-primary/40">✦</span>
+						<span>All rights reserved.</span>
 					</p>
 
 					{/* Social icons */}
@@ -102,7 +105,7 @@ export default function Footer() {
 								target="_blank"
 								rel="noreferrer"
 								aria-label={name}
-								className="flex h-8 w-8 items-center justify-center rounded-lg border border-borderLight bg-background text-textTertiary transition hover:border-primary/40 hover:bg-primaryLight/40 hover:text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/30">
+								className="flex h-9 w-9 items-center justify-center rounded-full border border-border bg-background text-textTertiary transition-all hover:scale-105 hover:border-primary/40 hover:bg-primaryLight hover:text-primary active:scale-95 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/40">
 								<Icon className="h-3.5 w-3.5" />
 							</a>
 						))}

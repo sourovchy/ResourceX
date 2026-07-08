@@ -1,18 +1,24 @@
 "use client";
 
 import api from "@/lib/api";
+import { Card } from "@/components/ui/Card";
 import { useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { formatShortDate } from "@/lib/dateUtils";
 import { extractErrorMessage } from "@/lib/errorUtils";
 import { useToast } from "@/context/ToastContext";
-import { Search, Users, ClipboardCheck } from "lucide-react";
+import { Search, Users, ClipboardCheck, ArrowUp, ArrowDown, ArrowUpDown } from "lucide-react";
 import { DataTable } from "@/components/ui/DataTable";
 import { useAutoRefresh } from "@/hooks/useAutoRefresh";
+import TrustBadge from "@/components/TrustBadge";
+import Avatar from "@/components/ui/Avatar";
+import { trustLevelFor, TRUST_LEVEL_LABEL } from "@/types/trust";
 
 type UserStatus = "VERIFIED" | "PENDING" | "SUSPENDED";
 type FilterType = "ALL" | UserStatus;
+type SortField = "name" | "joined";
+type SortOrder = "asc" | "desc";
 
 type AdminUser = {
 	id: string;
@@ -25,6 +31,8 @@ type AdminUser = {
 	status: UserStatus;
 	trustScore: number;
 	registered: string;
+	createdAt: number;
+	avatarUrl?: string | null;
 };
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
@@ -56,21 +64,25 @@ function mapNormalUser(u: any): AdminUser {
 		status: mapUserStatus(u.status),
 		trustScore: u.studentProfile?.trustScore ?? 0,
 		registered: formatShortDate(u.createdAt),
+		createdAt: new Date(u.createdAt).getTime() || 0,
+		avatarUrl: u.avatarUrl,
 	};
 }
 
 function mapPendingUser(u: any): AdminUser {
 	return {
-		id: String(u.id ?? ""),
+		id: String(u.userId ?? u.id ?? ""),
 		name: u.name ?? "",
 		email: u.email ?? "",
-		phone: u.phone ?? "—",
-		studentId: u.studentId ?? "—",
-		university: u.university ?? "—",
-		department: u.department ?? "—",
+		phone: u.studentProfile?.phone ?? u.phone ?? "—",
+		studentId: u.studentProfile?.studentId ?? u.studentId ?? "—",
+		university: u.studentProfile?.university ?? u.university ?? "—",
+		department: u.studentProfile?.department ?? u.department ?? "—",
 		status: "PENDING",
 		trustScore: 0,
 		registered: formatShortDate(u.createdAt),
+		createdAt: new Date(u.createdAt).getTime() || 0,
+		avatarUrl: u.avatarUrl,
 	};
 }
 
@@ -103,20 +115,6 @@ const SUMMARY_COLORS: Record<string, string> = {
 	Suspended: "text-error",
 };
 
-function getTrustColor(score: number) {
-	if (score >= 90) return "text-success";
-	if (score >= 50) return "text-primary";
-	if (score > 0) return "text-warning";
-	return "text-error";
-}
-
-function getTrustLabel(score: number) {
-	if (score >= 90) return "Low risk";
-	if (score >= 50) return "Moderate";
-	if (score > 0) return "Needs review";
-	return "Unverified";
-}
-
 // ─── Component ───────────────────────────────────────────────────────────────
 
 export default function AdminUsersPage() {
@@ -129,6 +127,8 @@ export default function AdminUsersPage() {
 	const [loading, setLoading] = useState(true);
 	const [pageIndex, setPageIndex] = useState(0);
 	const [totalPages, setTotalPages] = useState(0);
+	const [sortField, setSortField] = useState<SortField>("joined");
+	const [sortOrder, setSortOrder] = useState<SortOrder>("desc");
 
 	useEffect(() => {
 		const urlFilter = searchParams.get("filter") as FilterType | null;
@@ -198,7 +198,7 @@ export default function AdminUsersPage() {
 
 	const filteredUsers = useMemo(() => {
 		const term = search.toLowerCase();
-		return users.filter((u) => {
+		const filtered = users.filter((u) => {
 			const matchSearch =
 				!term ||
 				(u.name && u.name.toLowerCase().includes(term)) ||
@@ -207,39 +207,81 @@ export default function AdminUsersPage() {
 			const matchFilter = filter === "ALL" || u.status === filter;
 			return matchSearch && matchFilter;
 		});
-	}, [users, search, filter]);
+
+		return filtered.sort((a, b) => {
+			let comp = 0;
+			if (sortField === "name") {
+				comp = a.name.localeCompare(b.name);
+			} else if (sortField === "joined") {
+				comp = a.createdAt - b.createdAt;
+			}
+			return sortOrder === "asc" ? comp : -comp;
+		});
+	}, [users, search, filter, sortField, sortOrder]);
+
+	const handleSort = (field: SortField) => {
+		if (sortField === field) {
+			setSortOrder(sortOrder === "asc" ? "desc" : "asc");
+		} else {
+			setSortField(field);
+			setSortOrder("asc");
+		}
+	};
+
+	const renderSortableHeader = (label: string, field: SortField) => {
+		const isActive = sortField === field;
+		return (
+			<button
+				onClick={() => handleSort(field)}
+				className="group flex items-center gap-1 hover:text-primary transition-colors focus:outline-none"
+			>
+				{label}
+				{isActive ? (
+					sortOrder === "asc" ? (
+						<ArrowUp className="h-3.5 w-3.5" />
+					) : (
+						<ArrowDown className="h-3.5 w-3.5" />
+					)
+				) : (
+					<ArrowUpDown className="h-3.5 w-3.5 opacity-0 transition-opacity group-hover:opacity-50" />
+				)}
+			</button>
+		);
+	};
 
 	return (
-		<div className="w-full space-y-6 px-4 pb-20 sm:px-6 lg:px-8">
+		<div className="w-full space-y-6 px-4 pb-20 sm:px-6 lg:px-8 graph-grid page-enter">
 			{/* Header */}
-			<div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-				<div>
-					<h1 className="text-2xl font-bold text-textPrimary">User Management</h1>
-					<p className="mt-1 text-sm text-textSecondary">
-						Review student accounts. Open a user to verify documents and approve, reject,
-						suspend, or reactivate.
-					</p>
-				</div>
-				<div className="flex w-full items-center gap-2 rounded-xl border border-borderLight bg-surface px-3 py-2 text-sm text-textSecondary shadow-sm sm:w-auto">
-					<Users className="h-4 w-4" />
-					<span className="font-bold text-textPrimary">{users.length}</span>
-					<span>on this page</span>
+			<div className="glass-surface relative overflow-hidden rounded-2xl p-6 shadow-sm">
+				<div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+					<div>
+						<h2 className="mt-0.5 text-2xl font-bold tracking-tighter text-textPrimary">
+							User <span className="text-gradient-brand italic">Management.</span>
+						</h2>
+						<p className="mt-1 text-sm text-textSecondary">
+							Review student accounts. Open a user to verify documents and approve, reject,
+							suspend, or reactivate.
+						</p>
+					</div>
+					<div className="flex w-full items-center gap-2 rounded-xl border border-borderLight bg-surface px-3 py-2 text-sm text-textSecondary shadow-sm sm:w-auto self-start sm:self-auto">
+						<Users className="h-4 w-4" />
+						<span className="font-bold text-textPrimary">{users.length}</span>
+						<span>on this page</span>
+					</div>
 				</div>
 			</div>
 
 			{/* Stat cards */}
 			<div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
 				{SUMMARY_CARDS.map((card) => (
-					<div
-						key={card.label}
-						className="rounded-2xl border border-borderLight bg-surface p-4 shadow-sm">
+					<Card key={card.label} padding="none" className="p-4" interactive={true}>
 						<div className="text-xs font-semibold uppercase tracking-wider text-textTertiary">
 							{card.label}
 						</div>
 						<div className={`mt-2 text-2xl font-bold ${SUMMARY_COLORS[card.label]}`}>
 							{users.filter((u) => u.status === card.status).length}
 						</div>
-					</div>
+					</Card>
 				))}
 			</div>
 
@@ -253,7 +295,7 @@ export default function AdminUsersPage() {
 						onChange={(e) => setSearch(e.target.value)}
 						placeholder="Search by name, email, or student ID..."
 						aria-label="Search users"
-						className="w-full rounded-xl border border-outlineVariant bg-surface py-2.5 pl-9 pr-4 text-sm text-textPrimary outline-none transition focus:border-primary focus:ring-2 focus:ring-primary"
+						className="w-full rounded-xl border border-border bg-card py-2.5 pl-9 pr-4 text-sm text-textPrimary shadow-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20 placeholder:text-textTertiary"
 					/>
 				</div>
 				<div className="flex flex-wrap gap-2">
@@ -264,10 +306,10 @@ export default function AdminUsersPage() {
 								setPageIndex(0);
 								setFilter(f);
 							}}
-							className={`rounded-xl border px-3 py-2 text-xs font-semibold transition ${
+							className={`whitespace-nowrap rounded-full px-3 py-2 text-sm font-semibold transition-all sm:px-4 ${
 								filter === f
-									? "border-primary bg-primary text-onPrimary shadow"
-									: "border-outlineVariant bg-surface text-textSecondary hover:bg-surfaceVariant"
+									? "bg-primary text-onPrimary shadow-sm"
+									: "border border-border bg-card text-textSecondary hover:border-primary/40 hover:text-textPrimary"
 							}`}>
 							{f}
 						</button>
@@ -281,17 +323,15 @@ export default function AdminUsersPage() {
 			</div>
 
 			{/* Table */}
-			<div className="overflow-x-auto rounded-2xl border border-borderLight bg-surface shadow-sm">
+			<Card padding="none" className="overflow-x-auto">
 				<div className="min-w-full">
 					<DataTable
 						columns={[
 							{
-								header: "Student",
+								header: renderSortableHeader("Student", "name"),
 								cell: (u) => (
 									<div className="flex min-w-0 items-center gap-3">
-										<div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primaryLight text-sm font-bold text-primary">
-											{u.name?.[0]?.toUpperCase() ?? "?"}
-										</div>
+										<Avatar src={u.avatarUrl} name={u.name} size={36} />
 										<div className="min-w-0">
 											<div className="break-words font-semibold text-textPrimary">{u.name}</div>
 											<div className="break-all text-xs text-textTertiary">{u.email}</div>
@@ -318,19 +358,20 @@ export default function AdminUsersPage() {
 							},
 							{
 								header: "Trust",
-								cell: (u) => (
-									<div className="space-y-1">
-										<div className={`text-sm font-bold ${getTrustColor(u.trustScore)}`}>
-											{u.trustScore > 0 ? u.trustScore : "—"}
+								cell: (u) =>
+									u.status === "PENDING" ? (
+										<span className="text-xs text-textTertiary">Not yet rated</span>
+									) : (
+										<div className="space-y-1">
+											<TrustBadge score={u.trustScore} compact />
+											<div className="text-xs text-textTertiary">
+												{TRUST_LEVEL_LABEL[trustLevelFor(u.trustScore)]}
+											</div>
 										</div>
-										<div className="text-xs text-textTertiary">
-											{getTrustLabel(u.trustScore)}
-										</div>
-									</div>
-								),
+									),
 							},
 							{
-								header: "Joined",
+								header: renderSortableHeader("Joined", "joined"),
 								cell: (u) => (
 									<span className="text-xs text-textSecondary">{u.registered}</span>
 								),
@@ -357,7 +398,7 @@ export default function AdminUsersPage() {
 						emptyDescription="Try adjusting your search query or filter."
 					/>
 				</div>
-			</div>
+			</Card>
 		</div>
 	);
 }

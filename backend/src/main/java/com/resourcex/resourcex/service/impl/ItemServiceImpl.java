@@ -15,18 +15,19 @@ import com.resourcex.resourcex.repository.CategoryRepository;
 import com.resourcex.resourcex.repository.FileMetadataRepository;
 import com.resourcex.resourcex.repository.ItemRepository;
 import com.resourcex.resourcex.repository.UserRepository;
+import com.resourcex.resourcex.repository.ReviewRepository;
 import com.resourcex.resourcex.service.ItemService;
 import com.resourcex.resourcex.service.AuditLogService;
 import com.resourcex.resourcex.entity.AuditLog;
 import com.resourcex.resourcex.validator.ItemValidator;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
-import org.springframework.data.domain.PageImpl;
 
 import java.util.List;
 
@@ -36,11 +37,16 @@ public class ItemServiceImpl implements ItemService {
 
     private final ItemRepository itemRepository;
     private final UserRepository userRepository;
+    private final ReviewRepository reviewRepository;
     private final BookingRepository bookingRepository;
     private final FileMetadataRepository fileMetadataRepository;
     private final CategoryRepository categoryRepository;
+    private final com.resourcex.resourcex.repository.WishlistRepository wishlistRepository;
     private final ItemValidator itemValidator;
     private final AuditLogService auditLogService;
+    private final com.resourcex.resourcex.security.AccountAccessGuard accountAccessGuard;
+    private final com.resourcex.resourcex.service.StudentRestrictionManager restrictionManager;
+    private final com.resourcex.resourcex.service.AvatarUrlResolver avatarUrlResolver;
 
     @Override
     @Transactional
@@ -48,6 +54,15 @@ public class ItemServiceImpl implements ItemService {
         itemValidator.validateCreateRequest(request);
 
         User owner = resolveCurrentUser();
+
+        // Only approved (ACTIVE) accounts may list items.
+        accountAccessGuard.requireActive(owner);
+
+        // Trust restriction (<50): restricted users cannot create new items.
+        if (restrictionManager.isAutomaticallyRestricted(owner.getUserId())) {
+            throw new ForbiddenException(
+                    "Your account is restricted due to a low Trust Score and cannot create new items.");
+        }
 
         com.resourcex.resourcex.entity.Category categoryObj = null;
         if (request.getCategory() != null && !request.getCategory().isBlank()) {
@@ -61,9 +76,9 @@ public class ItemServiceImpl implements ItemService {
                 .category(categoryObj)
                 .itemCondition(request.getItemCondition())
                 .dailyRate(request.getDailyRate())
-                .deposit(request.getDeposit())
                 .status(Item.ItemStatus.AVAILABLE)
                 .owner(owner)
+                .availabilityScope(request.getAvailabilityScope() != null ? request.getAvailabilityScope() : "CAMPUS_ONLY")
                 .build();
 
         Item saved = itemRepository.save(item);
@@ -83,7 +98,7 @@ public class ItemServiceImpl implements ItemService {
                 "Item created: " + saved.getTitle()
         );
 
-        return ItemMapper.toResponse(saved);
+        return enrichItemResponse(saved);
     }
 
     @Override
@@ -114,17 +129,20 @@ public class ItemServiceImpl implements ItemService {
 
         Item saved = itemRepository.save(item);
 
+        boolean actorIsAdmin = isCurrentUserAdmin();
+        String actionType = actorIsAdmin ? "ITEM_UPDATED_BY_ADMIN" : "ITEM_UPDATED";
+
         auditLogService.logAction(
                 AuditLog.ActorType.USER,
                 resolveCurrentUser().getUserId(),
-                "ITEM_UPDATED",
+                actionType,
                 "ITEM",
                 saved.getItemId(),
                 AuditLog.AuditOutcome.SUCCESS,
                 "Item updated: " + saved.getTitle()
         );
 
-        return ItemMapper.toResponse(saved);
+        return enrichItemResponse(saved);
     }
 
     @Override
@@ -133,35 +151,33 @@ public class ItemServiceImpl implements ItemService {
         Item item = itemRepository.findById(itemId)
                 .orElseThrow(() -> new ResourceNotFoundException("Item not found"));
 
-        if (item.getStatus() == Item.ItemStatus.DELETED && !isCurrentUserAdmin()) {
+        // Deleted items are invisible to everyone — including admins — via direct
+        // URL / ID lookup. There is no hidden access path to a deleted listing.
+        if (item.getStatus() == Item.ItemStatus.DELETED) {
             throw new ResourceNotFoundException("Item not found");
         }
 
-        return ItemMapper.toResponse(item);
+        return enrichItemResponse(item);
     }
 
     @Override
     @Transactional(readOnly = true)
-    public Page<ItemResponse> getAllItems(String category, String searchQuery, Pageable pageable) {
+    public Page<ItemResponse> getAllItems(String category, String availabilityScope, String searchQuery, Pageable pageable) {
         String normalizedCategory = normalizeFilterValue(category);
+        String normalizedAvailabilityScope = normalizeFilterValue(availabilityScope);
         String normalizedSearchQuery = normalizeFilterValue(searchQuery);
 
-        Page<Item> itemPage = itemRepository.findItemsWithFilters(normalizedCategory, normalizedSearchQuery, pageable);
-        
-        List<ItemResponse> responses = itemPage.stream()
-                .filter(item -> item.getStatus() != Item.ItemStatus.DELETED || isCurrentUserAdmin())
-                .map(ItemMapper::toResponse)
-                .toList();
-                
-        return new PageImpl<>(responses, pageable, itemPage.getTotalElements());
+        // The query already excludes DELETED items at the database level, so the
+        // page (content + counts + pagination) is consistent for every role.
+        return enrichItemResponses(itemRepository
+                .findItemsWithFilters(normalizedCategory, normalizedAvailabilityScope, normalizedSearchQuery, pageable));
     }
 
     @Override
     @Transactional(readOnly = true)
     public Page<ItemResponse> getMyItems(Pageable pageable) {
         User owner = resolveCurrentUser();
-        return itemRepository.findByOwnerAndStatusNot(owner, Item.ItemStatus.DELETED, pageable)
-                .map(ItemMapper::toResponse);
+        return enrichItemResponses(itemRepository.findByOwnerAndStatusNot(owner, Item.ItemStatus.DELETED, pageable));
     }
 
     @Override
@@ -169,44 +185,80 @@ public class ItemServiceImpl implements ItemService {
     public Page<ItemResponse> getUserItems(Long userId, Pageable pageable) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found"));
-        return itemRepository.findByOwnerAndStatusNot(user, Item.ItemStatus.DELETED, pageable)
-                .map(ItemMapper::toResponse);
+        return enrichItemResponses(itemRepository.findByOwnerAndStatusNot(user, Item.ItemStatus.DELETED, pageable));
     }
 
     @Override
     @Transactional
-    public void deleteItem(Long itemId) {
+    public void deleteItem(Long itemId, String reason) {
         Item item = itemRepository.findById(itemId)
                 .orElseThrow(() -> new ResourceNotFoundException("Item not found"));
 
+        // Authorization: owner OR admin. Same gate for both deletion paths.
         assertCanManageItem(item);
 
+        performItemDeletion(item, reason);
+    }
+
+    /**
+     * Single source of truth for removing an item — invoked by both the owner
+     * delete and the admin take-down. Runs inside the caller's transaction so
+     * the whole operation is atomic.
+     *
+     * Strategy: soft-delete (status = DELETED). Every item-returning query
+     * already excludes DELETED, so the listing instantly disappears everywhere
+     * while audit/history rows that reference it stay intact (no orphans, no
+     * broken foreign keys). Dependent references that should NOT survive are
+     * cleaned up here.
+     */
+    private void performItemDeletion(Item item, String reason) {
         if (item.getStatus() == Item.ItemStatus.DELETED) {
             throw new ConflictException("Item is already deleted");
         }
 
         List<Booking> bookings = bookingRepository.findByItem(item);
 
-        boolean hasActiveOrPendingBooking = bookings.stream().anyMatch(booking ->
-                booking.getStatus() == Booking.BookingStatus.PENDING ||
-                        booking.getStatus() == Booking.BookingStatus.APPROVED
-        );
-
-        if (hasActiveOrPendingBooking) {
-            throw new ConflictException("Cannot delete item with active or pending bookings");
+        // An item that is approved for handoff or physically out on an active rental
+        // cannot be deleted — doing so would orphan an in-progress rental.
+        boolean hasActiveBooking = bookings.stream()
+                .anyMatch(b -> b.getStatus() == Booking.BookingStatus.APPROVED
+                        || b.getStatus() == Booking.BookingStatus.ACTIVE);
+        if (hasActiveBooking) {
+            throw new ConflictException(
+                    "Cannot delete an item that is currently rented out. Complete the active rental first.");
         }
 
+        // Auto-cancel outstanding PENDING requests so the listing also vanishes
+        // from renters' request/booking views.
+        List<Booking> pending = bookings.stream()
+                .filter(b -> b.getStatus() == Booking.BookingStatus.PENDING)
+                .toList();
+        if (!pending.isEmpty()) {
+            pending.forEach(b -> b.setStatus(Booking.BookingStatus.CANCELLED));
+            bookingRepository.saveAll(pending);
+        }
+
+        // Remove wishlist references so the item leaves every wishlist.
+        wishlistRepository.deleteByItem(item);
+
+        // Soft-delete — excluded from all queries from here on.
         item.setStatus(Item.ItemStatus.DELETED);
         itemRepository.save(item);
 
+        boolean actorIsAdmin = isCurrentUserAdmin();
+        Long actorId = resolveCurrentUser().getUserId();
+        String actionType = actorIsAdmin ? "ITEM_BLOCKED" : "ITEM_DELETED";
+        String detail = "Item deleted (" + (actorIsAdmin ? "admin take-down" : "owner")
+                + ")" + (reason != null && !reason.isBlank() ? ": " + reason.trim() : "");
+
         auditLogService.logAction(
                 AuditLog.ActorType.USER,
-                resolveCurrentUser().getUserId(),
-                "ITEM_DELETED",
+                actorId,
+                actionType,
                 "ITEM",
-                itemId,
+                item.getItemId(),
                 AuditLog.AuditOutcome.SUCCESS,
-                "Item marked as deleted"
+                detail
         );
     }
 
@@ -243,7 +295,10 @@ public class ItemServiceImpl implements ItemService {
         }
 
         return authentication.getAuthorities().stream()
-                .anyMatch(authority -> "ROLE_ADMIN".equals(authority.getAuthority()));
+                .map(GrantedAuthority::getAuthority)
+                .anyMatch(role -> "ROLE_ADMIN".equals(role)
+                        || "ROLE_SUPER_ADMIN".equals(role)
+                        || "ROLE_MODERATOR".equals(role));
     }
 
     private String normalizeFilterValue(String value) {
@@ -285,5 +340,71 @@ public class ItemServiceImpl implements ItemService {
             return url.substring(url.lastIndexOf('/') + 1);
         }
         return url;
+    }
+
+    private ItemResponse enrichItemResponse(Item item) {
+        if (item == null) return null;
+        ItemResponse resp = ItemMapper.toResponse(item);
+        if (resp != null && resp.getOwner() != null && item.getOwner() != null) {
+            resp.getOwner().setAvatarUrl(avatarUrlResolver.resolve(item.getOwner().getAvatarFileId()));
+        }
+        List<Object[]> stats = reviewRepository.findReviewStatsByItemIds(List.of(item.getItemId()));
+        if (stats != null && !stats.isEmpty()) {
+            Object[] row = stats.get(0);
+            Double avgRating = row[1] != null ? ((Number) row[1]).doubleValue() : null;
+            Long count = row[2] != null ? ((Number) row[2]).longValue() : 0L;
+            if (avgRating != null) {
+                avgRating = Math.round(avgRating * 10.0) / 10.0;
+            }
+            resp.setRating(avgRating);
+            resp.setReviews(count.intValue());
+        } else {
+            resp.setRating(null);
+            resp.setReviews(0);
+        }
+        return resp;
+    }
+
+    private org.springframework.data.domain.Page<ItemResponse> enrichItemResponses(org.springframework.data.domain.Page<Item> itemsPage) {
+        List<Item> items = itemsPage.getContent();
+        if (items.isEmpty()) {
+            return itemsPage.map(item -> {
+                ItemResponse resp = ItemMapper.toResponse(item);
+                if (resp != null && resp.getOwner() != null && item.getOwner() != null) {
+                    resp.getOwner().setAvatarUrl(avatarUrlResolver.resolve(item.getOwner().getAvatarFileId()));
+                }
+                return resp;
+            });
+        }
+
+        List<Long> itemIds = items.stream().map(Item::getItemId).toList();
+        List<Object[]> stats = reviewRepository.findReviewStatsByItemIds(itemIds);
+
+        java.util.Map<Long, Double> ratingsMap = new java.util.HashMap<>();
+        java.util.Map<Long, Integer> reviewsMap = new java.util.HashMap<>();
+
+        if (stats != null) {
+            for (Object[] row : stats) {
+                Long itemId = (Long) row[0];
+                Double avgRating = row[1] != null ? ((Number) row[1]).doubleValue() : null;
+                Long count = row[2] != null ? ((Number) row[2]).longValue() : 0L;
+
+                if (avgRating != null) {
+                    avgRating = Math.round(avgRating * 10.0) / 10.0;
+                }
+                ratingsMap.put(itemId, avgRating);
+                reviewsMap.put(itemId, count.intValue());
+            }
+        }
+
+        return itemsPage.map(item -> {
+            ItemResponse resp = ItemMapper.toResponse(item);
+            if (resp != null && resp.getOwner() != null && item.getOwner() != null) {
+                resp.getOwner().setAvatarUrl(avatarUrlResolver.resolve(item.getOwner().getAvatarFileId()));
+            }
+            resp.setRating(ratingsMap.get(item.getItemId()));
+            resp.setReviews(reviewsMap.getOrDefault(item.getItemId(), 0));
+            return resp;
+        });
     }
 }

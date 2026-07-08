@@ -3,10 +3,15 @@ package com.resourcex.resourcex.mapper;
 import com.resourcex.resourcex.dto.response.MessageResponse;
 import com.resourcex.resourcex.entity.Message;
 import com.resourcex.resourcex.entity.User;
+import com.resourcex.resourcex.service.AvatarUrlResolver;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
 @Component
+@RequiredArgsConstructor
 public class MessageMapper {
+
+    private final AvatarUrlResolver avatarUrlResolver;
 
     public MessageResponse toResponse(Message message) {
         return MessageResponse.builder()
@@ -16,15 +21,10 @@ public class MessageMapper {
                 .senderName(getUserName(message.getSenderUser()))
                 .senderEmail(getUserEmail(message.getSenderUser()))
                 .senderAvatarUrl(getUserAvatar(message.getSenderUser()))
-                .receiverUserId(getUserId(message.getReceiverUser()))
-                .receiverName(getUserName(message.getReceiverUser()))
-                .receiverEmail(getUserEmail(message.getReceiverUser()))
-                .receiverAvatarUrl(getUserAvatar(message.getReceiverUser()))
                 .content(message.getContent())
                 .isRead(message.isRead())
-                .readAt(message.getReadAt())
                 .createdAt(message.getCreatedAt())
-                .updatedAt(message.getUpdatedAt())
+                .updatedAt(null)
                 .build();
     }
 
@@ -41,6 +41,6 @@ public class MessageMapper {
     }
 
     private String getUserAvatar(User user) {
-        return user != null ? user.getAvatarUrl() : null;
+        return user != null ? avatarUrlResolver.resolve(user.getAvatarFileId()) : null;
     }
 }

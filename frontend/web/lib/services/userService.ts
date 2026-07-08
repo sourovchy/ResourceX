@@ -1,5 +1,5 @@
 import api from "../api";
-import { UserResponse, PendingUserResponse } from "../../types/user";
+import { UserResponse } from "../../types/user";
 
 export const userService = {
   getAllUsers: async (page = 0, size = 10): Promise<{ content: UserResponse[]; totalPages: number }> => {
@@ -7,7 +7,7 @@ export const userService = {
     return response.data;
   },
 
-  getPendingUsers: async (page = 0, size = 10): Promise<{ content: PendingUserResponse[]; totalPages: number }> => {
+  getPendingUsers: async (page = 0, size = 10): Promise<{ content: UserResponse[]; totalPages: number }> => {
     const response = await api.get(`/admin/pending-users?page=${page}&size=${size}`);
     return response.data;
   },

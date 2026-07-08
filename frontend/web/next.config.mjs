@@ -1,5 +1,6 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+	transpilePackages: ["three", "@react-three/fiber", "@react-three/drei"],
 	images: {
 		remotePatterns: [
 			{
@@ -21,6 +22,18 @@ const nextConfig = {
 				hostname: "example.com",
 			},
 		],
+	},
+	async rewrites() {
+		return [
+			{
+				source: "/api/:path*",
+				destination: "http://localhost:8082/api/:path*",
+			},
+			{
+				source: "/ws-endpoint/:path*",
+				destination: "http://localhost:8082/ws-endpoint/:path*",
+			},
+		];
 	},
 };
 

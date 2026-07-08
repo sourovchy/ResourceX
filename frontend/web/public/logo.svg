@@ -14,5 +14,5 @@
     <line x1="130" y1="330" x2="300" y2="160" clip-path="url(#x-leg-bounds)" />
   </g>
   <!-- Text -->
-  <text x="186.5" y="380" font-family="'Montserrat', 'Inter', system-ui, sans-serif" font-size="56" font-weight="800" fill="#da7756" text-anchor="middle" letter-spacing="1">ResourceX</text>
+  <text x="186.5" y="380" font-family="'JetBrains Mono', ui-monospace, monospace" font-size="56" font-weight="800" fill="#da7756" text-anchor="middle" letter-spacing="1">ResourceX</text>
 </svg>

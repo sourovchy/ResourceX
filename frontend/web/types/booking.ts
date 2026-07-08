@@ -1,7 +1,8 @@
 import { ItemResponse } from "./item";
 import { UserResponse } from "./user";
 
-export type BookingStatus = "PENDING" | "APPROVED" | "REJECTED" | "ACTIVE" | "COMPLETED" | "CANCELLED" | "OVERDUE";
+export type BookingStatus = "PENDING" | "APPROVED" | "REJECTED" | "ACTIVE" | "COMPLETED" | "OVERDUE";
+
 
 export interface BookingResponse {
   bookingId: number;

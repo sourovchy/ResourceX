@@ -14,7 +14,6 @@ import {
 	ShieldAlert,
 	ShieldCheck,
 	UserCog,
-	History,
 	// sub-item icons
 	Heart,
 	PackageCheck,
@@ -26,6 +25,8 @@ import {
 	type LucideIcon,
 } from "lucide-react";
 import { type AccessibleRole } from "@/lib/auth";
+
+export type NavGroup = "Dashboard" | "Resource Management" | "Communication" | "Account" | "System";
 
 export type NavSubItem = {
 	href: string;
@@ -42,6 +43,7 @@ export type NavItem = {
 	/** If undefined, accessible by all authenticated roles. */
 	roles?: AccessibleRole[];
 	subItems?: NavSubItem[];
+	group: NavGroup;
 };
 
 /**
@@ -56,6 +58,14 @@ export const DASHBOARD_NAV: NavItem[] = [
 		href: "/dashboard",
 		icon: LayoutDashboard,
 		label: "Dashboard",
+		group: "Dashboard",
+	},
+	{
+		href: "/analytics",
+		icon: BarChart3,
+		label: "Analytics",
+		roles: ["admin", "super_admin"],
+		group: "Dashboard",
 	},
 	{
 		href: "/borrow",
@@ -63,6 +73,7 @@ export const DASHBOARD_NAV: NavItem[] = [
 		label: "Borrow",
 		roles: ["student"],
 		subItems: [{ href: "/borrow/wishlist", label: "Wishlist", icon: Heart }],
+		group: "Resource Management",
 	},
 	{
 		href: "/my-posts",
@@ -72,87 +83,64 @@ export const DASHBOARD_NAV: NavItem[] = [
 		subItems: [
 			{ href: "/my-posts/active-rentals", label: "Active Rentals", icon: PackageCheck },
 			{ href: "/my-posts/requests", label: "Requests", icon: ClipboardList },
-			{ href: "/my-posts/earnings", label: "Earnings", icon: Wallet },
-			{ href: "/my-posts/deposit-tracker", label: "Deposits", icon: PiggyBank },
 		],
+		group: "Resource Management",
 	},
 	{
 		href: "/bookings",
 		icon: Calendar,
 		label: "Bookings",
+		group: "Resource Management",
 	},
 	{
 		href: "/items",
 		icon: Package,
 		label: "Items",
 		roles: ["admin", "super_admin", "moderator"],
+		group: "Resource Management",
 	},
 	{
 		href: "/categories",
 		icon: Tags,
 		label: "Categories",
 		roles: ["admin", "super_admin", "moderator"],
+		group: "Resource Management",
 	},
 	{
 		href: "/inbox",
 		icon: Inbox,
 		label: "Inbox",
+		group: "Communication",
 	},
 	{
-		href: "/disputes",
+		href: "/notifications",
+		icon: Bell,
+		label: "Notifications",
+		group: "Communication",
+	},
+
+	{
+		href: "/moderation",
 		icon: AlertTriangle,
-		label: "Disputes",
-		subItems: [
-			{ href: "/disputes/my", label: "My Disputes", icon: FileText, roles: ["student"] },
-			{ href: "/disputes/raise", label: "Raise Dispute", icon: FilePlus2, roles: ["student"] },
-		],
-	},
-	{
-		href: "/analytics",
-		icon: BarChart3,
-		label: "Analytics",
-		roles: ["admin", "super_admin"],
-	},
-	{
-		href: "/penalties",
-		icon: ShieldAlert,
-		label: "Penalties",
+		label: "Moderation",
 		roles: ["admin", "super_admin", "moderator"],
-	},
-	{
-		href: "/trust-scores",
-		icon: ShieldCheck,
-		label: "Trust Scores",
-		roles: ["admin", "super_admin", "moderator"],
+		group: "System",
 	},
 	{
 		href: "/users",
 		icon: Users,
 		label: "Users",
 		roles: ["admin", "super_admin"],
+		group: "System",
 	},
 	{
 		href: "/staff-management",
 		icon: UserCog,
 		label: "Staff",
 		roles: ["super_admin"],
+		group: "System",
 	},
-	{
-		href: "/history",
-		icon: History,
-		label: "History",
-		roles: ["student"],
-	},
-	{
-		href: "/notifications",
-		icon: Bell,
-		label: "Notifications",
-	},
-	{
-		href: "/profile",
-		icon: User,
-		label: "Profile",
-	},
+
 ];
 
 /**

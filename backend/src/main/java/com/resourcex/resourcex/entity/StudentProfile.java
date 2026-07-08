@@ -43,9 +43,14 @@ public class StudentProfile {
     @Column(name = "id_card_file_id")
     private Long idCardFileId;
 
+    @Column(name = "rejection_reason", columnDefinition = "TEXT")
+    private String rejectionReason;
+
     @Builder.Default
     @Column(name = "trust_score", nullable = false)
     private Integer trustScore = 100;
+
+
 
     @Column(name = "email_verified", nullable = false)
     @Builder.Default
@@ -55,23 +60,13 @@ public class StudentProfile {
     @Builder.Default
     private Boolean phoneVerified = false;
 
-    @Column(nullable = false, updatable = false)
-    private LocalDateTime createdAt;
-
-    @Column(nullable = false)
-    private LocalDateTime updatedAt;
-
     @PrePersist
     public void onCreate() {
-        LocalDateTime now = LocalDateTime.now();
-        this.createdAt = now;
-        this.updatedAt = now;
         normalizeFields();
     }
 
     @PreUpdate
     public void onUpdate() {
-        this.updatedAt = LocalDateTime.now();
         normalizeFields();
     }
 

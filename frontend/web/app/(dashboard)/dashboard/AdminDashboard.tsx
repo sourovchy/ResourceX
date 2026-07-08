@@ -3,298 +3,277 @@
 import React, { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import StatCard from "@/components/cards/StatCard";
+import { TiltCard } from "@/components/ui/TiltCard";
 import api from "@/lib/api";
 import { useAutoRefresh } from "@/hooks/useAutoRefresh";
-import { ListRowSkeleton } from "@/components/ui/Skeleton";
 import {
-	Users,
+	Package,
 	PackageOpen,
-	UserPlus,
 	Clock,
-	ArrowRight,
-	DollarSign,
 	AlertCircle,
-	TrendingUp,
-	TrendingDown,
+	Ban,
+	AlertTriangle,
+	ShieldCheck,
+	ShieldAlert,
+	ChevronRight,
 } from "lucide-react";
+import PendingUsersTab, { PendingUser } from "./admin/PendingUsersTab";
+import ReportsTab, { Report } from "./admin/ReportsTab";
 
 type DashboardStats = {
 	totalUsers: number;
 	activeBookings: number;
-	revenue: number;
 	pendingApprovals: number;
+	verifiedStudents: number;
+	totalListings: number;
+	availableListings: number;
+	activeRentals: number;
+	reportsPendingReview: number;
+	suspendedUsers: number;
 };
-
-type PendingUser = {
-	id: number | string;
-	name: string;
-	email: string;
-	studentId: string;
-	university?: string;
-	department?: string;
-	createdAt?: string;
-};
-
-interface AuditLog {
-	id?: string | number;
-	userId: string | number;
-	name: string;
-	change: number;
-	reason: string;
-	timestamp: string;
-}
-
-interface AuditApiResponse {
-	id?: string | number;
-	userId?: string | number;
-	name?: string;
-	userName?: string;
-	change?: number | string;
-	scoreChange?: number | string;
-	reason?: string;
-	description?: string;
-	timestamp?: string;
-	createdAt?: string;
-}
-
-function normalizeAudit(data: AuditApiResponse): AuditLog {
-	return {
-		id: data.id,
-		userId: data.userId ?? "",
-		name: data.name ?? data.userName ?? "Unknown User",
-		change: Number(data.change ?? data.scoreChange ?? 0),
-		reason: data.reason ?? data.description ?? "No reason provided.",
-		timestamp: data.timestamp ?? data.createdAt ?? new Date().toISOString(),
-	};
-}
-
-function formatDate(value?: string) {
-	if (!value) return "-";
-	const date = new Date(value);
-	if (Number.isNaN(date.getTime())) return "-";
-	return date.toLocaleString();
-}
 
 export default function AdminHomePage() {
 	const [stats, setStats] = useState<DashboardStats | null>(null);
 	const [pendingUsers, setPendingUsers] = useState<PendingUser[]>([]);
-	const [auditLogs, setAuditLogs] = useState<AuditLog[]>([]);
+	const [reports, setReports] = useState<Report[]>([]);
+
+	const [activeTab, setActiveTab] = useState<"pending" | "reports">("pending");
 	const [loading, setLoading] = useState(true);
 	const [error, setError] = useState("");
 
-	const loadDashboard = useCallback(async (silent = false) => {
+	const loadDashboardStatsAndLists = useCallback(async (silent = false) => {
 		try {
 			if (!silent) setLoading(true);
 			setError("");
 
-			const [statsRes, pendingRes, auditRes] = await Promise.all([
-				api.get<DashboardStats>("/admin/dashboard").catch(() => ({ data: { totalUsers: 0, activeBookings: 0, revenue: 0, pendingApprovals: 0 } as DashboardStats })),
-				api.get<{ content?: PendingUser[] }>("/admin/pending-users").catch(() => ({ data: { content: [] as PendingUser[] } })),
-				api.get("/trust/admin/audit-log").catch(() => ({ data: [] })),
+			const [statsRes, pendingRes, reportsRes] = await Promise.all([
+				api.get<DashboardStats>("/admin/dashboard").catch(() => ({
+					data: {
+						totalUsers: 0,
+						activeBookings: 0,
+						pendingApprovals: 0,
+						verifiedStudents: 0,
+						totalListings: 0,
+						availableListings: 0,
+						activeRentals: 0,
+						reportsPendingReview: 0,
+						suspendedUsers: 0,
+					} as DashboardStats,
+				})),
+				api.get<{ content?: any[] }>("/admin/pending-users").catch(() => ({
+					data: { content: [] as any[] },
+				})),
+				api.get<Report[]>("/admin/reports").catch(() => ({
+					data: [],
+				})),
 			]);
 
 			setStats(statsRes.data);
-
-			const pendingList = Array.isArray(pendingRes.data?.content)
-				? pendingRes.data.content
-				: [];
-			setPendingUsers(pendingList);
-
-			const auditRaw = auditRes.data;
-			const auditList = Array.isArray(auditRaw)
-				? auditRaw
-				: Array.isArray(auditRaw?.data)
-					? auditRaw.data
-					: Array.isArray(auditRaw?.content)
-						? auditRaw.content
-						: [];
-			setAuditLogs(auditList.map(normalizeAudit));
+			const mappedPending: PendingUser[] = (Array.isArray(pendingRes.data?.content) ? pendingRes.data.content : []).map((u: any) => ({
+				id: u.userId ?? u.id,
+				name: u.name ?? "",
+				email: u.email ?? "",
+				studentId: u.studentProfile?.studentId ?? u.studentId ?? "—",
+				university: u.studentProfile?.university ?? u.university ?? "—",
+				department: u.studentProfile?.department ?? u.department ?? "—",
+				createdAt: u.createdAt,
+			}));
+			setPendingUsers(mappedPending);
+			setReports(Array.isArray(reportsRes.data) ? reportsRes.data : []);
 		} catch (err) {
 			console.error(err);
-			setError("Could not load admin dashboard data.");
+			setError("Could not load dashboard platform stats.");
 		} finally {
 			if (!silent) setLoading(false);
 		}
 	}, []);
 
 	useEffect(() => {
-		void loadDashboard();
-	}, [loadDashboard]);
+		void loadDashboardStatsAndLists();
+	}, [loadDashboardStatsAndLists]);
 
-	// Auto-refresh admin summary silently on tab focus + moderate polling
-	useAutoRefresh(() => loadDashboard(true), { intervalMs: 60_000 });
-
-	// Removed full page loader in favor of skeleton state
+	useAutoRefresh(() => void loadDashboardStatsAndLists(true), { intervalMs: 30_000 });
 
 	return (
-		<div className="space-y-6 pb-20 sm:pb-0">
-			{/* Welcome strip (simplified for admin) */}
-			<div className="flex flex-col gap-4 rounded-xl border border-borderLight bg-surface p-5 shadow-sm sm:p-6">
-				<div className="min-w-0">
-					<p className="text-xs font-semibold uppercase tracking-widest text-textTertiary">
-						Admin Dashboard
-					</p>
-					<h1 className="mt-1 text-xl font-bold tracking-tight text-textPrimary sm:text-2xl">
-						Overview
-					</h1>
-					<p className="mt-1 text-sm text-textSecondary">
-						Live platform metrics from the ResourceX database.
-					</p>
+		<div className="space-y-6 pb-20 sm:pb-6 animate-fade-in graph-grid">
+			{/* Welcome strip / Header */}
+			<div className="glass-surface relative overflow-hidden rounded-2xl p-6 shadow-sm">
+				<div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+					<div>
+						<h1 className="mt-1 text-2xl font-extrabold tracking-tight text-textPrimary sm:text-3xl">
+							Admin <span className="text-gradient-brand italic">Dashboard.</span>
+						</h1>
+						<p className="mt-1 text-sm text-textSecondary">
+							ResourceX real-time metrics, verification workflows, and operational action queues.
+						</p>
+					</div>
 				</div>
 			</div>
 
 			{/* Error banner */}
 			{error && (
-				<div className="flex items-center gap-3 rounded-xl border border-error/40 bg-errorLight px-4 py-3 text-sm font-medium text-error animate-slide-down">
-					<AlertCircle className="h-4 w-4 shrink-0" />
+				<div className="flex items-center gap-3 rounded-xl border border-error/30 bg-errorLight px-4 py-3.5 text-sm font-medium text-error animate-slide-down shadow-sm">
+					<AlertCircle className="h-5 w-5 shrink-0" />
 					{error}
 				</div>
 			)}
 
-			{/* Stat cards */}
-			<div className="grid grid-cols-2 gap-4 xl:grid-cols-4 stagger-children">
+			{/* Platform Health Indicators Panel (Immediate Attention Actions) */}
+			<div className="grid grid-cols-2 sm:grid-cols-3 gap-4 stagger-children">
+				<HealthTile
+					href="/users?filter=PENDING"
+					tone="border-warning/30 bg-warningLight/50"
+					iconWrap="bg-warningLight text-warning"
+					icon={<Clock className="h-5 w-5" />}
+					label="Pending Review"
+					value={`${stats?.pendingApprovals ?? 0} Users`}
+				/>
+				<HealthTile
+					href="/moderation"
+					tone="border-error/30 bg-errorLight/50"
+					iconWrap="bg-errorLight text-error"
+					icon={<AlertTriangle className="h-5 w-5" />}
+					label="Pending Reports"
+					value={`${stats?.reportsPendingReview ?? 0} Reports`}
+				/>
+				<div className="col-span-2 sm:col-span-1">
+					<HealthTile
+						href="/users?filter=SUSPENDED"
+						tone="border-border bg-surfaceVariant/50 w-full"
+						iconWrap="bg-surfaceVariant text-textSecondary"
+						icon={<Ban className="h-5 w-5" />}
+						label="Suspended Accounts"
+						value={`${stats?.suspendedUsers ?? 0} Users`}
+					/>
+				</div>
+			</div>
+
+			{/* Stats Grid */}
+			<div className="grid grid-cols-2 sm:grid-cols-3 gap-4 stagger-children">
 				<StatCard
 					loading={loading}
-					icon={<Users className="h-5 w-5 text-dashboardBlue" />}
-					title="Total Users"
-					value={String(stats?.totalUsers ?? 0)}
-					tint="bg-dashboardBlueTint"
+					icon={<Package className="h-5 w-5 text-primary" />}
+					title="Total / Available Listings"
+					value={`${stats?.totalListings ?? 0} / ${stats?.availableListings ?? 0}`}
+					tint="bg-primaryLight"
+					href="/items"
+				/>
+				<StatCard
+					loading={loading}
+					icon={<ShieldCheck className="h-5 w-5 text-success" />}
+					title="Verified Students"
+					value={String(stats?.verifiedStudents ?? 0)}
+					tint="bg-successLight"
+					href="/users?filter=VERIFIED"
 				/>
 				<StatCard
 					loading={loading}
 					icon={<PackageOpen className="h-5 w-5 text-primary" />}
 					title="Active Rentals"
-					value={String(stats?.activeBookings ?? 0)}
+					value={String(stats?.activeRentals ?? 0)}
 					tint="bg-primaryLight"
-				/>
-				<StatCard
-					loading={loading}
-					icon={<DollarSign className="h-5 w-5 text-success" />}
-					title="Revenue"
-					value={`৳${Number(stats?.revenue ?? 0).toLocaleString()}`}
-					tint="bg-successLight"
-				/>
-				<StatCard
-					loading={loading}
-					icon={<UserPlus className="h-5 w-5 text-warning" />}
-					title="Pending Approvals"
-					value={String(stats?.pendingApprovals ?? pendingUsers.length)}
-					tint="bg-warningLight"
+					href="/bookings"
+					className="col-span-2 sm:col-span-1"
 				/>
 			</div>
 
-			{/* Pending approvals panel – styled like StudentDashboard's panels */}
-			<div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-				{/* Pending approvals panel – styled like StudentDashboard's panels */}
-				<section className="flex flex-col overflow-hidden rounded-xl border border-borderLight bg-surface shadow-sm">
-					<div className="flex items-center justify-between border-b border-borderLight px-5 py-4">
-						<h2 className="flex items-center gap-2 text-sm font-bold text-textPrimary">
-							<Clock className="h-4 w-4 text-warning" />
-							Pending Approvals
-						</h2>
-						<Link
-							href="/users?filter=PENDING"
-							className="text-xs font-semibold text-primary hover:underline">
-							View all
-						</Link>
-					</div>
+			{/* Main section: tabbed for maximum mobile layout optimization */}
+			<section id="main-tabs-section" className="flex flex-col rounded-2xl border border-borderLight bg-surface shadow-sm overflow-hidden">
+				{/* Tab Selection */}
+				<div className="flex border-b border-borderLight bg-card overflow-x-auto scrollbar-thin">
+					<TabButton
+						active={activeTab === "pending"}
+						onClick={() => setActiveTab("pending")}
+						icon={<Clock className="h-4 w-4" />}
+						label="Pending Approvals"
+						badge={pendingUsers.length > 0 ? pendingUsers.length : undefined}
+					/>
+					<TabButton
+						active={activeTab === "reports"}
+						onClick={() => setActiveTab("reports")}
+						icon={<ShieldAlert className="h-4 w-4" />}
+						label="Flagged Reports"
+						badge={reports.length > 0 ? reports.length : undefined}
+					/>
+				</div>
 
-					<div className="flex-1 divide-y divide-borderLight overflow-y-auto max-h-[480px]">
-						{loading ? (
-							<ListRowSkeleton count={4} />
-						) : pendingUsers.length === 0 ? (
-							<div className="flex flex-col items-center justify-center gap-2 px-5 py-10 text-center">
-								<Clock className="h-8 w-8 text-borderLight" />
-								<p className="text-sm text-textSecondary">No pending approvals.</p>
-							</div>
-						) : (
-							<>
-								{pendingUsers.slice(0, 6).map((user) => (
-									<div
-										key={user.id}
-										className="flex items-center justify-between gap-4 px-5 py-3.5 transition-colors hover:bg-surfaceVariant/60">
-										<div className="flex min-w-0 items-center gap-3">
-											<div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primaryLight text-sm font-bold text-primary">
-												{user.name?.[0]?.toUpperCase() ?? "U"}
-											</div>
-											<div className="min-w-0">
-												<div className="truncate text-sm font-semibold text-textPrimary">
-													{user.name}
-												</div>
-												<div className="truncate text-xs text-textTertiary">
-													{user.studentId} · {user.email}
-												</div>
-											</div>
-										</div>
-										<Link
-											href={`/users/${user.id}?type=pending`}
-											className="shrink-0 text-xs font-bold text-primary hover:underline">
-											Review
-										</Link>
-									</div>
-								))}
-								{pendingUsers.length > 6 && (
-									<Link
-										href="/users?filter=PENDING"
-										className="flex items-center justify-center px-5 py-3 text-xs font-semibold text-textSecondary transition-colors hover:bg-surfaceVariant/60 hover:text-primary">
-										View all {pendingUsers.length} pending users →
-									</Link>
-								)}
-							</>
-						)}
-					</div>
-				</section>
-
-				{/* Audit Log Panel */}
-				<section className="flex flex-col overflow-hidden rounded-xl border border-borderLight bg-surface shadow-sm">
-					<div className="border-b border-borderLight px-4 py-4 sm:px-5">
-						<h2 className="flex items-center gap-2 text-sm font-bold text-textPrimary">
-							<AlertCircle className="h-4 w-4 text-textTertiary" />
-							Trust Score Audit Log
-						</h2>
-					</div>
-					<div className="flex-1 divide-y divide-borderLight overflow-y-auto max-h-[480px]">
-						{loading ? (
-							<ListRowSkeleton count={4} />
-						) : auditLogs.length === 0 ? (
-							<div className="px-4 py-12 text-center text-sm text-textTertiary">
-								No audit logs found.
-							</div>
-						) : (
-							auditLogs.map((log, i) => (
-								<div
-									key={log.id ?? i}
-									className="flex flex-col gap-3 px-4 py-3.5 sm:flex-row sm:items-center sm:justify-between sm:px-5">
-									<div className="flex min-w-0 items-start gap-3 sm:items-center">
-										{log.change > 0 ? (
-											<TrendingUp className="h-4 w-4 shrink-0 text-success" />
-										) : (
-											<TrendingDown className="h-4 w-4 shrink-0 text-error" />
-										)}
-										<div className="min-w-0 max-w-full">
-											<div className="truncate text-xs font-bold text-textPrimary">
-												{log.name}
-											</div>
-											<div className="truncate text-xs text-textSecondary">
-												{log.reason}
-											</div>
-											<div className="mt-0.5 text-[10px] text-textTertiary">
-												{formatDate(log.timestamp)}
-											</div>
-										</div>
-									</div>
-									<span
-										className={`self-start text-sm font-extrabold sm:ml-3 sm:self-auto ${
-											log.change > 0 ? "text-success" : "text-error"
-										}`}>
-										{log.change > 0 ? `+${log.change}` : log.change}
-									</span>
-								</div>
-							))
-						)}
-					</div>
-				</section>
-			</div>
+				{/* TAB CONTENTS */}
+				<div className="p-5 flex-1 min-h-[400px]">
+					{activeTab === "pending" && (
+						<PendingUsersTab pendingUsers={pendingUsers} loading={loading} />
+					)}
+					{activeTab === "reports" && (
+						<ReportsTab reports={reports} loading={loading} />
+					)}
+				</div>
+			</section>
 		</div>
+	);
+}
+
+function HealthTile({
+	href,
+	tone,
+	iconWrap,
+	icon,
+	label,
+	value,
+}: {
+	href: string;
+	tone: string;
+	iconWrap: string;
+	icon: React.ReactNode;
+	label: string;
+	value: string;
+}) {
+	return (
+		<Link href={href} className="w-full">
+			<TiltCard
+				maxTilt={4}
+				glare={true}
+				className={`group flex items-center gap-3 rounded-xl border p-4 shadow-sm transition hover:border-primary/40 hover:shadow-md ${tone}`}
+			>
+				<div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-lg ${iconWrap}`}>
+					{icon}
+				</div>
+				<div className="min-w-0 flex-1">
+					<div className="text-[10px] font-bold uppercase tracking-wider text-textTertiary">{label}</div>
+					<div className="text-lg font-bold text-textPrimary">{value}</div>
+				</div>
+				<ChevronRight className="ml-auto h-4 w-4 shrink-0 text-textTertiary transition group-hover:translate-x-0.5 group-hover:text-primary" />
+			</TiltCard>
+		</Link>
+	);
+}
+
+function TabButton({
+	active,
+	onClick,
+	icon,
+	label,
+	badge,
+}: {
+	active: boolean;
+	onClick: () => void;
+	icon: React.ReactNode;
+	label: string;
+	badge?: number;
+}) {
+	return (
+		<button
+			onClick={onClick}
+			className={`flex-1 sm:flex-initial flex items-center justify-center gap-2 px-6 py-4 text-sm font-bold border-b-2 transition-all relative whitespace-nowrap ${
+				active
+					? "border-primary text-primary bg-surface"
+					: "border-transparent text-textSecondary hover:text-textPrimary hover:bg-surfaceVariant/30"
+			}`}>
+			{icon}
+			{label}
+			{badge !== undefined && (
+				<span className="absolute top-2 right-2 flex h-5 w-5 items-center justify-center rounded-full bg-warning text-[10px] font-bold text-white">
+					{badge}
+				</span>
+			)}
+		</button>
 	);
 }

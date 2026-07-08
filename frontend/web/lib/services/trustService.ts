@@ -1,29 +1,18 @@
 import api from "../api";
-import { TrustEventResponse, TrustEventType } from "../../types/trust";
+import {
+  TrustSummaryResponse,
+} from "../../types/trust";
 
 export const trustService = {
-  getAllTrustEvents: async (): Promise<TrustEventResponse[]> => {
-    const response = await api.get<TrustEventResponse[]>("/trust/events");
+  /** Current user's full trust snapshot (profile + dashboard). */
+  getMySummary: async (): Promise<TrustSummaryResponse> => {
+    const response = await api.get<TrustSummaryResponse>("/trust/me");
     return response.data;
   },
 
-  getTrustEventsByUserId: async (userId: number): Promise<TrustEventResponse[]> => {
-    const response = await api.get<TrustEventResponse[]>(`/trust/events/user/${userId}`);
-    return response.data;
-  },
-
-  getTrustScore: async (userId: number): Promise<number> => {
-    const response = await api.get<number>(`/trust/score/user/${userId}`);
-    return response.data;
-  },
-
-  createTrustEvent: async (trustEventData: {
-    userId: number;
-    eventType: TrustEventType;
-    points: number;
-    reason: string;
-  }): Promise<TrustEventResponse> => {
-    const response = await api.post<TrustEventResponse>("/trust/events", trustEventData);
+  /** Trust snapshot for a specific user (self or staff). */
+  getSummary: async (userId: number): Promise<TrustSummaryResponse> => {
+    const response = await api.get<TrustSummaryResponse>(`/trust/summary/${userId}`);
     return response.data;
   },
 };

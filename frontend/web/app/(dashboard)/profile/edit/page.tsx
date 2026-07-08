@@ -13,9 +13,12 @@ import {
 	CheckCircle2
 } from "lucide-react";
 import api, { getFileUrl } from "@/lib/api";
+import { Card } from "@/components/ui/Card";
 import { isPasswordStrong, validatePhone, normalizePhone } from "@/lib/validation";
 import { useAuth } from "@/context/AuthContext";
 import { useImageUpload } from "@/hooks/useImageUpload";
+import { Field, Input } from "@/components/ui/Field";
+import { TiltCard } from "@/components/ui/TiltCard";
 
 type UserProfile = {
 	userId?: number;
@@ -134,10 +137,7 @@ export default function EditProfilePage() {
 		return profile.phone !== originalProfile.phone;
 	}, [profile, originalProfile, isStudent]);
 
-	const isEmailChanged = useMemo(() => {
-		if (!originalProfile || !isStaff) return false;
-		return profile.email !== originalProfile.email;
-	}, [profile, originalProfile, isStaff]);
+	const isEmailChanged = false; // Email changing is permanently disabled for security reasons
 
 	const requiresPasswordVerification = isPhoneChanged || isEmailChanged;
 
@@ -212,13 +212,7 @@ export default function EditProfilePage() {
 				payload.avatarUrl = uploadedAvatarUrl;
 			}
 
-			// Staff: can change email (no phone — not in their DB schema)
-			if (isStaff) {
-				if (isEmailChanged) {
-					payload.email = profile.email.trim();
-					payload.currentPassword = profileCurrentPassword;
-				}
-			}
+			// Staff: cannot change email (no phone — not in their DB schema)
 
 			// Students: can change phone (no email change allowed)
 			if (isStudent) {
@@ -325,7 +319,7 @@ export default function EditProfilePage() {
 			<div className="mx-auto max-w-3xl space-y-6 px-4 pb-20 sm:px-6 lg:px-8">
 				<div className="h-5 w-40 animate-pulse rounded bg-surfaceVariant" />
 				<div className="h-8 w-56 animate-pulse rounded bg-surfaceVariant" />
-				<div className="rounded-2xl border border-borderLight bg-surface p-4 shadow-sm sm:p-6 md:p-8">
+				<Card padding="none" className="p-4 sm:p-6 md:p-8">
 					<div className="space-y-6">
 						<div className="flex flex-col items-center gap-4 border-b border-borderLight pb-6 sm:pb-8">
 							<div className="h-20 w-20 animate-pulse rounded-full bg-surfaceVariant sm:h-24 sm:w-24" />
@@ -334,24 +328,28 @@ export default function EditProfilePage() {
 						<div className="h-12 animate-pulse rounded-xl bg-surfaceVariant" />
 						<div className="h-12 animate-pulse rounded-xl bg-surfaceVariant" />
 					</div>
-				</div>
+				</Card>
 			</div>
 		);
 	}
 
 	return (
 		<div className="w-full space-y-8 px-4 pb-20 sm:px-6 lg:px-8">
-			<div className="space-y-2">
-				
-				<h1 className="text-2xl font-bold tracking-tight text-textPrimary sm:text-3xl">
-					Account Settings
-				</h1>
+			<div>
+<h2 className="mt-1 text-3xl font-bold tracking-tighter text-textPrimary sm:text-5xl">
+					Settings &amp; <span className="text-gradient-brand italic">Security.</span>
+				</h2>
 			</div>
 
 			{/* ──── Profile Information Form ──── */}
+			<TiltCard
+				maxTilt={3}
+				glare={true}
+				className="rounded-2xl border border-borderLight bg-surface shadow-sm transition-all duration-300 hover:border-primary/40 hover:shadow-md"
+			>
 			<form
 				onSubmit={handleProfileSubmit}
-				className="space-y-8 rounded-2xl border border-borderLight bg-surface p-4 shadow-sm sm:p-6 md:p-8">
+				className="space-y-8 p-4 sm:p-6 md:p-8">
 
 				<div className="border-b border-borderLight pb-4">
 					<h2 className="text-lg font-bold text-textPrimary">Profile Information</h2>
@@ -365,7 +363,7 @@ export default function EditProfilePage() {
 				)}
 
 				{profileError && (
-					<div className="break-words rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+					<div className="break-words rounded-xl border border-error/30 bg-errorLight px-4 py-3 text-sm font-medium text-error">
 						{profileError}
 					</div>
 				)}
@@ -375,6 +373,7 @@ export default function EditProfilePage() {
 					<label className="group relative cursor-pointer">
 						<div className="flex h-20 w-20 items-center justify-center overflow-hidden rounded-full border-2 border-transparent bg-primaryLight text-2xl font-extrabold text-primary transition-colors group-hover:border-primary sm:h-24 sm:w-24 sm:text-3xl">
 							{avatarPreviews[0]?.url || profile.avatarUrl ? (
+								// eslint-disable-next-line @next/next/no-img-element -- blob/object-URL preview; next/image cannot optimize these
 								<img
 									src={avatarPreviews[0]?.url || (profile.avatarUrl ? getFileUrl(profile.avatarUrl) : "")}
 									alt="Profile avatar"
@@ -404,66 +403,58 @@ export default function EditProfilePage() {
 				{/* Editable Fields */}
 				<div className="space-y-6">
 					{/* Full Name — always editable */}
-					<div className="space-y-2">
-						<label className="text-sm font-bold text-textPrimary">
-							Full Name
-						</label>
-						<input
+					<Field label="Full Name">
+						<Input
 							value={profile.name}
 							onChange={(e) => setProfile({ ...profile, name: e.target.value })}
 							type="text"
-							className="w-full rounded-xl border border-borderLight bg-surface px-3 py-3 sm:px-4 text-md text-primary focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
 							maxLength={50}
 							required
 						/>
-					</div>
+					</Field>
 
 					{/* Role-specific fields */}
 					{isStudent ? (
 						<>
 							{/* Student ID — read-only */}
-							<div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-								<div className="space-y-2 overflow-hidden opacity-70">
-									<label className="flex items-center gap-2 text-sm font-bold text-textPrimary">
-										Student ID <Lock className="h-3 w-3" />
-									</label>
-									<input
-										value={profile.studentId}
-										type="text"
-										className="w-full cursor-not-allowed overflow-hidden text-ellipsis rounded-xl border border-borderLight bg-surfaceVariant px-4 py-3 text-sm text-primary"
-										readOnly
-										disabled
-									/>
-								</div>
+							<div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+								<Field
+								className="overflow-hidden opacity-70"
+								label={<span className="flex items-center gap-2">Student ID <Lock className="h-3 w-3" /></span>}
+							>
+								<Input
+									value={profile.studentId}
+									type="text"
+									className="cursor-not-allowed overflow-hidden text-ellipsis !bg-surfaceVariant"
+									readOnly
+									disabled
+								/>
+							</Field>
 
 								{/* Email — read-only for students */}
-								<div className="space-y-2 overflow-hidden opacity-70">
-									<label className="flex items-center gap-2 text-sm font-bold text-textPrimary">
-										Email Address <Lock className="h-3 w-3" />
-									</label>
-									<input
-										value={profile.email}
-										type="email"
-										className="w-full cursor-not-allowed overflow-hidden text-ellipsis rounded-xl border border-borderLight bg-surfaceVariant px-4 py-3 text-sm text-primary"
-										readOnly
-										disabled
-									/>
-								</div>
+								<Field
+								className="overflow-hidden opacity-70"
+								label={<span className="flex items-center gap-2">Email Address <Lock className="h-3 w-3" /></span>}
+							>
+								<Input
+									value={profile.email}
+									type="email"
+									className="cursor-not-allowed overflow-hidden text-ellipsis !bg-surfaceVariant"
+									readOnly
+									disabled
+								/>
+							</Field>
 							</div>
 
 							{/* Phone Number — editable for students */}
-							<div className="space-y-2">
-								<label className="text-sm font-bold text-textPrimary">
-									Phone Number
-								</label>
-								<input
-									value={profile.phone}
-									onChange={(e) => setProfile({ ...profile, phone: e.target.value })}
-									type="tel"
-									placeholder="+1234567890"
-									className="w-full rounded-xl border border-borderLight bg-surface px-3 py-3 sm:px-4 text-md text-primary focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
-								/>
-							</div>
+							<Field label="Phone Number">
+							<Input
+								value={profile.phone}
+								onChange={(e) => setProfile({ ...profile, phone: e.target.value })}
+								type="tel"
+								placeholder="+1234567890"
+							/>
+						</Field>
 
 							<p className="break-words text-xs leading-relaxed text-textSecondary">
 								Student ID and email cannot be changed as they are verified academic
@@ -472,19 +463,22 @@ export default function EditProfilePage() {
 						</>
 					) : (
 						<>
-							{/* Email — editable for staff */}
-							<div className="space-y-2">
-								<label className="text-sm font-bold text-textPrimary">
-									Email Address
-								</label>
-								<input
+							{/* Email — read-only for staff */}
+							<Field
+								className="overflow-hidden opacity-70"
+								label={<span className="flex items-center gap-2">Email Address <Lock className="h-3 w-3" /></span>}
+							>
+								<Input
 									value={profile.email}
-									onChange={(e) => setProfile({ ...profile, email: e.target.value })}
 									type="email"
-									className="w-full rounded-xl border border-borderLight bg-surface px-3 py-3 sm:px-4 text-md text-primary focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
-									required
+									className="cursor-not-allowed overflow-hidden text-ellipsis !bg-surfaceVariant"
+									readOnly
+									disabled
 								/>
-							</div>
+							</Field>
+							<p className="break-words text-xs leading-relaxed text-textSecondary">
+								Email address cannot be changed for security purposes.
+							</p>
 						</>
 					)}
 
@@ -543,11 +537,17 @@ export default function EditProfilePage() {
 					</button>
 				</div>
 			</form>
+			</TiltCard>
 
 			{/* ──── Security / Password Form ──── */}
+			<TiltCard
+				maxTilt={3}
+				glare={true}
+				className="rounded-2xl border border-borderLight bg-surface shadow-sm transition-all duration-300 hover:border-primary/40 hover:shadow-md"
+			>
 			<form
 				onSubmit={handlePasswordSubmit}
-				className="space-y-8 rounded-2xl border border-borderLight bg-surface p-4 shadow-sm sm:p-6 md:p-8">
+				className="space-y-8 p-4 sm:p-6 md:p-8">
 
 				<div className="border-b border-borderLight pb-4">
 					<h2 className="text-lg font-bold text-textPrimary">Security</h2>
@@ -561,95 +561,44 @@ export default function EditProfilePage() {
 				)}
 
 				{passwordError && (
-					<div className="break-words rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-						{passwordError}
-					</div>
+					<div className="break-words rounded-xl border border-error/30 bg-errorLight px-4 py-3 text-sm font-medium text-error">
+					{passwordError}
+				</div>
 				)}
 
 				<div className="space-y-6">
-					<div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-						<div className="space-y-2">
-							<label className="text-sm font-bold text-textPrimary">
-								Current Password
-							</label>
-							<div className="relative">
-								<input
-									type={showCurrentPassword ? "text" : "password"}
-									value={passwordForm.currentPassword}
-									onChange={(e) => setPasswordForm(prev => ({ ...prev, currentPassword: e.target.value }))}
-									placeholder="••••••••"
-									className="w-full rounded-xl border border-borderLight bg-surface px-3 py-3 sm:px-4 pr-10 text-sm text-primary focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
-									maxLength={128}
-								/>
-								<button
-									type="button"
-									onClick={() => setShowCurrentPassword(!showCurrentPassword)}
-									className="absolute inset-y-0 right-0 flex items-center pr-3 text-textSecondary transition-colors hover:text-primary"
-								>
-									{showCurrentPassword ? (
-										<EyeOff className="h-4 w-4" />
-									) : (
-										<Eye className="h-4 w-4" />
-									)}
-								</button>
-							</div>
-						</div>
+					<div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+						<Field label="Current Password">
+					<PasswordInput
+						value={passwordForm.currentPassword}
+						onChange={(e) => setPasswordForm(prev => ({ ...prev, currentPassword: e.target.value }))}
+						show={showCurrentPassword}
+						onToggle={() => setShowCurrentPassword(!showCurrentPassword)}
+						maxLength={128}
+					/>
+				</Field>
 					</div>
 
-					<div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-						<div className="space-y-2">
-							<label className="text-sm font-bold text-textPrimary">
-								New Password
-							</label>
-							<div className="relative">
-								<input
-									type={showNewPassword ? "text" : "password"}
-									value={passwordForm.newPassword}
-									onChange={(e) => setPasswordForm(prev => ({ ...prev, newPassword: e.target.value }))}
-									placeholder="••••••••"
-									className="w-full rounded-xl border border-borderLight bg-surface px-3 py-3 sm:px-4 pr-10 text-sm text-primary focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
-									maxLength={128}
-								/>
-								<button
-									type="button"
-									onClick={() => setShowNewPassword(!showNewPassword)}
-									className="absolute inset-y-0 right-0 flex items-center pr-3 text-textSecondary transition-colors hover:text-primary"
-								>
-									{showNewPassword ? (
-										<EyeOff className="h-4 w-4" />
-									) : (
-										<Eye className="h-4 w-4" />
-									)}
-								</button>
-							</div>
-						</div>
+					<div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+						<Field label="New Password">
+					<PasswordInput
+						value={passwordForm.newPassword}
+						onChange={(e) => setPasswordForm(prev => ({ ...prev, newPassword: e.target.value }))}
+						show={showNewPassword}
+						onToggle={() => setShowNewPassword(!showNewPassword)}
+						maxLength={128}
+					/>
+				</Field>
 
-						<div className="space-y-2">
-							<label className="text-sm font-bold text-textPrimary">
-								Confirm New Password
-							</label>
-							<div className="relative">
-								<input
-									type={showConfirmPassword ? "text" : "password"}
-									value={passwordForm.confirmPassword}
-									onChange={(e) => setPasswordForm(prev => ({ ...prev, confirmPassword: e.target.value }))}
-									placeholder="••••••••"
-									className="w-full rounded-xl border border-borderLight bg-surface px-3 py-3 sm:px-4 pr-10 text-sm text-primary focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
-									maxLength={128}
-								/>
-								<button
-									type="button"
-									onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-									className="absolute inset-y-0 right-0 flex items-center pr-3 text-textSecondary transition-colors hover:text-primary"
-								>
-									{showConfirmPassword ? (
-										<EyeOff className="h-4 w-4" />
-									) : (
-										<Eye className="h-4 w-4" />
-									)}
-								</button>
-							</div>
-						</div>
+						<Field label="Confirm New Password">
+					<PasswordInput
+						value={passwordForm.confirmPassword}
+						onChange={(e) => setPasswordForm(prev => ({ ...prev, confirmPassword: e.target.value }))}
+						show={showConfirmPassword}
+						onToggle={() => setShowConfirmPassword(!showConfirmPassword)}
+						maxLength={128}
+					/>
+				</Field>
 					</div>
 
 					<div className="rounded-2xl border border-borderLight bg-surfaceVariant px-4 py-4 text-sm">
@@ -681,6 +630,43 @@ export default function EditProfilePage() {
 					</button>
 				</div>
 			</form>
+			</TiltCard>
+		</div>
+	);
+}
+
+function PasswordInput({
+	value,
+	onChange,
+	show,
+	onToggle,
+	maxLength,
+	placeholder = "\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022",
+}: {
+	value: string;
+	onChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
+	show: boolean;
+	onToggle: () => void;
+	maxLength?: number;
+	placeholder?: string;
+}) {
+	return (
+		<div className="relative">
+			<Input
+				type={show ? "text" : "password"}
+				value={value}
+				onChange={onChange}
+				placeholder={placeholder}
+				maxLength={maxLength}
+				className="pr-10"
+			/>
+			<button
+				type="button"
+				onClick={onToggle}
+				className="absolute inset-y-0 right-0 flex items-center pr-3 text-textSecondary transition-colors hover:text-primary"
+			>
+				{show ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+			</button>
 		</div>
 	);
 }

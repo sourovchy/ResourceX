@@ -27,6 +27,7 @@ public class WishlistServiceImpl implements WishlistService {
     private final WishlistRepository wishlistRepository;
     private final ItemRepository itemRepository;
     private final UserRepository userRepository;
+    private final com.resourcex.resourcex.service.AvatarUrlResolver avatarUrlResolver;
 
     @Override
     @Transactional
@@ -70,17 +71,21 @@ public class WishlistServiceImpl implements WishlistService {
     @Transactional(readOnly = true)
     public List<WishlistResponse> getMyWishlist() {
         User user = resolveCurrentUser();
-        return wishlistRepository.findByUserOrderByCreatedAtDesc(user).stream()
+        return wishlistRepository.findByUser(user).stream()
                 .filter(w -> w.getItem().getStatus() != Item.ItemStatus.DELETED)
                 .map(this::toResponse)
                 .toList();
     }
 
     private WishlistResponse toResponse(WishlistItem w) {
+        com.resourcex.resourcex.dto.response.ItemResponse itemResp = ItemMapper.toResponse(w.getItem());
+        if (itemResp != null && itemResp.getOwner() != null && w.getItem().getOwner() != null) {
+            itemResp.getOwner().setAvatarUrl(avatarUrlResolver.resolve(w.getItem().getOwner().getAvatarFileId()));
+        }
         return WishlistResponse.builder()
-                .wishlistId(w.getWishlistId())
-                .item(ItemMapper.toResponse(w.getItem()))
-                .createdAt(w.getCreatedAt())
+                .wishlistId(null)
+                .item(itemResp)
+                .createdAt(null)
                 .build();
     }
 

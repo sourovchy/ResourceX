@@ -23,14 +23,6 @@ public class NotificationValidator {
             throw new BadRequestException("Notification type is required");
         }
 
-        if (request.getTitle() == null || request.getTitle().isBlank()) {
-            throw new BadRequestException("Notification title cannot be empty");
-        }
-
-        if (request.getTitle().length() > 255) {
-            throw new BadRequestException("Notification title cannot exceed 255 characters");
-        }
-
         if (request.getMessage() == null || request.getMessage().isBlank()) {
             throw new BadRequestException("Notification message cannot be empty");
         }

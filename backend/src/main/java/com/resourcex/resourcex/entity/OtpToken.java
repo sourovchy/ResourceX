@@ -7,7 +7,7 @@ import java.time.Instant;
 
 @Entity
 @Table(name = "otp_tokens", indexes = {
-        @Index(name = "idx_otp_email_purpose_status", columnList = "email,tokenPurpose,status"),
+        @Index(name = "idx_otp_email_purpose", columnList = "email,tokenPurpose"),
         @Index(name = "idx_otp_expires_at", columnList = "expiresAt")
 })
 @Getter
@@ -32,43 +32,20 @@ public class OtpToken {
     @Builder.Default
     private TokenPurpose tokenPurpose = TokenPurpose.EMAIL_VERIFICATION;
 
-    @Enumerated(EnumType.STRING)
-    @Column(nullable = false, length = 50, columnDefinition = "VARCHAR(50)")
-    @Builder.Default
-    private OtpStatus status = OtpStatus.PENDING;
-
-    @Column(nullable = false)
-    @Builder.Default
-    private int attemptCount = 0;
-
     @Column(nullable = false)
     @Builder.Default
     private int resendCount = 0;
 
     @Column(nullable = false)
-    private Instant createdAt;
-
-    @Column(nullable = false)
     private Instant expiresAt;
-
-    private Instant verifiedAt;
 
     private Instant usedAt;
 
     private Instant lastSentAt;
 
-    @Version
-    private Long version;
-
     @PrePersist
     public void onCreate() {
-
         Instant now = Instant.now();
-
-        if (createdAt == null) {
-            createdAt = now;
-        }
-
         if (lastSentAt == null) {
             lastSentAt = now;
         }

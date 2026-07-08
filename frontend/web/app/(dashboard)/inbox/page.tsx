@@ -19,19 +19,17 @@ export default function InboxPage() {
     isCurrentUserStaff,
     loading,
     openCreatedConversation,
-    clearChat,
     deleteConversation,
   } = useChat();
 
   const isChatOpen = selectedId !== null;
 
   return (
-    <div className="h-full w-full bg-background p-2 sm:p-3 md:p-5">
-      <div className="flex h-full w-full flex-col overflow-hidden rounded-2xl border border-borderLight bg-[var(--color-chatBase)] text-sm shadow-sm md:flex-row md:text-base">
+    <div className="h-full w-full p-2 sm:p-3 md:p-5 flex flex-col md:flex-row gap-5 md:gap-6 text-sm md:text-base overflow-hidden">
       {/* Sidebar */}
       <div
-        className={`w-full md:w-[320px] lg:w-[360px] shrink-0 md:border-r md:border-[var(--color-chatBorder)] ${
-          isChatOpen ? "hidden md:block" : "block"
+        className={`w-full md:w-[320px] lg:w-[360px] shrink-0 h-full ${
+          isChatOpen ? "hidden md:flex md:flex-col" : "flex flex-col"
         }`}
       >
         <ChatSidebar
@@ -48,7 +46,7 @@ export default function InboxPage() {
 
       {/* Chat Area */}
       <div
-        className={`min-h-0 flex-1 flex-col ${
+        className={`min-h-0 flex-1 flex-col h-full ${
           isChatOpen ? "flex" : "hidden md:flex"
         }`}
       >
@@ -59,10 +57,8 @@ export default function InboxPage() {
           isCurrentUserStaff={isCurrentUserStaff}
           onSend={sendMessage}
           onBack={deselectConversation}
-          onClearChat={clearChat}
           onDeleteConversation={deleteConversation}
         />
-      </div>
       </div>
     </div>
   );

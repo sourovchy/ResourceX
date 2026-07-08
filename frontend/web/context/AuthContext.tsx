@@ -1,211 +1,209 @@
 "use client";
 
 import React, {
-	createContext,
-	useCallback,
-	useContext,
-	useEffect,
-	useMemo,
-	useRef,
-	useState,
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
 } from "react";
 import { usePathname, useRouter } from "next/navigation";
 
 import api from "@/lib/api";
+import { hasRole, type AccessibleRole } from "@/lib/auth";
 import {
-	hasRole,
-	type AccessibleRole,
-} from "@/lib/auth";
-import {
-	AuthResponse,
-	AuthUser,
-	CurrentUserResponse,
-	UserRole,
+  AuthResponse,
+  AuthUser,
+  CurrentUserResponse,
+  UserRole,
 } from "@/types/auth";
 
 type AuthContextValue = {
-	user: AuthUser | null;
-	roles: UserRole[];
-	loading: boolean;
-	error: string | null;
-	login: (
-		email: string,
-		password: string,
-		redirect?: boolean,
-	) => Promise<AuthResponse>;
-	logout: () => void;
-	refresh: () => Promise<void>;
-	canAccess: (role: AccessibleRole) => boolean;
+  user: AuthUser | null;
+  roles: UserRole[];
+  loading: boolean;
+  error: string | null;
+  login: (
+    email: string,
+    password: string,
+    redirect?: boolean,
+  ) => Promise<AuthResponse>;
+  logout: () => void;
+  refresh: () => Promise<void>;
+  canAccess: (role: AccessibleRole) => boolean;
 };
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 
 function normalizeRoles(roles: UserRole[] = []): UserRole[] {
-	return Array.from(
-		new Set(
-			roles
-				.filter(Boolean)
-				.map((role) => String(role).trim().toUpperCase() as UserRole),
-		),
-	);
+  return Array.from(
+    new Set(
+      roles
+        .filter(Boolean)
+        .map((role) => String(role).trim().toUpperCase() as UserRole),
+    ),
+  );
 }
 
 function getHomeRoute(_roles: UserRole[]) {
-	return "/dashboard";
+  return "/dashboard";
 }
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-	const router = useRouter();
-	const pathname = usePathname();
+  const router = useRouter();
+  const pathname = usePathname();
 
-	const [user, setUser] = useState<AuthUser | null>(null);
-	const [roles, setRoles] = useState<UserRole[]>([]);
-	const [loading, setLoading] = useState(true);
-	const [error, setError] = useState<string | null>(null);
+  const [user, setUser] = useState<AuthUser | null>(null);
+  const [roles, setRoles] = useState<UserRole[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-	const suppressLoginRedirectRef = useRef(false);
-	const isMountedRef = useRef(true);
-	const requestSeqRef = useRef(0);
+  const suppressLoginRedirectRef = useRef(false);
+  const isMountedRef = useRef(true);
+  const requestSeqRef = useRef(0);
 
-	const nextRequestSeq = useCallback(() => {
-		requestSeqRef.current += 1;
-		return requestSeqRef.current;
-	}, []);
+  const nextRequestSeq = useCallback(() => {
+    requestSeqRef.current += 1;
+    return requestSeqRef.current;
+  }, []);
 
-	const applySession = useCallback(
-		(nextUser: AuthUser, nextRoles: UserRole[]) => {
-			const normalizedRoles = normalizeRoles(nextRoles);
-			setUser(nextUser);
-			setRoles(normalizedRoles);
-			setError(null);
-		},
-		[],
-	);
+  const applySession = useCallback(
+    (nextUser: AuthUser, nextRoles: UserRole[]) => {
+      const normalizedRoles = normalizeRoles(nextRoles);
+      setUser(nextUser);
+      setRoles(normalizedRoles);
+      setError(null);
+    },
+    [],
+  );
 
-	const logout = useCallback(() => {
-		nextRequestSeq();
-		// Fire-and-forget: clears the httpOnly cookie on the server.
-		api.post("/auth/logout").catch(() => {});
-		setUser(null);
-		setRoles([]);
-		setError(null);
-		suppressLoginRedirectRef.current = false;
+  const logout = useCallback(() => {
+    nextRequestSeq();
+    // Fire-and-forget: clears the httpOnly cookie on the server.
+    api.post("/auth/logout").catch(() => {});
+    setUser(null);
+    setRoles([]);
+    setError(null);
+    suppressLoginRedirectRef.current = false;
 
-		if (pathname !== "/auth/login") {
-			router.replace("/auth/login");
-		}
-	}, [nextRequestSeq, pathname, router]);
+    if (pathname !== "/auth/login") {
+      router.replace("/auth/login");
+    }
+  }, [nextRequestSeq, pathname, router]);
 
-	const refresh = useCallback(async () => {
-		const seq = nextRequestSeq();
+  const refresh = useCallback(async () => {
+    const seq = nextRequestSeq();
 
-		try {
-			// Cookie is sent automatically via withCredentials; 401 means not logged in.
-			const { data } = await api.get<CurrentUserResponse>("/auth/me");
+    try {
+      // Cookie is sent automatically via withCredentials; 401 means not logged in.
+      const { data } = await api.get<CurrentUserResponse>("/auth/me");
 
-			if (isMountedRef.current && seq === requestSeqRef.current) {
-				applySession(data.user, data.roles ?? []);
-			}
-		} catch (err: unknown) {
-			if (isMountedRef.current && seq === requestSeqRef.current) {
-				setUser(null);
-				setRoles([]);
-				const status = (err as { response?: { status?: number } })?.response?.status;
-				// 401 = not logged in (normal). 403 = suspended/disabled account.
-				// Both clear the session without flagging an application error.
-				if (status !== 401 && status !== 403) {
-					setError("Failed to restore session");
-				}
-			}
-		} finally {
-			if (isMountedRef.current && seq === requestSeqRef.current) {
-				setLoading(false);
-			}
-		}
-	}, [applySession, nextRequestSeq]);
+      if (isMountedRef.current && seq === requestSeqRef.current) {
+        applySession(data.user, data.roles ?? []);
+      }
+    } catch (err: unknown) {
+      if (isMountedRef.current && seq === requestSeqRef.current) {
+        setUser(null);
+        setRoles([]);
+        const status = (err as { response?: { status?: number } })?.response
+          ?.status;
+        // 401 = not logged in (normal). 403 = suspended/disabled account.
+        // Both clear the session without flagging an application error.
+        if (status !== 401 && status !== 403) {
+          setError("Failed to restore session");
+        }
+      }
+    } finally {
+      if (isMountedRef.current && seq === requestSeqRef.current) {
+        setLoading(false);
+      }
+    }
+  }, [applySession, nextRequestSeq]);
 
-	useEffect(() => {
-		isMountedRef.current = true;
-		void refresh();
+  useEffect(() => {
+    isMountedRef.current = true;
+    void refresh();
 
-		return () => {
-			isMountedRef.current = false;
-		};
-	}, [refresh]);
+    return () => {
+      isMountedRef.current = false;
+    };
+  }, [refresh]);
 
-	useEffect(() => {
-		if (pathname !== "/auth/login") {
-			suppressLoginRedirectRef.current = false;
-		}
-	}, [pathname]);
+  useEffect(() => {
+    if (pathname !== "/auth/login") {
+      suppressLoginRedirectRef.current = false;
+    }
+  }, [pathname]);
 
-	const login = useCallback(
-		async (email: string, password: string, redirect = true) => {
-			const seq = nextRequestSeq();
+  const login = useCallback(
+    async (email: string, password: string, redirect = true) => {
+      const seq = nextRequestSeq();
 
-			try {
-				const { data } = await api.post<AuthResponse>("/auth/login", {
-					email,
-					password,
-				});
+      try {
+        const { data } = await api.post<AuthResponse>("/auth/login", {
+          email,
+          password,
+        });
 
-				if (!isMountedRef.current || seq !== requestSeqRef.current) {
-					return data;
-				}
+        if (!isMountedRef.current || seq !== requestSeqRef.current) {
+          return data;
+        }
 
-				const normalizedRoles = normalizeRoles(data.roles ?? []);
-				applySession(data.user, normalizedRoles);
+        const normalizedRoles = normalizeRoles(data.roles ?? []);
+        applySession(data.user, normalizedRoles);
 
-				suppressLoginRedirectRef.current = !redirect;
-				setError(null);
+        suppressLoginRedirectRef.current = !redirect;
+        setError(null);
 
-				if (redirect) {
-					router.replace(getHomeRoute(normalizedRoles));
-				}
+        if (redirect) {
+          router.replace(getHomeRoute(normalizedRoles));
+        }
 
-				return data;
-			} catch (err) {
-				if (isMountedRef.current && seq === requestSeqRef.current) {
-					setError("Login failed");
-				}
-				throw err;
-			}
-		},
-		[applySession, nextRequestSeq, router],
-	);
+        return data;
+      } catch (err) {
+        if (isMountedRef.current && seq === requestSeqRef.current) {
+          setError("Login failed");
+        }
+        throw err;
+      }
+    },
+    [applySession, nextRequestSeq, router],
+  );
 
-	const value = useMemo<AuthContextValue>(
-		() => ({
-			user,
-			roles,
-			loading,
-			error,
-			login,
-			logout,
-			refresh,
-			canAccess: (role: AccessibleRole) => hasRole(roles, role),
-		}),
-		[user, roles, loading, error, login, logout, refresh],
-	);
+  const value = useMemo<AuthContextValue>(
+    () => ({
+      user,
+      roles,
+      loading,
+      error,
+      login,
+      logout,
+      refresh,
+      canAccess: (role: AccessibleRole) => hasRole(roles, role),
+    }),
+    [user, roles, loading, error, login, logout, refresh],
+  );
 
-	useEffect(() => {
-		if (
-			!loading &&
-			user &&
-			pathname === "/auth/login" &&
-			!suppressLoginRedirectRef.current
-		) {
-			router.replace(getHomeRoute(roles));
-		}
-	}, [loading, pathname, roles, router, user]);
+  useEffect(() => {
+    if (
+      !loading &&
+      user &&
+      pathname === "/auth/login" &&
+      !suppressLoginRedirectRef.current
+    ) {
+      router.replace(getHomeRoute(roles));
+    }
+  }, [loading, pathname, roles, router, user]);
 
-	return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
 
 export function useAuth() {
-	const context = useContext(AuthContext);
-	if (!context) {
-		throw new Error("useAuth must be used within AuthProvider");
-	}
-	return context;
+  const context = useContext(AuthContext);
+  if (!context) {
+    throw new Error("useAuth must be used within AuthProvider");
+  }
+  return context;
 }

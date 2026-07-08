@@ -14,4 +14,6 @@ public class AdminTrustUserResponse {
     private String name;
     private String email;
     private Integer trustScore;
+    private String trustLevel;
+    private Integer suspensionCount;
 }

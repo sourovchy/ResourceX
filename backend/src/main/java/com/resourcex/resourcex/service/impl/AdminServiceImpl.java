@@ -2,15 +2,21 @@ package com.resourcex.resourcex.service.impl;
 
 import com.resourcex.resourcex.dto.request.SuspendUserRequest;
 import com.resourcex.resourcex.dto.response.DashboardStatsResponse;
-import com.resourcex.resourcex.dto.response.PendingUserResponse;
+
+import com.resourcex.resourcex.dto.response.PlatformActivityResponse;
+import com.resourcex.resourcex.dto.response.UserResponse;
 import com.resourcex.resourcex.entity.*;
 import com.resourcex.resourcex.exception.BadRequestException;
 import com.resourcex.resourcex.exception.ConflictException;
 import com.resourcex.resourcex.exception.ResourceNotFoundException;
+import com.resourcex.resourcex.mapper.UserMapper;
 import com.resourcex.resourcex.repository.*;
 import com.resourcex.resourcex.service.AdminService;
 import com.resourcex.resourcex.service.AuditLogService;
+import com.resourcex.resourcex.service.NotificationService;
+import com.resourcex.resourcex.service.TrustScoreService;
 import com.resourcex.resourcex.util.constants.RoleConstants;
+import com.resourcex.resourcex.util.constants.TrustPoints;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -28,44 +34,63 @@ import org.springframework.data.domain.Pageable;
 @RequiredArgsConstructor
 public class AdminServiceImpl implements AdminService {
 
-        private final PendingUserRepository pendingUserRepository;
+
         private final UserRepository userRepository;
         private final StudentProfileRepository studentProfileRepository;
         private final ItemRepository itemRepository;
         private final BookingRepository bookingRepository;
-        private final PaymentRepository paymentRepository;
         private final RoleRepository roleRepository;
-        private final UserRoleRepository userRoleRepository;
+        private final com.resourcex.resourcex.service.StudentRestrictionManager restrictionManager;
+        private final com.resourcex.resourcex.service.AvatarUrlResolver avatarUrlResolver;
         private final FileMetadataRepository fileMetadataRepository;
         private final AuditLogService auditLogService;
+        private final com.resourcex.resourcex.service.ItemService itemService;
+        private final TrustScoreService trustScoreService;
+        private final ReportRepository reportRepository;
+        private final NotificationService notificationService;
+        private final StudentRestrictionRepository studentRestrictionRepository;
+        private final PlatformActivityAggregator platformActivityAggregator;
 
         @Override
-        //To get dashboard stat
+        @Transactional(readOnly = true)
         public DashboardStatsResponse getDashboardStats() {
-                long approvedBookings = bookingRepository.countByStatus(Booking.BookingStatus.APPROVED);
+                long totalUsers = userRepository.count();
+                long verifiedStudents = studentProfileRepository.countByEmailVerifiedTrue();
+                long pendingApprovals = userRepository.countByStatus(UserStatus.PENDING);
+                long totalListings = itemRepository.countByStatusNot(Item.ItemStatus.DELETED);
+                long availableListings = itemRepository.countByStatus(Item.ItemStatus.AVAILABLE);
+                long activeRentals = bookingRepository.countByStatus(Booking.BookingStatus.APPROVED);
+                long reportsPendingReview = reportRepository.count();
+                long suspendedUsers = studentRestrictionRepository.countActiveSuspensions(LocalDateTime.now());
 
                 return DashboardStatsResponse.builder()
-                                .totalUsers(userRepository.count())
-                                .activeBookings(approvedBookings)
-                                .revenue(paymentRepository.sumSuccessfulRevenue().doubleValue())
-                                .pendingApprovals(pendingUserRepository.countByStatus(PendingUserStatus.PENDING_REVIEW))
+                                .totalUsers(totalUsers)
+                                .verifiedStudents(verifiedStudents)
+                                .pendingApprovals(pendingApprovals)
+                                .totalListings(totalListings)
+                                .availableListings(availableListings)
+                                .activeBookings(activeRentals) // Map to existing activeBookings
+                                .activeRentals(activeRentals)
+                                .reportsPendingReview(reportsPendingReview)
+                                .suspendedUsers(suspendedUsers)
                                 .build();
         }
 
         @Override
         @Transactional(readOnly = true)
-        public Page<PendingUserResponse> getPendingUsers(Pageable pageable) {
+        public Page<UserResponse> getPendingUsers(Pageable pageable) {
 
-                return pendingUserRepository
-                        .findByStatus(PendingUserStatus.PENDING_REVIEW, pageable)
-                        .map(this::mapToResponse);
+                return userRepository
+                        .findByStatus(UserStatus.PENDING, pageable)
+                        .map(this::mapToUserResponse);
         }
 
         @Override
         @Transactional(readOnly = true)
-        public PendingUserResponse getPendingUserById(Long pendingId) {
-                return pendingUserRepository.findById(pendingId)
-                        .map(this::mapToResponse)
+        public UserResponse getPendingUserById(Long pendingId) {
+                return userRepository.findById(pendingId)
+                        .filter(u -> u.getStatus() == UserStatus.PENDING)
+                        .map(this::mapToUserResponse)
                         .orElseThrow(() -> new ResourceNotFoundException("Pending user not found"));
         }
 
@@ -73,60 +98,39 @@ public class AdminServiceImpl implements AdminService {
         @Transactional
         //to approve user
         public void approveUser(Long pendingId) {
-                PendingUser pending = pendingUserRepository.findByIdForUpdate(pendingId)
+                User pending = userRepository.findById(pendingId)
                                 .orElseThrow(() -> new ResourceNotFoundException("Pending user not found"));
 
-                if (pending.getStatus() != PendingUserStatus.PENDING_REVIEW) {
-                        throw new ConflictException("Pending user is not awaiting approval");
+                if (pending.getStatus() != UserStatus.PENDING) {
+                        throw new ConflictException("User is not awaiting approval");
                 }
 
-                assertUserDoesNotExist(pending);
+                pending.setStatus(UserStatus.ACTIVE);
+                userRepository.save(pending);
 
-                Role defaultRole = roleRepository.findByNameIgnoreCase(RoleConstants.ROLE_USER)
-                                .orElseGet(() -> roleRepository.save(
-                                                Role.builder()
-                                                                .name(RoleConstants.ROLE_USER)
-                                                                .build()));
-
-                User user = User.builder()
-                                .name(pending.getName())
-                                .email(pending.getEmail().trim().toLowerCase())
-                                .password(pending.getPasswordHash())
-                                .status(UserStatus.ACTIVE)
-                                .build();
-
-                User savedUser = userRepository.save(user);
-
-                StudentProfile studentProfile = StudentProfile.builder()
-                                .user(savedUser)
-                                .studentId(pending.getStudentId())
-                                .phone(pending.getPhone())
-                                .university(pending.getUniversity())
-                                .department(pending.getDepartment())
-                                .idCardFileId(pending.getIdCardFileId())
-                                .trustScore(100)
-                                .emailVerified(false)
-                                .phoneVerified(false)
-                                .build();
-
-                studentProfileRepository.save(studentProfile);
-
-                userRoleRepository.save(
-                                UserRole.builder()
-                                                .user(savedUser)
-                                                .role(defaultRole)
-                                                .build());
-
-                pendingUserRepository.delete(pending);
+                // Role is assigned at registration (ROLE_USER); safety net if somehow unset.
+                if (pending.getRole() == null) {
+                        Role defaultRole = roleRepository.findByNameIgnoreCase(RoleConstants.ROLE_USER)
+                                        .orElseGet(() -> roleRepository.save(
+                                                        Role.builder().name(RoleConstants.ROLE_USER).build()));
+                        pending.setRole(defaultRole);
+                        userRepository.save(pending);
+                }
 
                 auditLogService.logAction(
-                                AuditLog.ActorType.SYSTEM,
-                                null,
-                                "USER_APPROVAL",
-                                "PENDING_USER",
-                                pending.getPendingUserId(),
+                                AuditLog.ActorType.USER,
+                                resolveCurrentAdminId(),
+                                "USER_APPROVED",
+                                "USER",
+                                pending.getUserId(),
                                 AuditLog.AuditOutcome.APPROVED,
-                                "Approved pending user " + pending.getEmail() + " and created user account"
+                                "Approved university verification for " + pending.getName() + " (" + pending.getEmail() + ")"
+                );
+
+                notificationService.createAdminNotification(
+                                pending.getUserId(),
+                                "Your account has been approved. You now have full access to ResourceX.",
+                                resolveCurrentAdminId()
                 );
         }
 
@@ -134,49 +138,50 @@ public class AdminServiceImpl implements AdminService {
         @Transactional
         //reject user
         public void rejectUser(Long pendingId, String reason) {
-                PendingUser pending = pendingUserRepository.findByIdForUpdate(pendingId)
+                User pending = userRepository.findById(pendingId)
                                 .orElseThrow(() -> new ResourceNotFoundException("Pending user not found"));
 
-                if (pending.getStatus() != PendingUserStatus.PENDING_REVIEW) {
-                        throw new ConflictException("Pending user cannot be rejected in current status");
+                if (pending.getStatus() != UserStatus.PENDING) {
+                        throw new ConflictException("User cannot be rejected in current status");
                 }
+
+                pending.setStatus(UserStatus.DELETED);
+                userRepository.save(pending);
 
                 String rejectionReason = reason != null && !reason.isBlank()
                                 ? reason.trim()
                                 : "No rejection reason provided";
 
-                pendingUserRepository.delete(pending);
+                StudentProfile profile = studentProfileRepository.findByUser(pending).orElse(null);
+                if (profile != null) {
+                        profile.setRejectionReason(rejectionReason);
+                        studentProfileRepository.save(profile);
+                }
 
                 auditLogService.logAction(
-                                AuditLog.ActorType.SYSTEM,
-                                null,
-                                "USER_REJECTION",
-                                "PENDING_USER",
-                                pending.getPendingUserId(),
+                                AuditLog.ActorType.USER,
+                                resolveCurrentAdminId(),
+                                "USER_REJECTED",
+                                "USER",
+                                pending.getUserId(),
                                 AuditLog.AuditOutcome.REJECTED,
-                                "Rejected pending user " + pending.getEmail() + ". Reason: " + rejectionReason
+                                "Rejected university verification for " + pending.getName() + " (" + pending.getEmail() + "). Reason: " + rejectionReason
+                );
+
+                notificationService.createAdminNotification(
+                                pending.getUserId(),
+                                "Your verification request was rejected. Reason: " + rejectionReason,
+                                resolveCurrentAdminId()
                 );
         }
 
         @Override
         @Transactional
-        //block inappropriate item
+        // Admin take-down — delegates to the single core deletion routine so an
+        // admin removal is globally consistent with an owner deletion (item is
+        // excluded from every query and its references are cleaned up).
         public void blockItem(Long itemId, String reason) {
-                Item item = itemRepository.findById(itemId)
-                                .orElseThrow(() -> new IllegalArgumentException("Item not found"));
-
-                item.setStatus(Item.ItemStatus.BLOCKED);
-                itemRepository.save(item);
-
-                auditLogService.logAction(
-                                AuditLog.ActorType.SYSTEM,
-                                null,
-                                "ITEM_TAKEDOWN",
-                                "ITEM",
-                                itemId,
-                                AuditLog.AuditOutcome.SUCCESS,
-                                "Item " + item.getTitle() + " taken down. Reason: " + reason
-                );
+                itemService.deleteItem(itemId, reason);
         }
 
         @Override
@@ -185,8 +190,16 @@ public class AdminServiceImpl implements AdminService {
                 User user = userRepository.findById(userId)
                                 .orElseThrow(() -> new ResourceNotFoundException("User not found"));
 
-                if (user.getStatus() == UserStatus.SUSPENDED) {
-                        throw new ConflictException("User is already suspended");
+                com.resourcex.resourcex.entity.StudentRestriction restriction =
+                                restrictionManager.getOrCreate(userId);
+
+                if (restriction.getSuspendedAt() != null) {
+                        if (restriction.getSuspendedUntil() == null) {
+                                throw new ConflictException("User is already permanently suspended");
+                        }
+                        if (LocalDateTime.now().isBefore(restriction.getSuspendedUntil())) {
+                                throw new ConflictException("User is already suspended");
+                        }
                 }
 
                 Long adminId = resolveCurrentAdminId();
@@ -195,30 +208,30 @@ public class AdminServiceImpl implements AdminService {
                 LocalDateTime suspendedUntil;
                 LocalDateTime scheduledDeletion = null;
 
-                switch (request.getSuspensionType()) {
-                        case ONE_DAY     -> suspendedUntil = now.plusDays(1);
-                        case SEVEN_DAYS  -> suspendedUntil = now.plusDays(7);
-                        case THIRTY_DAYS -> suspendedUntil = now.plusDays(30);
-                        case PERMANENT   -> {
+                String duration = request.getDuration() == null ? "" : request.getDuration().toUpperCase().trim();
+                switch (duration) {
+                        case "ONE_DAY"       -> suspendedUntil = now.plusDays(1);
+                        case "SEVEN_DAYS"    -> suspendedUntil = now.plusDays(7);
+                        case "FOURTEEN_DAYS" -> suspendedUntil = now.plusDays(14);
+                        case "THIRTY_DAYS"   -> suspendedUntil = now.plusDays(30);
+                        case "PERMANENT"     -> {
                                 suspendedUntil = null;
                                 scheduledDeletion = now.plusDays(15);
                         }
-                        default          -> suspendedUntil = now.plusDays(1);
+                        default -> throw new BadRequestException("Invalid suspension duration");
                 }
 
-                user.setStatus(UserStatus.SUSPENDED);
-                user.setSuspensionType(request.getSuspensionType());
-                user.setSuspensionReason(request.getReason().trim());
-                user.setSuspendedAt(now);
-                user.setSuspendedUntil(suspendedUntil);
-                user.setSuspendedByUserId(adminId);
-                user.setScheduledDeletionAt(scheduledDeletion);
-                userRepository.save(user);
+                // Suspension details live on the student's restriction record.
+                restriction.setSuspensionReason(request.getReason().trim());
+                restriction.setSuspendedAt(now);
+                restriction.setSuspendedUntil(suspendedUntil);
+                restriction.setScheduledDeletionAt(scheduledDeletion);
+                restrictionManager.save(restriction);
 
                 String detail = String.format(
-                        "Suspended user %s — type=%s, until=%s, reason=%s",
+                        "Suspended user %s — duration=%s, until=%s, reason=%s",
                         user.getEmail(),
-                        request.getSuspensionType(),
+                        duration,
                         suspendedUntil != null ? suspendedUntil.toString() : "PERMANENT",
                         request.getReason()
                 );
@@ -232,6 +245,14 @@ public class AdminServiceImpl implements AdminService {
                                 AuditLog.AuditOutcome.SUCCESS,
                                 detail
                 );
+
+                // Trust: a moderator-issued suspension carries a trust cost (-30).
+                // Applied after status is SUSPENDED so automated enforcement does not re-suspend.
+                trustScoreService.applyTrustChange(
+                                userId,
+                                TrustPoints.TEMPORARY_SUSPENSION,
+                                "Moderator suspension: " + request.getReason().trim()
+                );
         }
 
         @Override
@@ -243,13 +264,12 @@ public class AdminServiceImpl implements AdminService {
                 Long adminId = resolveCurrentAdminId();
 
                 user.setStatus(UserStatus.ACTIVE);
-                user.setSuspensionType(null);
-                user.setSuspensionReason(null);
-                user.setSuspendedAt(null);
-                user.setSuspendedUntil(null);
-                user.setSuspendedByUserId(null);
-                user.setScheduledDeletionAt(null);
                 userRepository.save(user);
+
+                restrictionManager.find(userId).ifPresent(restriction -> {
+                        restriction.clearSuspension();
+                        restrictionManager.save(restriction);
+                });
 
                 auditLogService.logAction(
                                 AuditLog.ActorType.USER,
@@ -273,20 +293,23 @@ public class AdminServiceImpl implements AdminService {
                                 .orElse(null);
         }
 
-        private PendingUserResponse mapToResponse(PendingUser pending) {
-                return PendingUserResponse.builder()
-                                .id(pending.getPendingUserId())
-                                .studentId(pending.getStudentId())
-                                .name(pending.getName())
-                                .email(pending.getEmail())
-                                .phone(pending.getPhone())
-                                .university(pending.getUniversity() != null ? pending.getUniversity().getName() : null)
-                                .department(pending.getDepartment())
-                                .idCardFileId(pending.getIdCardFileId())
-                                .idCardDataUrl(resolveStoredName(pending.getIdCardFileId()))
-                                .status(pending.getStatus())
-                                .createdAt(pending.getCreatedAt())
-                                .build();
+        private UserResponse mapToUserResponse(User user) {
+                UserResponse response = UserMapper.toResponse(
+                        user,
+                        studentProfileRepository.findByUser(user).orElse(null)
+                );
+                response.setAvatarUrl(avatarUrlResolver.resolve(user.getAvatarFileId()));
+                // Suspension details live on the student's restriction record.
+                restrictionManager.find(user.getUserId()).ifPresent(r -> {
+                        response.setSuspensionReason(r.getSuspensionReason());
+                        response.setSuspendedAt(r.getSuspendedAt());
+                        response.setSuspendedUntil(r.getSuspendedUntil());
+                        response.setScheduledDeletionAt(r.getScheduledDeletionAt());
+                });
+                if (response.getStudentProfile() != null && response.getStudentProfile().getIdCardFileId() != null) {
+                        response.getStudentProfile().setIdCardDataUrl(resolveStoredName(response.getStudentProfile().getIdCardFileId()));
+                }
+                return response;
         }
 
         // Resolves a FileMetadata id to its stored file name, which the
@@ -301,17 +324,46 @@ public class AdminServiceImpl implements AdminService {
                                 .orElse(null);
         }
 
-        private void assertUserDoesNotExist(PendingUser pending) {
-                if (userRepository.existsByEmailIgnoreCase(pending.getEmail())) {
-                        throw new ConflictException("Email already exists in users");
+
+
+        @Override
+        @Transactional(readOnly = true)
+        public List<PlatformActivityResponse> getPlatformActivities() {
+                return platformActivityAggregator.getPlatformActivities();
+        }
+
+        @Override
+        @Transactional(readOnly = true)
+        public List<UserResponse> getAdminsAndModerators() {
+                List<String> roles = List.of(RoleConstants.ROLE_ADMIN, RoleConstants.ROLE_MODERATOR, RoleConstants.ROLE_SUPER_ADMIN);
+                return userRepository.findAllByRoleNamesList(roles).stream()
+                                .map(user -> UserMapper.toResponse(
+                                                user,
+                                                studentProfileRepository.findByUser(user).orElse(null)))
+                                .collect(Collectors.toList());
+        }
+
+        @Override
+        @Transactional
+        public void unblockItem(Long itemId) {
+                Item item = itemRepository.findById(itemId)
+                                .orElseThrow(() -> new ResourceNotFoundException("Item not found"));
+
+                if (item.getStatus() != Item.ItemStatus.DELETED && item.getStatus() != Item.ItemStatus.BLOCKED) {
+                        throw new ConflictException("Item is not blocked or deleted");
                 }
 
-                if (studentProfileRepository.existsByStudentId(pending.getStudentId())) {
-                        throw new ConflictException("Student ID already exists in users");
-                }
+                item.setStatus(Item.ItemStatus.AVAILABLE);
+                itemRepository.save(item);
 
-                if (studentProfileRepository.existsByPhone(pending.getPhone())) {
-                        throw new ConflictException("Phone number already exists in users");
-                }
+                auditLogService.logAction(
+                                AuditLog.ActorType.USER,
+                                resolveCurrentAdminId(),
+                                "ITEM_UNBLOCKED",
+                                "ITEM",
+                                itemId,
+                                AuditLog.AuditOutcome.SUCCESS,
+                                "Admin unblocked item: " + item.getTitle()
+                );
         }
 }

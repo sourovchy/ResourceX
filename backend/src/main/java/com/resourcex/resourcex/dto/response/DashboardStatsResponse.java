@@ -13,7 +13,17 @@ public class DashboardStatsResponse {
 
     private Long activeBookings;
 
-    private Double revenue;
-
     private Long pendingApprovals;
+
+    private Long verifiedStudents;
+
+    private Long totalListings;
+
+    private Long availableListings;
+
+    private Long activeRentals;
+
+    private Long reportsPendingReview;
+
+    private Long suspendedUsers;
 }

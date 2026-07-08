@@ -18,9 +18,6 @@ public class NotificationRequest {
     @NotNull(message = "Notification type is required")
     private Notification.NotificationType notificationType;
 
-    @NotBlank(message = "Title is required")
-    private String title;
-
     @NotBlank(message = "Message is required")
     private String message;
 

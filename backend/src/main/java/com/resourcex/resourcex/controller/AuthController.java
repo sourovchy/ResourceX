@@ -8,6 +8,7 @@ import com.resourcex.resourcex.service.AuthService;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -20,6 +21,12 @@ public class AuthController {
     private static final String COOKIE_NAME = "resourcex_token";
 
     private final AuthService authService;
+
+    @Value("${app.cookie.same-site:Lax}")
+    private String cookieSameSite;
+
+    @Value("${app.cookie.secure:false}")
+    private boolean cookieSecure;
 
     @PostMapping("/register")
     public AuthResponse register(@Valid @RequestBody RegisterRequest request) {
@@ -64,10 +71,16 @@ public class AuthController {
     }
 
     private String buildTokenCookie(String value, int maxAge) {
-        return COOKIE_NAME + "=" + value
-                + "; Path=/"
-                + "; Max-Age=" + maxAge
-                + "; HttpOnly"
-                + "; SameSite=Lax";
+        StringBuilder cookie = new StringBuilder()
+                .append(COOKIE_NAME).append("=").append(value)
+                .append("; Path=/")
+                .append("; Max-Age=").append(maxAge)
+                .append("; HttpOnly")
+                .append("; SameSite=").append(cookieSameSite);
+        // SameSite=None requires the Secure attribute or browsers reject the cookie.
+        if (cookieSecure || "None".equalsIgnoreCase(cookieSameSite)) {
+            cookie.append("; Secure");
+        }
+        return cookie.toString();
     }
 }

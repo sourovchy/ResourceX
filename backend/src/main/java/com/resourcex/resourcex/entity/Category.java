@@ -22,11 +22,4 @@ public class Category {
 
     @Column(columnDefinition = "TEXT")
     private String description;
-
-    private LocalDateTime createdAt;
-
-    @PrePersist
-    public void onCreate() {
-        this.createdAt = LocalDateTime.now();
-    }
 }

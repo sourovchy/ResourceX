@@ -4,9 +4,13 @@ import React, { useState, Suspense, useMemo } from "react";
 import Link from "next/link";
 import { useSearchParams, useRouter } from "next/navigation";
 import { Lock, Loader2, Eye, EyeOff } from "lucide-react";
+import { Button } from "@/components/ui/Button";
+import { LogoIcon } from "@/components/ui/Logo";
 import api from "@/lib/api";
 import { validatePasswordChecks, isPasswordStrong } from "@/lib/validation";
 import AuthProgressOverlay, { AuthProgress } from "@/components/auth/AuthProgressOverlay";
+import { Reveal } from "@/components/ui/Reveal";
+import { TiltCard } from "@/components/ui/TiltCard";
 
 function ResetPasswordForm() {
 	const searchParams = useSearchParams();
@@ -68,9 +72,9 @@ function ResetPasswordForm() {
 						<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
 					</svg>
 				</div>
-				<h2 className="text-xl font-bold leading-tight text-textPrimary sm:text-2xl">Password Reset Successful!</h2>
+				<h2 className="text-xl font-bold leading-tight text-textPrimary sm:text-2xl">Password reset <span className="text-gradient-brand italic">complete.</span></h2>
 				<p className="text-sm text-textSecondary sm:text-base">You will be redirected to the login page shortly.</p>
-				<Link href="/auth/login" className="mt-4 inline-flex items-center justify-center rounded-lg bg-primary px-5 py-2.5 font-bold text-onPrimary sm:px-6">
+				<Link href="/auth/login" className="mt-4 inline-flex items-center justify-center rounded-full bg-primary px-6 py-3 text-sm font-bold italic text-onPrimary shadow-sm transition-colors duration-300 hover:bg-primaryDark focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background">
 					Go to Login
 				</Link>
 			</div>
@@ -81,21 +85,22 @@ function ResetPasswordForm() {
 		<form className="space-y-4 sm:space-y-5" onSubmit={handleSubmit}>
 			<AuthProgressOverlay progress={progress} />
 			{error && (
-				<div className="rounded-xl border border-red-500/20 bg-red-50 px-4 py-3 text-sm leading-relaxed text-red-700">
+				<div role="alert" className="rounded-xl border border-error/40 bg-errorLight px-4 py-3 text-sm font-medium leading-relaxed text-errorDark">
 					{error}
 				</div>
 			)}
 			<div className="space-y-1.5">
-				<label className="block text-sm font-medium text-textPrimary">New Password</label>
+				<label htmlFor="rp-new" className="block text-[11px] font-bold uppercase tracking-[0.1em] text-primary">New Password <span className="text-error">*</span></label>
 				<div className="relative">
 					<div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3 text-textTertiary">
 						<Lock className="h-5 w-5" />
 					</div>
 					<input
+						id="rp-new"
 						type={showPassword ? "text" : "password"}
 						value={newPassword}
 						onChange={(e) => setNewPassword(e.target.value)}
-						className="w-full rounded-lg border border-outlineVariant bg-surface py-3 pl-10 pr-10 text-textPrimary outline-none transition-all focus:border-primary focus:ring-2 focus:ring-primary"
+						className="w-full rounded-xl border border-border bg-card py-3 pl-10 pr-10 text-textPrimary outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20 placeholder:text-textTertiary"
 						placeholder="New password"
 						minLength={8}
 						maxLength={128}
@@ -123,16 +128,17 @@ function ResetPasswordForm() {
 			</div>
 
 			<div className="space-y-1.5">
-				<label className="block text-sm font-medium text-textPrimary">Confirm Password</label>
+				<label htmlFor="rp-confirm" className="block text-[11px] font-bold uppercase tracking-[0.1em] text-primary">Confirm Password <span className="text-error">*</span></label>
 				<div className="relative">
 					<div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3 text-textTertiary">
 						<Lock className="h-5 w-5" />
 					</div>
 					<input
+						id="rp-confirm"
 						type={showPassword ? "text" : "password"}
 						value={confirmPassword}
 						onChange={(e) => setConfirmPassword(e.target.value)}
-						className="w-full rounded-lg border border-outlineVariant bg-surface py-3 pl-10 pr-4 text-textPrimary outline-none transition-all focus:border-primary focus:ring-2 focus:ring-primary"
+						className="w-full rounded-xl border border-border bg-card py-3 pl-10 pr-4 text-textPrimary outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20 placeholder:text-textTertiary"
 						placeholder="Confirm new password"
 						minLength={8}
 						maxLength={128}
@@ -141,32 +147,26 @@ function ResetPasswordForm() {
 				</div>
 			</div>
 
-			<button
-				type="submit"
-				disabled={loading}
-				className="mt-2 flex w-full items-center justify-center gap-2 rounded-lg bg-primary px-4 py-3 font-medium text-onPrimary shadow-md transition-colors hover:bg-primaryDark hover:shadow-lg focus:ring-4 focus:ring-primaryLight outline-none disabled:cursor-not-allowed disabled:opacity-70"
-			>
-				{loading ? <Loader2 className="h-6 w-6 animate-spin text-primary" /> : "Reset Password"}
-			</button>
+			<Button type="submit" loading={loading} fullWidth className="mt-2">
+				{loading ? "Resetting…" : "Reset Password"}
+			</Button>
 		</form>
 	);
 }
 
 export default function ResetPasswordPage() {
 	return (
-		<div className="flex min-h-screen items-center justify-center bg-background px-4 py-8 sm:px-6 lg:px-8">
-			<div className="pointer-events-none absolute inset-0 overflow-hidden">
-				<div className="absolute left-[-10%] top-[-10%] h-72 w-72 rounded-full bg-primary opacity-20 blur-3xl sm:h-96 sm:w-96"></div>
-				<div className="absolute bottom-[-10%] right-[-10%] h-72 w-72 rounded-full bg-accent opacity-20 blur-3xl sm:h-[30rem] sm:w-[30rem]"></div>
-			</div>
-
-			<div className="relative z-10 w-full max-w-md px-1 sm:px-0">
-				<div className="rounded-2xl border border-borderLight bg-surface p-5 shadow-xl sm:p-6 md:p-8">
+		<div className="graph-grid relative flex min-h-screen items-center justify-center bg-background px-4 py-8 sm:px-6 lg:px-8">
+			<Reveal className="relative z-10 w-full max-w-md px-1 sm:px-0">
+				<TiltCard className="glass-surface rounded-2xl p-5 shadow-md sm:p-6 md:p-8">
 					<div className="mb-6 text-center sm:mb-8">
+						<div className="mb-4 flex justify-center">
+							<LogoIcon size={48} />
+						</div>
 						<h1 className="text-2xl font-bold leading-tight tracking-tight text-textPrimary sm:text-3xl">
-							Set New Password
+							Set new <span className="text-gradient-brand italic">password.</span>
 						</h1>
-						<p className="mt-2 text-sm text-textSecondary sm:text-base">
+						<p className="mt-2 text-sm text-textSecondary">
 							Enter a new strong password below.
 						</p>
 					</div>
@@ -174,12 +174,8 @@ export default function ResetPasswordPage() {
 					<Suspense fallback={<div className="flex justify-center py-8"><Loader2 className="h-6 w-6 animate-spin text-primary" /></div>}>
 						<ResetPasswordForm />
 					</Suspense>
-
-					<div className="mt-6 text-center sm:mt-8">
-						
-					</div>
-				</div>
-			</div>
+				</TiltCard>
+			</Reveal>
 		</div>
 	);
 }

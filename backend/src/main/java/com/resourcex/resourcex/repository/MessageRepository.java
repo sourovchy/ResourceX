@@ -27,37 +27,51 @@ public interface MessageRepository extends JpaRepository<Message, Long> {
 
     Optional<Message> findByMessageIdAndConversationConversationId(Long messageId, Long conversationId);
 
-    long countByConversationConversationIdAndReceiverUserUserIdAndIsReadFalse(Long conversationId, Long receiverUserId);
+    @Query("""
+            select count(m) from Message m
+            where m.conversation.conversationId = :conversationId
+              and m.senderUser.userId <> :userId
+              and m.isRead = false
+            """)
+    long countUnreadMessagesForUser(
+            @Param("conversationId") Long conversationId,
+            @Param("userId") Long userId
+    );
 
-    long countByReceiverUserUserIdAndIsReadFalse(Long receiverUserId);
+    @Query("""
+            select count(m) from Message m
+            where m.senderUser.userId <> :userId
+              and m.isRead = false
+              and (
+                m.conversation.participantOneUser.userId = :userId
+                or m.conversation.participantTwoUser.userId = :userId
+              )
+            """)
+    long countTotalUnreadMessagesForUser(@Param("userId") Long userId);
 
     @Modifying(clearAutomatically = true, flushAutomatically = true)
     @Query("""
             update Message m
-            set m.isRead = true,
-                m.readAt = :readAt
+            set m.isRead = true
             where m.conversation.conversationId = :conversationId
-              and m.receiverUser.userId = :receiverUserId
+              and m.senderUser.userId <> :userId
               and m.isRead = false
             """)
     int markConversationMessagesAsRead(
             @Param("conversationId") Long conversationId,
-            @Param("receiverUserId") Long receiverUserId,
-            @Param("readAt") LocalDateTime readAt
+            @Param("userId") Long userId
     );
 
     @Modifying(clearAutomatically = true, flushAutomatically = true)
     @Query("""
             update Message m
-            set m.isRead = true,
-                m.readAt = :readAt
+            set m.isRead = true
             where m.messageId = :messageId
-              and m.receiverUser.userId = :receiverUserId
+              and m.senderUser.userId <> :userId
               and m.isRead = false
             """)
     int markMessageAsRead(
             @Param("messageId") Long messageId,
-            @Param("receiverUserId") Long receiverUserId,
-            @Param("readAt") LocalDateTime readAt
+            @Param("userId") Long userId
     );
 }

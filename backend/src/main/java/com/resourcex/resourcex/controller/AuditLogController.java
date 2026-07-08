@@ -20,8 +20,15 @@ public class AuditLogController {
 
     @GetMapping
     @PreAuthorize("hasAnyRole('ADMIN', 'SUPER_ADMIN')")
-    public ResponseEntity<List<AuditLogResponse>> getAllLogs() {
-        return ResponseEntity.ok(auditLogService.getAllLogs());
+    public ResponseEntity<org.springframework.data.domain.Page<AuditLogResponse>> getAllLogs(
+            @RequestParam(required = false) String actionType,
+            @RequestParam(required = false) String entityType,
+            @RequestParam(required = false) String outcome,
+            @RequestParam(required = false) Long actorId,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime startDate,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime endDate,
+            @org.springframework.data.web.PageableDefault(size = 20, sort = "createdAt", direction = org.springframework.data.domain.Sort.Direction.DESC) org.springframework.data.domain.Pageable pageable) {
+        return ResponseEntity.ok(auditLogService.getLogsWithFilters(actionType, entityType, outcome, actorId, startDate, endDate, pageable));
     }
 
     @GetMapping("/user/{userId}")

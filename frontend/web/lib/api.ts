@@ -2,7 +2,8 @@ import axios from "axios";
 import { logger } from "@/lib/logger";
 
 export const API_BASE =
-	process.env.NEXT_PUBLIC_API_URL?.replace(/\/$/, "") || "http://localhost:8082/api";
+	process.env.NEXT_PUBLIC_API_URL?.replace(/\/$/, "") || 
+	(typeof window === "undefined" ? "http://localhost:8082/api" : "/api");
 
 export const getFileUrl = (url: string | null | undefined): string => {
 	if (!url) return "";

@@ -40,6 +40,5 @@ public class CreateItemRequest {
 
     private List<String> imageUrls;
 
-    @DecimalMin(value = "0.0", inclusive = true, message = "Deposit must be zero or greater")
-    private BigDecimal deposit;
+    private String availabilityScope;
 }

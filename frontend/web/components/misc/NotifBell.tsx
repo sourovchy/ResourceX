@@ -7,7 +7,7 @@ import api from "@/lib/api";
 
 const POLL_INTERVAL_MS = 30_000; // 30 seconds
 
-export default function NotifBell() {
+export default function NotifBell({ className }: { className?: string }) {
 	const router = useRouter();
 	const [count, setCount] = useState(0);
 	const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -40,7 +40,7 @@ export default function NotifBell() {
 				hasNotifications ? `Notifications, ${count} unread` : "Notifications"
 			}
 			onClick={() => router.push("/notifications")}
-			className="relative flex h-9 w-9 items-center justify-center rounded-full text-textSecondary transition-all duration-200 hover:bg-surfaceVariant hover:text-textPrimary focus:outline-none focus:ring-2 focus:ring-primary/30 sm:h-10 sm:w-10">
+			className={className || "relative flex h-9 w-9 items-center justify-center rounded-full text-textSecondary transition-all duration-200 hover:bg-surfaceVariant hover:text-textPrimary focus:outline-none focus:ring-2 focus:ring-primary/30 sm:h-10 sm:w-10"}>
 			<Bell className="h-5 w-5" />
 
 			{hasNotifications && (

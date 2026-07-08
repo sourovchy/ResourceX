@@ -4,7 +4,7 @@ import {
 	ConversationRequest,
 	Message,
 	MessageRequest,
-} from "../types/chat";
+} from "@/types/chat";
 import api from "@/lib/api";
 
 const CONVERSATION_BASE_URL = "/conversations";
@@ -99,9 +99,7 @@ export const chatService = {
 		}
 	},
 
-	clearChat: async (conversationId: number): Promise<void> => {
-		await api.delete(`${CONVERSATION_BASE_URL}/${conversationId}/messages`);
-	},
+
 
 	deleteConversation: async (conversationId: number): Promise<void> => {
 		await api.delete(`${CONVERSATION_BASE_URL}/${conversationId}`);

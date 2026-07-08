@@ -1,5 +1,4 @@
 import Link from "next/link";
-import { Logo } from "@/components/ui/Logo";
 import {
   ArrowRight,
   BadgeCheck,
@@ -8,6 +7,10 @@ import {
   Sparkles,
   Share2,
 } from "lucide-react";
+import { TiltCard } from "@/components/ui/TiltCard";
+import { Background } from "@/components/ui/Background";
+import { Reveal } from "@/components/ui/Reveal";
+import Button from "@/components/ui/Button";
 
 const FEATURES = [
   {
@@ -37,216 +40,277 @@ const FAQS = [
   },
   {
     q: "Is it safe to rent my items?",
-    a: "Yes. All users are verified students within your campus network. We track trust scores, manage automated deposits, and offer a dispute resolution centre to protect your items.",
+    a: "Yes. All users are verified students within your campus network. Every account carries a trust score, and our moderation team reviews reports to protect your items.",
   },
   {
     q: "How are payments handled?",
-    a: "Payment is arranged directly with the owner after they approve your request. The refundable deposit is settled between you and the owner at handover and returned when the item is safely back.",
+    a: "Payment is arranged directly with the owner after they approve your request — ResourceX does not process online payments. You coordinate the details at handover.",
   },
   {
     q: "What happens if an item is damaged?",
-    a: "If an item is returned damaged, the owner can open a dispute. Our moderation team reviews the evidence and can penalise the borrower or deduct from their deposit.",
+    a: "If an item is returned damaged, the owner can report the borrower. Our moderation team reviews the evidence, and offenders lose trust score and can be restricted from the platform.",
   },
+];
+
+const MARQUEE = [
+  "VERIFIED STUDENTS ONLY",
+  "ZERO HIDDEN FEES",
+  "TRUST SCORES",
+  "CAMPUS MODERATION",
+  "CAMPUS-LOCAL LISTINGS",
+];
+
+const WATERMARKS = [
+  { t: "rent()", c: "left-8 top-40 text-[5rem] md:text-[8rem]" },
+  { t: "O(1)", c: "right-16 top-28 text-[6rem] md:text-[10rem]" },
+  { t: "ACCEPTED", c: "right-1/4 bottom-10 text-[4rem] md:text-[7rem] italic" },
+  { t: "share", c: "left-1/4 bottom-24 text-[5rem] md:text-[8rem] italic" },
 ];
 
 export default function LandingPage() {
   return (
-    <main className="bg-background text-textPrimary overflow-x-hidden">
-      {/* ── Nav ──────────────────────────────────────────────── */}
-      <header className="sticky top-0 z-50 border-b border-borderLight bg-surface/80 backdrop-blur-md">
-        <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-4">
-          <Link href="/" className="flex items-center group">
-            <Logo size={32} priority className="transition-transform group-hover:scale-105" />
-          </Link>
-
-          <nav className="flex items-center gap-2">
-            <Link
-              href="/auth/login"
-              className="rounded-lg px-4 py-2 text-sm font-semibold text-textSecondary transition hover:bg-surfaceVariant hover:text-textPrimary"
-            >
-              Login
-            </Link>
-            <Link
-              href="/auth/register"
-              className="inline-flex items-center gap-1.5 rounded-lg bg-primary px-4 py-2 text-sm font-bold text-onPrimary transition hover:bg-primaryDark active:scale-95"
-            >
-              Get started <ArrowRight className="w-3.5 h-3.5" />
-            </Link>
-          </nav>
-        </div>
-      </header>
+    <main className="relative overflow-hidden bg-background text-textPrimary">
+      <Background />
 
       {/* ── Hero ─────────────────────────────────────────────── */}
-      <section className="mx-auto max-w-7xl px-6 py-20 lg:py-28 grid lg:grid-cols-[1.1fr_0.9fr] gap-14 items-center">
-        {/* Left copy */}
-        <div className="space-y-8">
-          <div className="inline-flex items-center gap-2 rounded-full border border-borderLight bg-surface px-3.5 py-1.5 text-xs font-semibold text-textSecondary shadow-sm">
-            <Sparkles className="w-3.5 h-3.5 text-primary" />
-            Secure student-to-student resource sharing
-          </div>
-
-          <div className="space-y-5">
-            <h1 className="text-5xl md:text-6xl font-black tracking-tight leading-[1.05]">
-              Rent peer items.{" "}
-              <span className="text-primary">Share safely.</span>
-            </h1>
-            <p className="max-w-xl text-base text-textSecondary leading-7">
-              ResourceX is a trusted peer-to-peer marketplace designed
-              exclusively for students. Rent specialised equipment, share
-              everyday essentials, and monetise your idle items within a
-              verified campus network.
-            </p>
-          </div>
-
-          <div className="flex flex-col sm:flex-row gap-3">
-            <Link
-              href="/auth/register"
-              className="inline-flex items-center justify-center gap-2 rounded-lg bg-primary px-6 py-3 text-sm font-bold text-onPrimary transition hover:bg-primaryDark active:scale-95"
+      <section className="graph-grid relative overflow-hidden border-b border-borderLight">
+        {/* CS watermarks */}
+        <div className="pointer-events-none absolute inset-0 select-none overflow-hidden">
+          {WATERMARKS.map((w) => (
+            <span
+              key={w.t}
+              className={`absolute font-black text-primaryDark/[0.04] ${w.c}`}
             >
-              Create account <ArrowRight className="w-4 h-4" />
-            </Link>
-            <Link
-              href="/auth/login"
-              className="inline-flex items-center justify-center rounded-lg border border-borderLight bg-surface px-6 py-3 text-sm font-bold text-textPrimary transition hover:bg-surfaceVariant active:scale-95"
-            >
-              Browse marketplace
-            </Link>
-          </div>
+              {w.t}
+            </span>
+          ))}
         </div>
 
-        {/* Right visual card */}
-        <div className="animate-slide-left bg-surface border border-borderLight rounded-2xl p-7 shadow-sm space-y-5">
-          <div className="flex items-center gap-4 border-b border-divider pb-5">
-            <div className="w-11 h-11 rounded-xl bg-primaryLight text-primary flex items-center justify-center shrink-0">
-              <Share2 className="w-5 h-5" />
+        {/* Backdrop glowing orbs */}
+        <div className="pointer-events-none absolute left-1/4 top-1/4 -z-10 h-96 w-96 select-none rounded-full bg-primary/5 blur-[150px]" />
+        <div className="pointer-events-none absolute bottom-1/4 right-1/4 -z-10 h-80 w-80 select-none rounded-full bg-accent/5 blur-[150px]" />
+
+        <div className="relative z-10 mx-auto grid max-w-7xl items-center gap-14 px-6 pb-20 pt-16 lg:grid-cols-[1.1fr_0.9fr] lg:pb-28 lg:pt-20">
+          {/* Left copy */}
+          <div className="space-y-8">
+            <Reveal delay={0}>
+              <div className="inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primaryLight/50 px-3.5 py-1.5 text-[11px] font-bold uppercase tracking-[0.12em] text-primary">
+                <Sparkles className="h-3.5 w-3.5" />
+                Secure student-to-student resource sharing
+              </div>
+            </Reveal>
+
+            <div className="space-y-5">
+              <Reveal delay={90}>
+                <h1 className="text-[clamp(2.75rem,1.9rem+3.2vw,4.25rem)] font-black leading-[1.02] tracking-tight">
+                  Rent peer items.{" "}
+                  <span className="text-gradient-brand italic">
+                    Share safely.
+                  </span>
+                </h1>
+              </Reveal>
+              <Reveal delay={180}>
+                <p className="max-w-xl text-base leading-7 text-textSecondary">
+                  ResourceX is a trusted peer-to-peer marketplace designed
+                  exclusively for students. Rent specialised equipment, share
+                  everyday essentials, and monetise your idle items within a
+                  verified campus network.
+                </p>
+              </Reveal>
             </div>
-            <div>
-              <h3 className="font-bold text-base text-textPrimary">
-                Smart Campus Economy
-              </h3>
-              <p className="text-sm text-textSecondary">
-                Cut down expenses, reduce waste.
-              </p>
-            </div>
+
+            <Reveal delay={270}>
+              <div className="flex flex-col gap-3 sm:flex-row">
+                <Link href="/auth/register">
+                  <Button variant="primary" size="lg" rightIcon={<ArrowRight className="h-4 w-4" />}>
+                    Create account
+                  </Button>
+                </Link>
+                <Link href="/auth/login">
+                  <Button variant="ghost" size="lg">
+                    Browse marketplace
+                  </Button>
+                </Link>
+              </div>
+            </Reveal>
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
-            <div className="rounded-xl bg-surfaceVariant border border-borderLight p-5">
-              <div className="text-3xl font-black text-primary">100%</div>
-              <div className="text-[11px] font-semibold text-textSecondary mt-1.5 uppercase tracking-wider">
-                Verified Students
-              </div>
+          {/* Right visual card */}
+          <Reveal delay={200} from="right">
+            <div className="animate-float">
+              <TiltCard className="space-y-5 rounded-3xl border border-border bg-card p-7 shadow-md">
+                <div className="flex items-center gap-4 border-b border-divider pb-5">
+                  <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-primaryLight text-primary">
+                    <Share2 className="h-5 w-5" />
+                  </div>
+                  <div>
+                    <h3 className="text-base font-bold text-textPrimary">
+                      Smart Campus Economy
+                    </h3>
+                    <p className="text-sm text-textSecondary">
+                      Cut down expenses, reduce waste.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="rounded-2xl border border-border bg-surfaceVariant p-5">
+                    <div className="text-3xl font-black text-primary">100%</div>
+                    <div className="mt-1.5 text-[10px] font-bold uppercase tracking-[0.12em] text-textTertiary">
+                      Verified Students
+                    </div>
+                  </div>
+                  <div className="rounded-2xl border border-border bg-surfaceVariant p-5">
+                    <div className="text-3xl font-black text-primary">Zero</div>
+                    <div className="mt-1.5 text-[10px] font-bold uppercase tracking-[0.12em] text-textTertiary">
+                      Hidden Fees
+                    </div>
+                  </div>
+                  <div className="col-span-2 rounded-2xl border border-primary/20 bg-primaryLight/50 p-5">
+                    <div className="mb-2 text-[10px] font-bold uppercase tracking-[0.12em] text-primary">
+                      How it works
+                    </div>
+                    <p className="text-sm font-medium leading-relaxed text-textPrimary">
+                      Verify identity → List or find resources → Securely book
+                      online
+                    </p>
+                  </div>
+                </div>
+              </TiltCard>
             </div>
-            <div className="rounded-xl bg-surfaceVariant border border-borderLight p-5">
-              <div className="text-3xl font-black text-success">Zero</div>
-              <div className="text-[11px] font-semibold text-textSecondary mt-1.5 uppercase tracking-wider">
-                Hidden Fees
-              </div>
-            </div>
-            <div className="col-span-2 rounded-xl bg-primaryLight/40 border border-primaryLight p-5">
-              <div className="text-[11px] font-bold uppercase text-primary tracking-wider mb-2">
-                How it works
-              </div>
-              <p className="text-sm font-medium text-textPrimary leading-relaxed">
-                Verify identity → List or find resources → Securely book online
-              </p>
-            </div>
-          </div>
+          </Reveal>
         </div>
       </section>
 
+      {/* ── Marquee ──────────────────────────────────────────── */}
+      <div className="relative overflow-hidden border-b border-borderLight bg-surfaceVariant py-3.5">
+        <div className="flex w-max animate-marquee whitespace-nowrap">
+          {[0, 1].map((dup) => (
+            <div key={dup} className="flex items-center" aria-hidden={dup === 1}>
+              {MARQUEE.map((item) => (
+                <span
+                  key={item}
+                  className="flex items-center text-[11px] font-bold uppercase tracking-[0.12em] text-primary"
+                >
+                  <span className="mx-6 text-primaryMuted">✦</span>
+                  {item}
+                </span>
+              ))}
+            </div>
+          ))}
+        </div>
+      </div>
+
       {/* ── Features ─────────────────────────────────────────── */}
-      <section className="border-t border-borderLight bg-surfaceVariant/40 py-20">
+      <section id="features" className="relative scroll-mt-24 border-b border-borderLight py-20">
         <div className="mx-auto max-w-7xl px-6">
-          <div className="mb-10 text-center animate-fade-in">
-            <h2 className="text-2xl font-black tracking-tight text-textPrimary">
-              Built for campus life
+          <Reveal className="mb-12 text-center">
+            <h2 className="text-3xl font-bold tracking-tight text-textPrimary md:text-4xl">
+              Built for{" "}
+              <span className="text-gradient-brand italic">campus life.</span>
             </h2>
-            <p className="mt-2 text-sm text-textSecondary">
+            <p className="mt-3 text-sm text-textSecondary">
               Everything you need, nothing you don&apos;t.
             </p>
-          </div>
+          </Reveal>
 
-          <div className="grid md:grid-cols-3 gap-5 stagger-children">
-            {FEATURES.map(({ title, description, icon: Icon }) => (
-              <div
-                key={title}
-                className="group rounded-xl border border-borderLight bg-surface p-6 transition-all duration-200 hover:shadow-md hover:-translate-y-0.5"
-              >
-                <div className="w-10 h-10 rounded-lg bg-primaryLight/60 flex items-center justify-center border border-primaryLight">
-                  <Icon className="w-5 h-5 text-primary" />
-                </div>
-                <h3 className="mt-5 font-bold text-base text-textPrimary">
-                  {title}
-                </h3>
-                <p className="mt-2 text-sm leading-6 text-textSecondary">
-                  {description}
-                </p>
-              </div>
+          <div className="grid gap-5 md:grid-cols-3">
+            {FEATURES.map(({ title, description, icon: Icon }, i) => (
+              <Reveal key={title} delay={i * 110}>
+                <TiltCard className="group h-full rounded-2xl border border-border bg-card p-6 shadow-sm transition-all duration-300 hover:border-primary/40 hover:shadow-md">
+                  <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-primaryLight text-primary transition-transform duration-300 group-hover:scale-110">
+                    <Icon className="h-5 w-5" />
+                  </div>
+                  <h3 className="mt-5 text-base font-bold text-textPrimary">
+                    {title}
+                  </h3>
+                  <p className="mt-2 text-sm leading-6 text-textSecondary">
+                    {description}
+                  </p>
+                </TiltCard>
+              </Reveal>
             ))}
           </div>
         </div>
       </section>
 
       {/* ── FAQ ──────────────────────────────────────────────── */}
-      <section className="py-20">
+      <section id="faq" className="relative scroll-mt-24 py-20">
         <div className="mx-auto max-w-3xl px-6">
-          <div className="mb-10 text-center animate-fade-in">
-            <h2 className="text-2xl font-black tracking-tight text-textPrimary">
-              Frequently asked questions
+          <Reveal className="mb-12 text-center">
+            <h2 className="text-3xl font-bold tracking-tight text-textPrimary md:text-4xl">
+              Frequently asked{" "}
+              <span className="text-gradient-brand italic">questions.</span>
             </h2>
-            <p className="mt-2 text-sm text-textSecondary">
-              Got questions? We&apos;ve got answers.
-            </p>
-          </div>
+          </Reveal>
 
-          <div className="space-y-3 stagger-children">
+          <div className="space-y-3">
             {FAQS.map((faq, i) => (
-              <details
-                key={i}
-                className="group rounded-xl border border-borderLight bg-surface [&_summary::-webkit-details-marker]:hidden"
-              >
-                <summary className="flex cursor-pointer select-none items-center justify-between gap-4 px-6 py-4 font-semibold text-sm text-textPrimary">
-                  {faq.q}
-                  <svg
-                    className="h-5 w-5 shrink-0 text-textTertiary transition-transform duration-200 group-open:rotate-180"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    stroke="currentColor"
-                    strokeWidth="1.5"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      d="M6 9l6 6 6-6"
-                    />
-                  </svg>
-                </summary>
-                <p className="px-6 pb-5 text-sm leading-relaxed text-textSecondary border-t border-divider pt-4">
-                  {faq.a}
-                </p>
-              </details>
+              <Reveal key={i} delay={i * 80}>
+                <TiltCard
+                  maxTilt={4}
+                  hoverScale={1.01}
+                  className="group rounded-2xl border border-border bg-card shadow-sm transition-all duration-300 hover:border-primary/40 hover:shadow-md"
+                >
+                  <details className="[&_summary::-webkit-details-marker]:hidden">
+                    <summary className="flex cursor-pointer select-none items-center justify-between gap-4 px-6 py-4 text-sm font-bold text-textPrimary">
+                      <span className="min-w-0 break-words">{faq.q}</span>
+                      <svg
+                        className="h-5 w-5 shrink-0 text-textTertiary transition-transform duration-200 group-open:rotate-180"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                        strokeWidth="1.5"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          d="M6 9l6 6 6-6"
+                        />
+                      </svg>
+                    </summary>
+                    <p className="border-t border-divider px-6 pb-5 pt-4 text-sm leading-relaxed text-textSecondary">
+                      {faq.a}
+                    </p>
+                  </details>
+                </TiltCard>
+              </Reveal>
             ))}
           </div>
         </div>
       </section>
 
-      {/* ── CTA Banner ───────────────────────────────────────── */}
-      <section className="border-t border-borderLight bg-surface py-16">
-        <div className="mx-auto max-w-2xl px-6 text-center animate-fade-in space-y-6">
-          <h2 className="text-2xl font-black tracking-tight text-textPrimary">
-            Ready to join your campus network?
-          </h2>
-          <p className="text-sm text-textSecondary leading-6">
-            Create a free account in under two minutes and start renting or
-            listing today.
-          </p>
-          <Link
-            href="/auth/register"
-            className="inline-flex items-center gap-2 rounded-lg bg-primary px-6 py-3 text-sm font-bold text-onPrimary transition hover:bg-primaryDark active:scale-95"
-          >
-            Get started for free <ArrowRight className="w-4 h-4" />
-          </Link>
+      {/* ── CTA banner ───────────────────────────────────────── */}
+      <section className="relative py-20">
+        <div className="mx-auto max-w-3xl px-6">
+          <Reveal>
+            <TiltCard
+              maxTilt={5}
+              hoverScale={1.01}
+              className="space-y-6 rounded-3xl border border-border bg-card p-10 text-center shadow-md transition-all duration-300 hover:border-primary/40 hover:shadow-lg md:p-14"
+            >
+              <h2 className="text-3xl font-bold leading-tight tracking-tight text-textPrimary md:text-5xl">
+                Ready to join your{" "}
+                <span className="text-gradient-brand italic">campus network?</span>
+              </h2>
+              <p className="mx-auto max-w-xl text-sm leading-6 text-textSecondary">
+                Create a free account in under two minutes and start renting or
+                listing today.
+              </p>
+              <div className="pt-2">
+                <Link href="/auth/register">
+                  <Button
+                    variant="primary"
+                    size="lg"
+                    rightIcon={<ArrowRight className="h-4 w-4" />}
+                    className="shadow-sm hover:shadow-lg hover:shadow-primary/30"
+                  >
+                    Get started for free
+                  </Button>
+                </Link>
+              </div>
+            </TiltCard>
+          </Reveal>
         </div>
       </section>
     </main>

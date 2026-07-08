@@ -1,6 +1,7 @@
 package com.resourcex.resourcex.repository;
 
 import com.resourcex.resourcex.entity.Conversation;
+import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -10,6 +11,7 @@ import java.util.Optional;
 
 public interface ConversationRepository extends JpaRepository<Conversation, Long> {
 
+    @EntityGraph(attributePaths = { "participantOneUser", "participantTwoUser" }, type = EntityGraph.EntityGraphType.LOAD)
     @Query("""
             select c
             from Conversation c
@@ -30,13 +32,9 @@ public interface ConversationRepository extends JpaRepository<Conversation, Long
                  or (c.participantOneUser.userId = :participantTwoUserId
                      and c.participantTwoUser.userId = :participantOneUserId)
             )
-              and ((:bookingId is null and c.booking is null) or c.booking.bookingId = :bookingId)
-              and ((:disputeId is null and c.dispute is null) or c.dispute.disputeId = :disputeId)
             """)
     Optional<Conversation> findExistingConversation(
             @Param("participantOneUserId") Long participantOneUserId,
-            @Param("participantTwoUserId") Long participantTwoUserId,
-            @Param("bookingId") Long bookingId,
-            @Param("disputeId") Long disputeId
+            @Param("participantTwoUserId") Long participantTwoUserId
     );
 }

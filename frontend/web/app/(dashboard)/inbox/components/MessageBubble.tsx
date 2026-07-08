@@ -1,6 +1,7 @@
 "use client";
 
 import { Message } from "@/types/chat";
+import { formatTime } from "@/lib/dateUtils";
 
 interface MessageBubbleProps {
 	message: Message;
@@ -17,12 +18,7 @@ export default function MessageBubble({
 }: MessageBubbleProps) {
 	const isMe = message.senderUserId === currentUserId;
 
-	const formattedTime = message.createdAt
-		? new Date(message.createdAt).toLocaleTimeString([], {
-				hour: "2-digit",
-				minute: "2-digit",
-			})
-		: "";
+	const formattedTime = formatTime(message.createdAt);
 
 	// Tighter bubble corners on the "joined" side within a group
 	let radiusClasses = "rounded-2xl";
@@ -36,7 +32,7 @@ export default function MessageBubble({
 
 	const bubbleBgClasses = isMe
 		? "bg-primary text-white"
-		: "bg-[var(--color-chatIncoming)] text-textPrimary border border-[var(--color-chatBorder)]";
+		: "bg-card text-textPrimary border border-border";
 
 	return (
 		<div

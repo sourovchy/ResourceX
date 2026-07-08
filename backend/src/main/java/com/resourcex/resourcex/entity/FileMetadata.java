@@ -48,12 +48,4 @@ public class FileMetadata {
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private FilePurpose purpose;
-
-    @Column(nullable = false, updatable = false)
-    private LocalDateTime createdAt;
-
-    @PrePersist
-    public void onCreate() {
-        this.createdAt = LocalDateTime.now();
-    }
 }

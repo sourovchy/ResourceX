@@ -4,7 +4,6 @@ import com.resourcex.resourcex.dto.request.CreatePrivilegedUserRequest;
 import com.resourcex.resourcex.dto.response.UserResponse;
 import com.resourcex.resourcex.entity.Role;
 import com.resourcex.resourcex.entity.User;
-import com.resourcex.resourcex.entity.UserRole;
 import com.resourcex.resourcex.entity.UserStatus;
 import com.resourcex.resourcex.exception.ConflictException;
 import com.resourcex.resourcex.exception.ResourceNotFoundException;
@@ -12,7 +11,6 @@ import com.resourcex.resourcex.mapper.UserMapper;
 import com.resourcex.resourcex.repository.RoleRepository;
 import com.resourcex.resourcex.repository.StudentProfileRepository;
 import com.resourcex.resourcex.repository.UserRepository;
-import com.resourcex.resourcex.repository.UserRoleRepository;
 import com.resourcex.resourcex.service.AuditLogService;
 import com.resourcex.resourcex.entity.AuditLog;
 import com.resourcex.resourcex.service.SuperAdminService;
@@ -27,7 +25,6 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 
 import java.util.List;
-import java.util.Optional;
 
 @Service
 @RequiredArgsConstructor
@@ -36,7 +33,6 @@ public class SuperAdminServiceImpl implements SuperAdminService {
 
         private final UserRepository userRepository;
         private final RoleRepository roleRepository;
-        private final UserRoleRepository userRoleRepository;
         private final StudentProfileRepository studentProfileRepository;
         private final PasswordEncoder passwordEncoder;
         private final AuditLogService auditLogService;
@@ -49,14 +45,8 @@ public class SuperAdminServiceImpl implements SuperAdminService {
                 Role adminRole = roleRepository.findByNameIgnoreCase(RoleConstants.ROLE_ADMIN)
                                 .orElseThrow(() -> new ResourceNotFoundException("Role not found"));
 
-                Optional<UserRole> existingRole = userRoleRepository.findByUserAndRole(user, adminRole);
-                if (existingRole.isEmpty()) {
-                        UserRole userRole = UserRole.builder()
-                                        .user(user)
-                                        .role(adminRole)
-                                        .build();
-                        userRoleRepository.save(userRole);
-                }
+                user.setRole(adminRole);
+                userRepository.save(user);
 
                 auditLogService.logAction(
                                 AuditLog.ActorType.USER,
@@ -68,10 +58,7 @@ public class SuperAdminServiceImpl implements SuperAdminService {
                                 "User promoted to ADMIN"
                 );
 
-                return UserMapper.toResponse(
-                                user,
-                                userRoleRepository.findAllByUser(user),
-                                studentProfileRepository.findByUser(user).orElse(null));
+                return UserMapper.toResponse(user, studentProfileRepository.findByUser(user).orElse(null));
         }
 
         @Override
@@ -83,22 +70,12 @@ public class SuperAdminServiceImpl implements SuperAdminService {
                         throw new ConflictException("Cannot demote a super admin account");
                 }
 
-                Role adminRole = roleRepository.findByNameIgnoreCase(RoleConstants.ROLE_ADMIN)
-                                .orElseThrow(() -> new ResourceNotFoundException("Role not found"));
-
                 Role moderatorRole = roleRepository.findByNameIgnoreCase(RoleConstants.ROLE_MODERATOR)
                                 .orElseGet(() -> roleRepository
                                                 .save(Role.builder().name(RoleConstants.ROLE_MODERATOR).build()));
 
-                userRoleRepository.findByUserAndRole(user, adminRole)
-                                .ifPresent(userRoleRepository::delete);
-
-                if (userRoleRepository.findByUserAndRole(user, moderatorRole).isEmpty()) {
-                        userRoleRepository.save(UserRole.builder()
-                                        .user(user)
-                                        .role(moderatorRole)
-                                        .build());
-                }
+                user.setRole(moderatorRole);
+                userRepository.save(user);
 
                 auditLogService.logAction(
                                 AuditLog.ActorType.USER,
@@ -110,10 +87,7 @@ public class SuperAdminServiceImpl implements SuperAdminService {
                                 "User demoted from ADMIN to MODERATOR"
                 );
 
-                return UserMapper.toResponse(
-                                user,
-                                userRoleRepository.findAllByUser(user),
-                                studentProfileRepository.findByUser(user).orElse(null));
+                return UserMapper.toResponse(user, studentProfileRepository.findByUser(user).orElse(null));
         }
 
         @Override
@@ -137,11 +111,6 @@ public class SuperAdminServiceImpl implements SuperAdminService {
 
                 if (isSuperAdmin(user)) {
                         throw new ConflictException("Super admin accounts cannot be deleted");
-                }
-
-                List<UserRole> userRoles = userRoleRepository.findAllByUser(user);
-                if (!userRoles.isEmpty()) {
-                        userRoleRepository.deleteAll(userRoles);
                 }
 
                 studentProfileRepository.findByUser(user)
@@ -170,14 +139,12 @@ public class SuperAdminServiceImpl implements SuperAdminService {
                 return userRepository.findAllByRoleNames(privilegedRoles, pageable)
                                 .map(user -> UserMapper.toResponse(
                                                 user,
-                                                userRoleRepository.findAllByUser(user),
                                                 studentProfileRepository.findByUser(user).orElse(null)));
         }
 
         private boolean isSuperAdmin(User user) {
-                return userRoleRepository.findAllByUser(user).stream()
-                                .map(ur -> ur.getRole().getName())
-                                .anyMatch(RoleConstants.ROLE_SUPER_ADMIN::equalsIgnoreCase);
+                return user.getRole() != null
+                                && RoleConstants.ROLE_SUPER_ADMIN.equalsIgnoreCase(user.getRole().getName());
         }
 
         private Long getCurrentUserId() {
@@ -203,13 +170,10 @@ public class SuperAdminServiceImpl implements SuperAdminService {
                                 .email(request.getEmail())
                                 .password(passwordEncoder.encode(request.getPassword()))
                                 .status(UserStatus.ACTIVE)
+                                .role(role)
                                 .build();
 
                 User savedUser = userRepository.save(user);
-                userRoleRepository.save(UserRole.builder()
-                                .user(savedUser)
-                                .role(role)
-                                .build());
 
                 auditLogService.logAction(
                                 AuditLog.ActorType.USER,
@@ -221,9 +185,6 @@ public class SuperAdminServiceImpl implements SuperAdminService {
                                 "Created privileged user with role " + roleName
                 );
 
-                return UserMapper.toResponse(
-                                savedUser,
-                                userRoleRepository.findAllByUser(savedUser),
-                                null);
+                return UserMapper.toResponse(savedUser, null);
         }
 }

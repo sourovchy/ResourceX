@@ -1,7 +1,6 @@
 package com.resourcex.resourcex.controller;
 
 import com.resourcex.resourcex.dto.request.NotificationRequest;
-import com.resourcex.resourcex.dto.response.ApiResponse;
 import com.resourcex.resourcex.dto.response.NotificationResponse;
 import com.resourcex.resourcex.entity.Notification;
 import com.resourcex.resourcex.service.AuthService;
@@ -141,16 +140,9 @@ public class NotificationController {
      */
     @PatchMapping("/user/read-all")
     @PreAuthorize("isAuthenticated()")
-    public ResponseEntity<ApiResponse<Void>> markAllAsRead() {
-        // Note: In production, extract userId from SecurityContext
+    public ResponseEntity<Void> markAllAsRead() {
         notificationService.markAllAsRead(authService.getCurrentUser().getUser().getUserId());
-
-        ApiResponse<Void> response = ApiResponse.<Void>builder()
-                .success(true)
-                .message("All notifications marked as read")
-                .build();
-
-        return ResponseEntity.ok(response);
+        return ResponseEntity.noContent().build();
     }
 
     /**
@@ -178,16 +170,9 @@ public class NotificationController {
      */
     @DeleteMapping("/user/read-all")
     @PreAuthorize("isAuthenticated()")
-    public ResponseEntity<ApiResponse<Void>> deleteReadNotifications() {
-        // Note: In production, extract userId from SecurityContext
+    public ResponseEntity<Void> deleteReadNotifications() {
         notificationService.deleteReadNotifications(authService.getCurrentUser().getUser().getUserId());
-
-        ApiResponse<Void> response = ApiResponse.<Void>builder()
-                .success(true)
-                .message("All read notifications deleted")
-                .build();
-
-        return ResponseEntity.ok(response);
+        return ResponseEntity.noContent().build();
     }
 
     /**
@@ -198,43 +183,10 @@ public class NotificationController {
     public ResponseEntity<NotificationResponse> createBookingNotification(
             @RequestParam Long userId,
             @RequestParam Long bookingId,
-            @RequestParam String title,
             @RequestParam String message,
             @RequestParam(required = false) Long userIdParam) {
         NotificationResponse response = notificationService.createBookingNotification(
-                userId, bookingId, title, message, userIdParam);
-        return ResponseEntity.status(HttpStatus.CREATED).body(response);
-    }
-
-    /**
-     * Create dispute notification (admin/moderator only)
-     */
-    @PostMapping("/dispute")
-    @PreAuthorize("hasRole('ADMIN') or hasRole('MODERATOR')")
-    public ResponseEntity<NotificationResponse> createDisputeNotification(
-            @RequestParam Long userId,
-            @RequestParam Long disputeId,
-            @RequestParam String title,
-            @RequestParam String message,
-            @RequestParam(required = false) Long userIdParam) {
-        NotificationResponse response = notificationService.createDisputeNotification(
-                userId, disputeId, title, message, userIdParam);
-        return ResponseEntity.status(HttpStatus.CREATED).body(response);
-    }
-
-    /**
-     * Create penalty notification (admin/moderator only)
-     */
-    @PostMapping("/penalty")
-    @PreAuthorize("hasRole('ADMIN') or hasRole('MODERATOR')")
-    public ResponseEntity<NotificationResponse> createPenaltyNotification(
-            @RequestParam Long userId,
-            @RequestParam Long penaltyId,
-            @RequestParam String title,
-            @RequestParam String message,
-            @RequestParam(required = false) Long userIdParam) {
-        NotificationResponse response = notificationService.createPenaltyNotification(
-                userId, penaltyId, title, message, userIdParam);
+                userId, bookingId, message, userIdParam);
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
@@ -246,11 +198,10 @@ public class NotificationController {
     public ResponseEntity<NotificationResponse> createTrustNotification(
             @RequestParam Long userId,
             @RequestParam Long trustEventId,
-            @RequestParam String title,
             @RequestParam String message,
             @RequestParam(required = false) Long userIdParam) {
         NotificationResponse response = notificationService.createTrustNotification(
-                userId, trustEventId, title, message, userIdParam);
+                userId, trustEventId, message, userIdParam);
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
@@ -261,11 +212,10 @@ public class NotificationController {
     @PreAuthorize("hasRole('ADMIN') or hasRole('MODERATOR')")
     public ResponseEntity<NotificationResponse> createAdminNotification(
             @RequestParam Long userId,
-            @RequestParam String title,
             @RequestParam String message,
             @RequestParam(required = false) Long userIdParam) {
         NotificationResponse response = notificationService.createAdminNotification(
-                userId, title, message, userIdParam);
+                userId, message, userIdParam);
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
@@ -274,21 +224,14 @@ public class NotificationController {
      */
     @PostMapping("/broadcast")
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<ApiResponse<Void>> broadcastNotification(
+    public ResponseEntity<Void> broadcastNotification(
             @RequestParam List<Long> userIds,
             @RequestParam Notification.NotificationType type,
-            @RequestParam String title,
             @RequestParam String message,
             @RequestParam Notification.RelatedEntityType entityType,
             @RequestParam(required = false) Long entityId,
             @RequestParam(required = false) Long userIdParam) {
-        notificationService.broadcastNotification(userIds, type, title, message, entityType, entityId, userIdParam);
-
-        ApiResponse<Void> response = ApiResponse.<Void>builder()
-                .success(true)
-                .message("Notification broadcast to " + userIds.size() + " users")
-                .build();
-
-        return ResponseEntity.status(HttpStatus.CREATED).body(response);
+        notificationService.broadcastNotification(userIds, type, message, entityType, entityId, userIdParam);
+        return ResponseEntity.status(HttpStatus.CREATED).build();
     }
 }

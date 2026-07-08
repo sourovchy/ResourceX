@@ -3,14 +3,13 @@
 import React, { useEffect, useState } from "react";
 import {
 	BarChart3,
-	TrendingUp,
 	PieChart,
-	Clock,
 	CheckCircle2,
 	Loader2,
 } from "lucide-react";
 import { useAutoRefresh } from "@/hooks/useAutoRefresh";
 import { Skeleton, StatCardSkeleton } from "@/components/ui/Skeleton";
+import { TiltCard } from "@/components/ui/TiltCard";
 import {
 	analyticsService,
 	AnalyticsResponse,
@@ -24,23 +23,11 @@ const getTailwindColor = (colorClass: string) => {
 		"bg-warningDark": "bg-warningDark",
 		"bg-error": "bg-error",
 		"bg-accent": "bg-accent",
-		"bg-blue-500": "bg-blue-500",
+		"bg-blue-500": "bg-outline",
 		"bg-textTertiary": "bg-textTertiary",
 	};
-	return colors[colorClass] || "bg-gray-400";
+	return colors[colorClass] || "bg-outline";
 };
-
-function formatCurrency(value?: number) {
-	if (typeof value !== "number") return "৳ 0";
-	return new Intl.NumberFormat("en-BD", {
-		style: "currency",
-		currency: "BDT",
-		maximumFractionDigits: 0,
-	})
-		.format(value)
-		.replace("BDT", "")
-		.trim();
-}
 
 // BAR CHART
 function BarChart({
@@ -84,46 +71,6 @@ function BarChart({
 	);
 }
 
-// HORIZONTAL BAR CHART
-function HBarChart({
-	data,
-	maxVal,
-}: {
-	data: { label: string; value: number; color: string }[];
-	maxVal: number;
-}) {
-	return (
-		<div className="mt-6 space-y-4 sm:space-y-5">
-			{data.length === 0 ? (
-				<div className="rounded-xl border border-dashed border-borderLight p-6 text-sm text-textSecondary">
-					No data available
-				</div>
-			) : (
-				data.map((d) => (
-					<div key={d.label} className="group">
-						<div className="mb-1.5 flex justify-between text-xs">
-							<span className="font-medium text-textSecondary group-hover:text-textPrimary">
-								{d.label}
-							</span>
-							<span className="font-bold text-textPrimary">{d.value}</span>
-						</div>
-						<div className="h-2.5 overflow-hidden rounded-full bg-surfaceVariant">
-							<div
-								className={`h-full rounded-full ${getTailwindColor(
-									d.color,
-								)} transition-all duration-1000 ease-in-out`}
-								style={{
-									width: `${Math.max((d.value / maxVal) * 100, 2)}%`,
-								}}
-							/>
-						</div>
-					</div>
-				))
-			)}
-		</div>
-	);
-}
-
 // DONUT CHART
 function DonutChart({
 	slices,
@@ -132,13 +79,13 @@ function DonutChart({
 }) {
 	let cumulative = 0;
 	const colorMap: Record<string, string> = {
-		"bg-blue-500": "#3b82f6",
-		"bg-accent": "#12a37a",
-		"bg-primary": "#1a73e8",
-		"bg-warning": "#f29900",
-		"bg-textTertiary": "#9aa0a6",
-		"bg-success": "#1e8e3e",
-		"bg-error": "#d93025",
+		"bg-blue-500": "rgb(var(--color-outline))",
+		"bg-accent": "rgb(var(--color-primaryDark))",
+		"bg-primary": "rgb(var(--color-primary))",
+		"bg-warning": "rgb(var(--color-warning))",
+		"bg-textTertiary": "rgb(var(--color-textTertiary))",
+		"bg-success": "rgb(var(--color-success))",
+		"bg-error": "rgb(var(--color-error))",
 	};
 
 	const gradient =
@@ -147,11 +94,11 @@ function DonutChart({
 					.map((s) => {
 						const start = cumulative;
 						cumulative += s.pct;
-						const color = colorMap[s.color] || "#ccc";
+						const color = colorMap[s.color] || "rgb(var(--color-outline))";
 						return `${color} ${start}% ${cumulative}%`;
 					})
 					.join(", ")
-			: "#e5e7eb 0% 100%";
+			: "rgb(var(--color-surfaceVariant)) 0% 100%";
 
 	return (
 		<div className="mt-6 flex flex-col items-center gap-6 sm:flex-row sm:gap-10">
@@ -203,7 +150,11 @@ function ChartCard({
 	children: React.ReactNode;
 }) {
 	return (
-		<div className="overflow-hidden rounded-xl border border-borderLight bg-surface shadow-sm transition-shadow hover:shadow-md">
+		<TiltCard
+			maxTilt={3}
+			glare={true}
+			className="overflow-hidden rounded-xl border border-borderLight bg-surface shadow-sm transition-shadow hover:border-primary/40 hover:shadow-md"
+		>
 			<div className="border-b border-borderLight px-5 py-4">
 				<h2 className="flex items-center gap-2.5 text-sm font-bold uppercase tracking-wider text-textPrimary">
 					<span className="rounded-lg bg-surfaceVariant p-2">{icon}</span>
@@ -211,7 +162,7 @@ function ChartCard({
 				</h2>
 			</div>
 			<div className="p-5">{children}</div>
-		</div>
+		</TiltCard>
 	);
 }
 
@@ -254,18 +205,16 @@ export default function AdminAnalyticsPage() {
 	const summary = analytics?.summary;
 
 	const topItems = analytics?.topItems ?? [];
-	const penalties = analytics?.penalties ?? [];
-	const disputes = analytics?.disputes ?? [];
 	const bookingRatio = analytics?.bookingRatio ?? [];
 	const categoryDistribution = analytics?.categoryDistribution ?? [];
 
 	const summaryCards = [
 		{
-			label: "Total Revenue",
-			value: formatCurrency(summary?.totalRevenue),
-			valueClass: "text-success",
-			accentClass: "bg-success/10",
-			iconClass: "bg-success",
+			label: "Total Reports",
+			value: (summary?.totalReports ?? 0).toLocaleString(),
+			valueClass: "text-error",
+			accentClass: "bg-error/10",
+			iconClass: "bg-error",
 		},
 		{
 			label: "Total Bookings",
@@ -312,26 +261,6 @@ export default function AdminAnalyticsPage() {
 			icon: <PieChart className="h-4 w-4 text-textSecondary" />,
 			content: <DonutChart slices={categoryDistribution} />,
 		},
-		{
-			title: "Penalties (Applied vs Waived)",
-			icon: <Clock className="h-4 w-4 text-warning" />,
-			content: (
-				<HBarChart
-					data={penalties}
-					maxVal={Math.max(...penalties.map((d) => d.value), 1)}
-				/>
-			),
-		},
-		{
-			title: "Disputes (Open vs Resolved)",
-			icon: <TrendingUp className="h-4 w-4 text-success" />,
-			content: (
-				<HBarChart
-					data={disputes}
-					maxVal={Math.max(...disputes.map((d) => d.value), 1)}
-				/>
-			),
-		},
 	];
 
 	if (loading) {
@@ -341,12 +270,12 @@ export default function AdminAnalyticsPage() {
 					<Skeleton className="h-8 w-40" />
 					<Skeleton className="mt-2 h-4 w-72" />
 				</div>
-				<div className="grid grid-cols-2 gap-4 xl:grid-cols-4">
+				<div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
 					{Array.from({ length: 4 }).map((_, i) => (
 						<StatCardSkeleton key={i} />
 					))}
 				</div>
-				<div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+				<div className="grid grid-cols-1 gap-6 md:grid-cols-2">
 					{Array.from({ length: 4 }).map((_, i) => (
 						<div
 							key={i}
@@ -361,17 +290,19 @@ export default function AdminAnalyticsPage() {
 	}
 
 	return (
-		<div className="w-full space-y-6 px-4 pb-20 sm:px-6 lg:px-8">
+		<div className="w-full space-y-6 px-4 pb-20 sm:px-6 lg:px-8 graph-grid page-enter">
 			{/* Header – matches admin pattern */}
-			<div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-				<div>
-					<h1 className="text-2xl font-bold text-textPrimary tracking-tight sm:text-3xl">
-						Analytics
-					</h1>
-					<p className="mt-1 text-sm text-textSecondary">
-						Live platform-wide insights and performance metrics for the current
-						period.
-					</p>
+			<div className="glass-surface relative overflow-hidden rounded-2xl p-6 shadow-sm">
+				<div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+					<div>
+						<h1 className="mt-1 text-2xl font-bold text-textPrimary tracking-tight sm:text-3xl">
+							Platform <span className="text-gradient-brand italic">Analytics.</span>
+						</h1>
+						<p className="mt-1 text-sm text-textSecondary">
+							Live platform-wide insights and performance metrics for the current
+							period.
+						</p>
+					</div>
 				</div>
 			</div>
 
@@ -384,15 +315,17 @@ export default function AdminAnalyticsPage() {
 			)}
 
 			{/* Summary cards – 2 columns mobile, 4 columns desktop */}
-			<div className="grid grid-cols-2 gap-4 xl:grid-cols-4">
+			<div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
 				{summaryCards.map((card) => (
-					<div
+					<TiltCard
 						key={card.label}
+						maxTilt={6}
+						glare={true}
 						className="relative overflow-hidden rounded-xl border border-borderLight bg-surface p-4 shadow-sm transition hover:shadow-md">
-						<div className="text-xs font-semibold uppercase tracking-wider text-textTertiary">
+						<div className="text-xs font-semibold uppercase tracking-wider text-textTertiary relative z-10">
 							{card.label}
 						</div>
-						<div className={`mt-2 text-2xl font-bold ${card.valueClass}`}>
+						<div className={`mt-2 text-2xl font-bold relative z-10 ${card.valueClass}`}>
 							{card.value}
 						</div>
 						<div
@@ -401,12 +334,12 @@ export default function AdminAnalyticsPage() {
 						<div
 							className={`absolute right-5 top-5 h-2.5 w-2.5 rounded-full ${card.iconClass}`}
 						/>
-					</div>
+					</TiltCard>
 				))}
 			</div>
 
 			{/* Charts grid – 1 column mobile, 2 columns desktop */}
-			<div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+			<div className="grid grid-cols-1 gap-6 md:grid-cols-2">
 				{chartConfigs.map((chart) => (
 					<ChartCard key={chart.title} title={chart.title} icon={chart.icon}>
 						{chart.content}

@@ -50,12 +50,6 @@ public class BookingController {
         return bookingService.getRequestsForMyListings();
     }
 
-    @GetMapping("/deposits")
-    @PreAuthorize("isAuthenticated()")
-    public List<BookingResponse> getDepositTracker() {
-        return bookingService.getDepositTracker();
-    }
-
     @GetMapping("/{bookingId}")
     @PreAuthorize("isAuthenticated()")
     public BookingResponse getBookingById(
@@ -70,11 +64,18 @@ public class BookingController {
         return bookingService.approveBooking(bookingId);
     }
 
+    @PatchMapping("/{bookingId}/activate")
+    @PreAuthorize("isAuthenticated()")
+    public BookingResponse activateBooking(
+            @PathVariable Long bookingId) {
+        return bookingService.activateBooking(bookingId);
+    }
+
     @PatchMapping("/{bookingId}/reject")
     @PreAuthorize("isAuthenticated()")
     public BookingResponse rejectBooking(
             @PathVariable Long bookingId,
-            @RequestBody(required = false) RejectBookingRequest request) {
+            @Valid @RequestBody(required = false) RejectBookingRequest request) {
         String reason = request != null ? request.getReason() : null;
         return bookingService.rejectBooking(bookingId, reason);
     }

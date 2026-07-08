@@ -1,7 +1,9 @@
 package com.resourcex.resourcex.controller;
 
 import com.resourcex.resourcex.dto.request.CreateReviewRequest;
+import com.resourcex.resourcex.dto.response.ReviewEligibilityResponse;
 import com.resourcex.resourcex.dto.response.ReviewResponse;
+import com.resourcex.resourcex.dto.response.ReviewSummaryResponse;
 import com.resourcex.resourcex.service.ReviewService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -45,6 +47,29 @@ public class ReviewController {
     @GetMapping("/reviewee/{revieweeId}")
     public List<ReviewResponse> getReviewsByReviewee(@PathVariable Long revieweeId) {
         return reviewService.getReviewsByReviewee(revieweeId);
+    }
+
+    @GetMapping("/item/{itemId}")
+    public Page<ReviewResponse> getReviewsByItem(
+            @PathVariable Long itemId,
+            @PageableDefault(size = 5, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable
+    ) {
+        return reviewService.getReviewsByItem(itemId, pageable);
+    }
+
+    @GetMapping("/item/{itemId}/summary")
+    public ReviewSummaryResponse getItemReviewSummary(@PathVariable Long itemId) {
+        return reviewService.getItemReviewSummary(itemId);
+    }
+
+    @GetMapping("/item/{itemId}/eligibility")
+    public ReviewEligibilityResponse getItemReviewEligibility(@PathVariable Long itemId) {
+        return reviewService.getItemReviewEligibility(itemId);
+    }
+
+    @GetMapping("/owner/{ownerId}/summary")
+    public ReviewSummaryResponse getOwnerReviewSummary(@PathVariable Long ownerId) {
+        return reviewService.getOwnerReviewSummary(ownerId);
     }
 
     @DeleteMapping("/{reviewId}")

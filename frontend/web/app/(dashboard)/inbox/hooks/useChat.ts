@@ -3,13 +3,13 @@
 import { useState, useCallback, useEffect, useMemo, useRef } from "react";
 import { Client } from "@stomp/stompjs";
 import SockJS from "sockjs-client";
-import { Conversation, Message } from "../types/chat";
+import { Conversation, Message } from "@/types/chat";
 import { chatService } from "../services/chatService";
 import { useAuth } from "@/context/AuthContext";
 import { useToast } from "@/context/ToastContext";
 import { extractErrorMessage } from "@/lib/errorUtils";
 
-const WS_ENDPOINT = (process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8082") + "/ws-endpoint";
+const WS_ENDPOINT = (process.env.NEXT_PUBLIC_API_BASE_URL ?? (typeof window === "undefined" ? "http://localhost:8082" : "")) + "/ws-endpoint";
 
 export function useChat() {
 	const { user, canAccess } = useAuth();
@@ -125,8 +125,6 @@ export function useChat() {
 				conversation.participantTwoName,
 				conversation.participantTwoEmail,
 				conversation.lastMessageContent ?? "",
-				conversation.bookingId ? `booking ${conversation.bookingId}` : "",
-				conversation.disputeId ? `dispute ${conversation.disputeId}` : "",
 			]
 				.join(" ")
 				.toLowerCase();
@@ -215,23 +213,6 @@ export function useChat() {
 		[refreshConversations, selectConversation],
 	);
 
-	const clearChat = useCallback(async (conversationId: number) => {
-		try {
-			await chatService.clearChat(conversationId);
-			setMessages((prev) => ({ ...prev, [conversationId]: [] }));
-			setConversations((prev) =>
-				prev.map((c) =>
-					c.conversationId === conversationId
-						? { ...c, lastMessageContent: "Chat cleared", lastMessageAt: new Date().toISOString() }
-						: c
-				)
-			);
-			toast("Chat cleared successfully", "success");
-		} catch (err) {
-			toast(extractErrorMessage(err), "error");
-		}
-	}, [toast]);
-
 	const deleteConversation = useCallback(async (conversationId: number) => {
 		try {
 			await chatService.deleteConversation(conversationId);
@@ -265,7 +246,6 @@ export function useChat() {
 		sendMessage,
 		refreshConversations,
 		openCreatedConversation,
-		clearChat,
 		deleteConversation,
 	};
 }

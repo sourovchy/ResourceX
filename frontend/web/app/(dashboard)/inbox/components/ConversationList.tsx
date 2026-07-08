@@ -3,6 +3,7 @@
 
 import { Conversation } from "@/types/chat";
 import ConversationItem from "./ConversationItem";
+import { TiltCard } from "@/components/ui/TiltCard";
 
 interface ConversationListProps {
 	conversations: Conversation[];
@@ -18,20 +19,34 @@ export default function ConversationList({
 	onSelect,
 }: ConversationListProps) {
 	return (
-		<div className="flex flex-col gap-1 px-2 pb-2">
-			{conversations.map((c, index) => (
-				<div key={c.conversationId}>
-					<ConversationItem
-						conversation={c}
-						currentUserId={currentUserId}
-						isActive={c.conversationId === selectedId}
-						onClick={() => onSelect(c.conversationId)}
-					/>
-					{index < conversations.length - 1 && (
-						<div className="mx-2 mt-1 h-[1px] bg-borderLight/50" />
-					)}
-				</div>
-			))}
+		<div className="flex flex-col gap-3 px-2 pb-2">
+			{conversations.map((c) => {
+				const isActive = c.conversationId === selectedId;
+				return (
+					<TiltCard
+						key={c.conversationId}
+						maxTilt={4}
+						hoverScale={1.02}
+						glare={true}
+						className={`
+							overflow-hidden rounded-2xl border transition-all duration-300 cursor-pointer
+							bg-card/75 backdrop-blur-md
+							${
+								isActive
+									? "border-primary/40 shadow-[0_8px_24px_rgba(218,119,86,0.15)] bg-card/90"
+									: "border-borderLight/60 shadow-[0_4px_12px_rgba(0,0,0,0.04)] hover:shadow-[0_8px_20px_rgba(0,0,0,0.08)]"
+							}
+						`}
+					>
+						<ConversationItem
+							conversation={c}
+							currentUserId={currentUserId}
+							isActive={isActive}
+							onClick={() => onSelect(c.conversationId)}
+						/>
+					</TiltCard>
+				);
+			})}
 		</div>
 	);
 }

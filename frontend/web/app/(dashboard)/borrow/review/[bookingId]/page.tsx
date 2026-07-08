@@ -7,6 +7,8 @@ import { Star, MessageSquare, CheckCircle2, Loader2, AlertTriangle } from "lucid
 import api from "@/lib/api";
 import { extractErrorMessage } from "@/lib/errorUtils";
 import { formatDateRange } from "@/lib/dateUtils";
+import Button from "@/components/ui/Button";
+import Card from "@/components/ui/Card";
 
 type BookingSummary = {
 	bookingId: number;
@@ -114,7 +116,7 @@ export default function ReviewPage({ params }: { params: { bookingId: string } }
 				<p className="mt-2 text-sm text-textSecondary">{fetchError}</p>
 				<Link
 					href="/bookings"
-					className="mt-6 inline-flex items-center rounded-xl bg-primary px-6 py-3 text-sm font-bold text-white hover:bg-primaryDark">
+					className="mt-6 inline-flex items-center justify-center rounded-full font-bold italic transition-colors duration-300 outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background bg-primary text-onPrimary hover:bg-primaryDark focus-visible:ring-primary/40 shadow-sm px-6 py-3 text-sm gap-2">
 					My Bookings
 				</Link>
 			</div>
@@ -133,7 +135,7 @@ export default function ReviewPage({ params }: { params: { bookingId: string } }
 				</p>
 				<Link
 					href="/bookings"
-					className="mt-6 inline-flex items-center rounded-xl bg-primary px-6 py-3 text-sm font-bold text-white hover:bg-primaryDark">
+					className="mt-6 inline-flex items-center justify-center rounded-full font-bold italic transition-colors duration-300 outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background bg-primary text-onPrimary hover:bg-primaryDark focus-visible:ring-primary/40 shadow-sm px-6 py-3 text-sm gap-2">
 					Back to My Bookings
 				</Link>
 			</div>
@@ -143,11 +145,17 @@ export default function ReviewPage({ params }: { params: { bookingId: string } }
 	// ── Form ─────────────────────────────────────────────────────────────────
 	return (
 		<div className="w-full space-y-6 px-3 pb-20 sm:space-y-8 sm:px-0">
-			<div className="text-center">
-				<h1 className="text-xl font-bold tracking-tight text-textPrimary sm:text-2xl">
-					Leave a Review
+			<div className="mb-2">
+				<p className="text-xs font-bold uppercase tracking-[0.2em] text-textTertiary">
+				{"// Transaction Feedback"}
+			</p>
+				<h1 className="mt-1 text-3xl font-normal italic leading-tight text-textPrimary sm:text-4xl">
+					Leave a <span className="text-primary italic font-bold">Review.</span>
 				</h1>
-				<p className="mt-1.5 text-sm text-textSecondary">
+			</div>
+
+			<div className="text-center sm:text-left">
+				<p className="text-sm text-textSecondary font-medium">
 					How was your experience renting from{" "}
 					<strong className="text-textPrimary">{booking?.ownerName}</strong>?
 				</p>
@@ -168,7 +176,7 @@ export default function ReviewPage({ params }: { params: { bookingId: string } }
 					<div className="min-w-0">
 						<h3 className="font-bold text-textPrimary">{booking?.itemTitle}</h3>
 						{booking?.startDate && booking?.endDate && (
-							<p className="mt-0.5 text-xs text-textSecondary">
+							<p className="mt-0.5 text-xs text-textSecondary font-mono">
 								{formatDateRange(booking.startDate, booking.endDate)}
 							</p>
 						)}
@@ -178,14 +186,14 @@ export default function ReviewPage({ params }: { params: { bookingId: string } }
 				<form onSubmit={handleSubmit} className="space-y-6">
 					{submitError && (
 						<div className="flex items-start gap-3 rounded-xl border border-error bg-errorLight/30 p-4 text-sm text-errorDark">
-							<AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
-							{submitError}
+							<AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-error" />
+							<span>{submitError}</span>
 						</div>
 					)}
 
 					{/* Star rating */}
 					<div className="flex flex-col items-center gap-3">
-						<label className="text-xs font-bold uppercase tracking-wider text-textSecondary">
+						<label className="text-[11px] font-bold uppercase tracking-[0.12em] text-primary">
 							Rate Your Experience
 						</label>
 						<div
@@ -197,7 +205,7 @@ export default function ReviewPage({ params }: { params: { bookingId: string } }
 									type="button"
 									onClick={() => setRating(star)}
 									onMouseEnter={() => setHoverRating(star)}
-									className="rounded-full p-1 transition-transform hover:scale-110 focus:outline-none">
+									className="rounded-full p-1 transition-transform hover:scale-110 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/40">
 									<Star
 										className={`h-9 w-9 transition-colors sm:h-10 sm:w-10 ${
 											star <= (hoverRating || rating)
@@ -208,17 +216,17 @@ export default function ReviewPage({ params }: { params: { bookingId: string } }
 								</button>
 							))}
 						</div>
-						<span className="h-4 text-xs font-bold text-textSecondary">
+						<span className="h-4 text-xs font-bold text-textSecondary uppercase tracking-wider">
 							{RATING_LABELS[hoverRating || rating] ?? ""}
 						</span>
 					</div>
 
 					{/* Comment */}
-					<div className="space-y-2">
+					<div className="space-y-1.5">
 						<label
 							htmlFor="comment"
-							className="flex items-center gap-2 text-sm font-bold text-textPrimary">
-							<MessageSquare className="h-4 w-4 text-textSecondary" />
+							className="flex items-center gap-2 text-[11px] font-bold uppercase tracking-[0.12em] text-primary">
+							<MessageSquare className="h-3.5 w-3.5" />
 							Comment
 						</label>
 						<textarea
@@ -228,26 +236,23 @@ export default function ReviewPage({ params }: { params: { bookingId: string } }
 							placeholder="Share details about the item's condition or the owner's communication…"
 							value={comment}
 							onChange={(e) => setComment(e.target.value)}
-							className="w-full resize-none rounded-xl border border-borderLight bg-surfaceVariant px-4 py-3 text-sm text-textPrimary placeholder-textSecondary outline-none transition focus:border-primary focus:ring-1 focus:ring-primary"
+							className="w-full resize-none rounded-xl border border-borderLight bg-card px-4 py-3 text-sm text-textPrimary placeholder-textSecondary outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
 						/>
-						<p className="text-right text-xs text-textSecondary">
+						<p className="text-right text-xs text-textSecondary font-mono">
 							{comment.length}/1000
 						</p>
 					</div>
 
-					<button
+					<Button
 						type="submit"
 						disabled={rating === 0 || !comment.trim() || submitting}
-						className="flex w-full items-center justify-center gap-2 rounded-xl bg-primary py-4 font-bold text-white shadow-sm transition-colors hover:bg-primaryDark disabled:cursor-not-allowed disabled:opacity-50">
-						{submitting ? (
-							<>
-								<Loader2 className="h-5 w-5 animate-spin" />
-								Submitting…
-							</>
-						) : (
-							"Submit Review"
-						)}
-					</button>
+						loading={submitting}
+						variant="primary"
+						size="lg"
+						fullWidth
+					>
+						Submit Review
+					</Button>
 				</form>
 			</div>
 		</div>

@@ -4,8 +4,7 @@ import com.resourcex.resourcex.dto.request.LoginRequest;
 import com.resourcex.resourcex.dto.request.RegisterRequest;
 import com.resourcex.resourcex.dto.response.AuthResponse;
 import com.resourcex.resourcex.dto.response.CurrentUserResponse;
-import com.resourcex.resourcex.entity.PendingUser;
-import com.resourcex.resourcex.entity.PendingUserStatus;
+
 import com.resourcex.resourcex.entity.StudentProfile;
 import com.resourcex.resourcex.entity.University;
 import com.resourcex.resourcex.entity.User;
@@ -15,10 +14,11 @@ import com.resourcex.resourcex.exception.ConflictException;
 import com.resourcex.resourcex.exception.ResourceNotFoundException;
 import com.resourcex.resourcex.exception.UnauthorizedException;
 import com.resourcex.resourcex.mapper.UserMapper;
-import com.resourcex.resourcex.repository.PendingUserRepository;
+
+import com.resourcex.resourcex.entity.Role;
 import com.resourcex.resourcex.repository.StudentProfileRepository;
 import com.resourcex.resourcex.repository.UniversityRepository;
-import com.resourcex.resourcex.repository.UserRoleRepository;
+import com.resourcex.resourcex.repository.RoleRepository;
 import com.resourcex.resourcex.repository.UserRepository;
 import com.resourcex.resourcex.security.JwtService;
 import com.resourcex.resourcex.service.AuthService;
@@ -33,6 +33,9 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import com.resourcex.resourcex.repository.StudentRestrictionRepository;
+import com.resourcex.resourcex.entity.StudentRestriction;
+import java.time.LocalDateTime;
 
 import java.util.List;
 
@@ -41,16 +44,18 @@ import java.util.List;
 public class AuthServiceImpl implements AuthService {
 
     private final UserRepository userRepository;
-    private final PendingUserRepository pendingUserRepository;
+
     private final StudentProfileRepository studentProfileRepository;
     private final UniversityRepository universityRepository;
-    private final UserRoleRepository userRoleRepository;
+    private final RoleRepository roleRepository;
     private final PasswordEncoder passwordEncoder;
     private final JwtService jwtService;
     private final EmailService emailService;
     private final com.resourcex.resourcex.repository.FileMetadataRepository fileMetadataRepository;
     private final com.resourcex.resourcex.service.OtpService otpService;
     private final AuditLogService auditLogService;
+    private final StudentRestrictionRepository studentRestrictionRepository;
+    private final com.resourcex.resourcex.service.AvatarUrlResolver avatarUrlResolver;
 
     @Override
     @Transactional
@@ -58,18 +63,15 @@ public class AuthServiceImpl implements AuthService {
 
         request.setPhone(PhoneUtil.normalizePhone(request.getPhone()));
 
-        if (userRepository.existsByEmailIgnoreCase(request.getEmail())
-                || pendingUserRepository.existsByEmailIgnoreCase(request.getEmail())) {
+        if (userRepository.existsByEmailIgnoreCase(request.getEmail())) {
             throw new ConflictException("Email already exists");
         }
 
-        if (studentProfileRepository.existsByStudentId(request.getStudentId())
-                || pendingUserRepository.existsByStudentId(request.getStudentId())) {
+        if (studentProfileRepository.existsByStudentId(request.getStudentId())) {
             throw new ConflictException("Student ID already exists");
         }
 
-        if (studentProfileRepository.existsByPhone(request.getPhone())
-                || pendingUserRepository.existsByPhone(request.getPhone())) {
+        if (studentProfileRepository.existsByPhone(request.getPhone())) {
             throw new ConflictException("Phone number already exists");
         }
 
@@ -86,26 +88,38 @@ public class AuthServiceImpl implements AuthService {
             throw new BadRequestException("Invalid file purpose for ID card");
         }
 
-        PendingUser pendingUser = PendingUser.builder()
-                .studentId(request.getStudentId())
+        // Every user has exactly one role; new registrants are ROLE_USER (still PENDING approval).
+        Role roleUser = roleRepository.findByNameIgnoreCase(RoleConstants.ROLE_USER)
+                .orElseGet(() -> roleRepository.save(Role.builder().name(RoleConstants.ROLE_USER).build()));
+
+        User user = User.builder()
                 .name(request.getName())
                 .email(request.getEmail())
-                .passwordHash(passwordEncoder.encode(request.getPassword()))
+                .password(passwordEncoder.encode(request.getPassword()))
+                .status(UserStatus.PENDING)
+                .role(roleUser)
+                .build();
+        User savedUser = userRepository.save(user);
+
+        StudentProfile profile = StudentProfile.builder()
+                .user(savedUser)
+                .studentId(request.getStudentId())
                 .phone(request.getPhone())
                 .university(university)
                 .department(request.getDepartment())
                 .idCardFileId(request.getIdCardFileId())
-                .status(PendingUserStatus.REGISTERED)
+                .trustScore(100)
+                .emailVerified(false)
+                .phoneVerified(false)
                 .build();
-
-        pendingUserRepository.save(pendingUser);
+        studentProfileRepository.save(profile);
 
         auditLogService.logAction(
                 AuditLog.ActorType.SYSTEM,
                 null,
                 "USER_REGISTER_PENDING",
-                "PENDING_USER",
-                pendingUser.getPendingUserId(),
+                "USER",
+                savedUser.getUserId(),
                 AuditLog.AuditOutcome.SUCCESS,
                 "User registration request created for " + request.getEmail()
         );
@@ -123,33 +137,38 @@ public class AuthServiceImpl implements AuthService {
     public AuthResponse login(LoginRequest request) {
 
         User user = userRepository.findByEmailIgnoreCase(request.getEmail())
-                .orElseGet(() -> {
-                    var pendingOpt = pendingUserRepository.findByEmailIgnoreCase(request.getEmail());
-                    if (pendingOpt.isPresent()) {
-                        PendingUser pending = pendingOpt.get();
-                        if (pending.getStatus() == PendingUserStatus.REGISTERED) {
-                            throw new UnauthorizedException("Email not verified. Please verify your email.");
-                        } else if (pending.getStatus() == PendingUserStatus.PENDING_REVIEW || pending.getStatus() == PendingUserStatus.EMAIL_VERIFIED) {
-                            throw new UnauthorizedException("Your account is pending admin review.");
-                        } else if (pending.getStatus() == PendingUserStatus.REJECTED) {
-                            throw new UnauthorizedException("Your registration was rejected.");
-                        }
-                    }
-                    throw new UnauthorizedException("Invalid email or password");
-                });
+                .orElseThrow(() -> new UnauthorizedException("Invalid email or password"));
 
         if (!passwordEncoder.matches(request.getPassword(), user.getPassword())) {
             throw new UnauthorizedException("Invalid email or password");
         }
 
         if (user.getStatus() != UserStatus.ACTIVE) {
-            if (user.getStatus() == UserStatus.SUSPENDED) {
-                throw new UnauthorizedException("Account is suspended.");
+            if (user.getStatus() == UserStatus.PENDING) {
+                StudentProfile profile = studentProfileRepository.findByUser(user).orElse(null);
+                if (profile != null && !profile.getEmailVerified()) {
+                    throw new UnauthorizedException("Email not verified. Please verify your email.");
+                } else {
+                    throw new UnauthorizedException("Your account is pending admin review.");
+                }
             }
-            if (user.getStatus() == UserStatus.BANNED) {
-                throw new UnauthorizedException("Account is banned.");
+            if (user.getStatus() == UserStatus.DELETED) {
+                StudentProfile profile = studentProfileRepository.findByUser(user).orElse(null);
+                if (profile != null && profile.getRejectionReason() != null) {
+                    throw new UnauthorizedException("Your registration was rejected.");
+                }
+                throw new UnauthorizedException("Account is deleted.");
             }
             throw new UnauthorizedException("Account is not active.");
+        }
+
+        // Check suspension dynamically via restriction record
+        StudentRestriction restriction = studentRestrictionRepository.findByStudentUserId(user.getUserId()).orElse(null);
+        if (restriction != null && restriction.getSuspendedAt() != null) {
+            LocalDateTime until = restriction.getSuspendedUntil();
+            if (until == null || LocalDateTime.now().isBefore(until)) {
+                throw new UnauthorizedException("Account is suspended.");
+            }
         }
 
         List<String> roles = resolveRoles(user);
@@ -166,15 +185,17 @@ public class AuthServiceImpl implements AuthService {
                 "User logged in successfully"
         );
 
+        com.resourcex.resourcex.dto.response.UserResponse userResponse = UserMapper.toResponse(user, profile);
+        if (userResponse != null) {
+            userResponse.setAvatarUrl(avatarUrlResolver.resolve(user.getAvatarFileId()));
+        }
+
         return AuthResponse.builder()
                 .success(true)
                 .message("Login successful")
                 .token(token)
                 .tokenType("Bearer")
-                .user(UserMapper.toResponse(
-                        user,
-                        userRoleRepository.findAllByUser(user),
-                        profile))
+                .user(userResponse)
                 .roles(roles)
                 .build();
     }
@@ -184,11 +205,13 @@ public class AuthServiceImpl implements AuthService {
         User user = resolveCurrentUser();
         StudentProfile profile = studentProfileRepository.findByUser(user).orElse(null);
 
+        com.resourcex.resourcex.dto.response.UserResponse userResponse = UserMapper.toResponse(user, profile);
+        if (userResponse != null) {
+            userResponse.setAvatarUrl(avatarUrlResolver.resolve(user.getAvatarFileId()));
+        }
+
         return CurrentUserResponse.builder()
-                .user(UserMapper.toResponse(
-                        user,
-                        userRoleRepository.findAllByUser(user),
-                        profile))
+                .user(userResponse)
                 .roles(resolveRoles(user))
                 .build();
     }
@@ -249,11 +272,9 @@ public class AuthServiceImpl implements AuthService {
     }
 
     private List<String> resolveRoles(User user) {
-        List<String> roles = userRoleRepository.findAllByUser(user).stream()
-                .map(userRole -> userRole.getRole().getName())
-                .toList();
-
-        return roles.isEmpty() ? List.of(RoleConstants.ROLE_USER) : roles;
+        return (user.getRole() != null && user.getRole().getName() != null)
+                ? List.of(user.getRole().getName())
+                : List.of(RoleConstants.ROLE_USER);
     }
 }
 

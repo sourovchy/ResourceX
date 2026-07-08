@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Inter } from "next/font/google";
+import { Plus_Jakarta_Sans, JetBrains_Mono } from "next/font/google";
 // @ts-ignore
 import "./globals.css";
 import { ThemeProvider } from "@/context/ThemeContext";
@@ -7,7 +7,19 @@ import { AuthProvider } from "@/context/AuthContext";
 import { ToastProvider } from "@/context/ToastContext";
 import { ToastContainer } from "@/components/ui/Toast";
 
-const inter = Inter({ subsets: ["latin"] });
+// Primary UI typeface — professional, modern sans.
+const jakarta = Plus_Jakarta_Sans({
+	subsets: ["latin"],
+	variable: "--font-sans",
+	display: "swap",
+});
+
+// Monospace — reserved for IDs, codes, and the `font-mono` utility.
+const jetbrainsMono = JetBrains_Mono({
+	subsets: ["latin"],
+	variable: "--font-mono",
+	display: "swap",
+});
 
 export const metadata: Metadata = {
 	title: "ResourceX",
@@ -36,8 +48,12 @@ export default function RootLayout({
 	children: React.ReactNode;
 }>) {
 	return (
-		<html lang="en" suppressHydrationWarning>
-			<body className={inter.className}>
+		<html
+			lang="en"
+			suppressHydrationWarning
+			className={`${jakarta.variable} ${jetbrainsMono.variable}`}
+		>
+			<body className={`${jakarta.className} graph-grid`}>
 				<ThemeProvider>
 					<ToastProvider>
 						<AuthProvider>{children}</AuthProvider>

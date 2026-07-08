@@ -7,7 +7,7 @@ import api from "@/lib/api";
 import { useToast } from "@/context/ToastContext";
 import { extractErrorMessage } from "@/lib/errorUtils";
 import { chatService } from "../services/chatService";
-import { getFileUrl } from "@/lib/api";
+import Avatar from "@/components/ui/Avatar";
 import { useDialog } from "@/hooks/useDialog";
 
 interface UserResult {
@@ -171,17 +171,7 @@ export default function NewConversationModal({
 											<button
 												onClick={() => setSelected(u)}
 												className="flex w-full items-center gap-3 rounded-xl p-2.5 text-left transition-colors hover:bg-surfaceVariant">
-												<div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primaryLight text-sm font-bold text-primary">
-													{u.avatarUrl ? (
-														<img
-															src={getFileUrl(u.avatarUrl)}
-															alt={u.name}
-															className="h-full w-full rounded-full object-cover"
-														/>
-													) : (
-														u.name?.charAt(0).toUpperCase() ?? "U"
-													)}
-												</div>
+												<Avatar src={u.avatarUrl} name={u.name} size={40} />
 												<div className="min-w-0 flex-1">
 													<p className="truncate text-sm font-semibold text-textPrimary">
 														{u.name}

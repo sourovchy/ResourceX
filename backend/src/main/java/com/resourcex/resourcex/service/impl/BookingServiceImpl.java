@@ -20,7 +20,6 @@ import com.resourcex.resourcex.entity.AuditLog;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
-import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
@@ -41,6 +40,12 @@ public class BookingServiceImpl implements BookingService {
     private final UserRepository userRepository;
     private final AuditLogService auditLogService;
     private final NotificationService notificationService;
+    private final BookingTrustHandler bookingTrustHandler;
+    private final ItemAvailabilityService itemAvailabilityService;
+    private final BookingMaintenanceService bookingMaintenanceService;
+    private final com.resourcex.resourcex.security.AccountAccessGuard accountAccessGuard;
+    private final com.resourcex.resourcex.service.StudentRestrictionManager restrictionManager;
+    private final com.resourcex.resourcex.service.AvatarUrlResolver avatarUrlResolver;
 
     @Override
     @Transactional
@@ -52,9 +57,19 @@ public class BookingServiceImpl implements BookingService {
 
         // Prevent owners from booking their own items
         User renter = resolveCurrentUser();
+
+        // Only approved (ACTIVE) accounts may book items.
+        accountAccessGuard.requireActive(renter);
+
         if (item.getOwner() != null
                 && item.getOwner().getUserId().equals(renter.getUserId())) {
             throw new BadRequestException("You cannot book your own item");
+        }
+
+        // Trust restriction (<50): restricted users cannot create new bookings.
+        if (restrictionManager.isAutomaticallyRestricted(renter.getUserId())) {
+            throw new ForbiddenException(
+                    "Your account is restricted due to a low Trust Score and cannot create new bookings.");
         }
 
         // Block deleted/unavailable items
@@ -68,7 +83,7 @@ public class BookingServiceImpl implements BookingService {
             throw new ConflictException("This item is currently unavailable");
         }
 
-        // Overlap check: exclude CANCELLED, REJECTED, COMPLETED bookings
+        // Overlap check: exclude CANCELLED bookings (see findOverlappingBookings)
         List<Booking> overlappingBookings = bookingRepository.findOverlappingBookings(
                 item,
                 request.getStartDate(),
@@ -112,7 +127,6 @@ public class BookingServiceImpl implements BookingService {
         notificationService.createBookingNotification(
                 item.getOwner().getUserId(),
                 saved.getBookingId(),
-                "New Booking Request",
                 renter.getName() + " requested to rent \"" + item.getTitle() + "\".",
                 renter.getUserId()
         );
@@ -125,7 +139,7 @@ public class BookingServiceImpl implements BookingService {
     public BookingResponse getBookingById(Long bookingId) {
         Booking booking = bookingRepository.findById(bookingId)
                 .orElseThrow(() -> new ResourceNotFoundException("Booking not found"));
-        assertCanViewBooking(booking);
+        assertCanViewBooking(booking, resolveCurrentUser());
         return BookingMapper.toResponse(booking);
     }
 
@@ -145,26 +159,34 @@ public class BookingServiceImpl implements BookingService {
     @Override
     @Transactional(readOnly = true)
     public List<BookingResponse> getMyBookings() {
+        LocalDateTime threshold = LocalDateTime.now().minusDays(2);
         return bookingRepository.findByRenter(resolveCurrentUser()).stream()
-                .map(BookingMapper::toResponse)
+                .filter(b -> b.getStatus() != Booking.BookingStatus.CANCELLED)
+                .filter(b -> b.getStatus() != Booking.BookingStatus.REJECTED
+                        || (b.getUpdatedAt() != null ? b.getUpdatedAt() : b.getCreatedAt()).isAfter(threshold))
+                .map(b -> resolveAvatars(BookingMapper.toResponse(b)))
                 .toList();
     }
 
     @Override
     @Transactional(readOnly = true)
     public List<BookingResponse> getRequestsForMyListings() {
+        LocalDateTime threshold = LocalDateTime.now().minusDays(2);
         return bookingRepository.findByItem_Owner(resolveCurrentUser()).stream()
-                .map(BookingMapper::toResponse)
+                .filter(b -> b.getStatus() != Booking.BookingStatus.CANCELLED)
+                .filter(b -> b.getStatus() != Booking.BookingStatus.REJECTED
+                        || (b.getUpdatedAt() != null ? b.getUpdatedAt() : b.getCreatedAt()).isAfter(threshold))
+                .map(b -> resolveAvatars(BookingMapper.toResponse(b)))
                 .toList();
     }
 
-    @Override
-    @Transactional(readOnly = true)
-    public List<BookingResponse> getDepositTracker() {
-        return bookingRepository.findByItem_Owner(resolveCurrentUser()).stream()
-                .filter(b -> b.getStatus() == Booking.BookingStatus.APPROVED)
-                .map(BookingMapper::toResponse)
-                .toList();
+    /** Resolves avatarUrl on the renter (and owner via item) using AvatarUrlResolver. */
+    private BookingResponse resolveAvatars(BookingResponse r) {
+        if (r == null) return null;
+        if (r.getRenter() != null && r.getRenter().getAvatarFileId() != null) {
+            r.getRenter().setAvatarUrl(avatarUrlResolver.resolve(r.getRenter().getAvatarFileId()));
+        }
+        return r;
     }
 
     @Override
@@ -173,22 +195,22 @@ public class BookingServiceImpl implements BookingService {
         Booking booking = bookingRepository.findById(bookingId)
                 .orElseThrow(() -> new ResourceNotFoundException("Booking not found"));
 
-        assertCanManageOwnerSide(booking);
+        User currentUser = resolveCurrentUser();
+        assertCanManageOwnerSide(booking, currentUser);
 
         if (booking.getStatus() != Booking.BookingStatus.PENDING) {
             throw new ConflictException("Only pending bookings can be approved");
         }
 
         booking.setStatus(Booking.BookingStatus.APPROVED);
-        booking.setApprovedAt(LocalDateTime.now());
 
         Booking saved = bookingRepository.save(booking);
         // Sync availability after any approval (status changed)
-        syncItemAvailability(saved.getItem());
+        itemAvailabilityService.sync(saved.getItem());
 
         auditLogService.logAction(
                 AuditLog.ActorType.USER,
-                resolveCurrentUser().getUserId(),
+                currentUser.getUserId(),
                 "BOOKING_APPROVED",
                 "BOOKING",
                 saved.getBookingId(),
@@ -200,8 +222,82 @@ public class BookingServiceImpl implements BookingService {
         notificationService.createBookingNotification(
                 saved.getRenter().getUserId(),
                 saved.getBookingId(),
-                "Booking Approved",
-                "Your booking for \"" + saved.getItem().getTitle() + "\" was approved. Coordinate payment and pickup with the owner.",
+                "Your booking for \"" + saved.getItem().getTitle() + "\" was approved. Coordinate pickup with the owner.",
+                saved.getItem().getOwner().getUserId()
+        );
+
+        // Auto-reject all other PENDING bookings for this item whose dates overlap
+        final String overlapReason =
+                "Another booking was approved for dates that overlap with your requested rental period.";
+
+        List<Booking> overlappingPending = bookingRepository
+                .findOverlappingBookings(saved.getItem(), saved.getStartDate(), saved.getEndDate())
+                .stream()
+                .filter(b -> b.getStatus() == Booking.BookingStatus.PENDING)
+                .filter(b -> !b.getBookingId().equals(saved.getBookingId()))
+                .toList();
+
+        for (Booking conflict : overlappingPending) {
+            conflict.setStatus(Booking.BookingStatus.REJECTED);
+            conflict.setRejectionReason(overlapReason);
+            Booking rejectedSaved = bookingRepository.save(conflict);
+
+            notificationService.createBookingNotification(
+                    rejectedSaved.getRenter().getUserId(),
+                    rejectedSaved.getBookingId(),
+                    "Your booking request for \"" + rejectedSaved.getItem().getTitle()
+                            + "\" was declined. " + overlapReason,
+                    saved.getItem().getOwner().getUserId()
+            );
+
+            auditLogService.logAction(
+                    AuditLog.ActorType.SYSTEM,
+                    null,
+                    "BOOKING_AUTO_REJECTED",
+                    "BOOKING",
+                    rejectedSaved.getBookingId(),
+                    AuditLog.AuditOutcome.SUCCESS,
+                    "Auto-rejected due to overlap with approved booking #" + saved.getBookingId()
+            );
+        }
+
+        return BookingMapper.toResponse(saved);
+
+    }
+
+    @Override
+    @Transactional
+    public BookingResponse activateBooking(Long bookingId) {
+        Booking booking = bookingRepository.findById(bookingId)
+                .orElseThrow(() -> new ResourceNotFoundException("Booking not found"));
+
+        User currentUser = resolveCurrentUser();
+        assertCanManageOwnerSide(booking, currentUser);
+
+        if (booking.getStatus() != Booking.BookingStatus.APPROVED) {
+            throw new ConflictException("Only approved bookings can be marked as handed over");
+        }
+
+        booking.setStatus(Booking.BookingStatus.ACTIVE);
+
+        Booking saved = bookingRepository.save(booking);
+        itemAvailabilityService.sync(saved.getItem());
+
+        auditLogService.logAction(
+                AuditLog.ActorType.USER,
+                currentUser.getUserId(),
+                "BOOKING_ACTIVATED",
+                "BOOKING",
+                saved.getBookingId(),
+                AuditLog.AuditOutcome.SUCCESS,
+                "Item handed over; rental active"
+        );
+
+        notificationService.createBookingNotification(
+                saved.getRenter().getUserId(),
+                saved.getBookingId(),
+                "Your rental of \"" + saved.getItem().getTitle() + "\" is now active. Please return it by "
+                        + saved.getEndDate() + ".",
                 saved.getItem().getOwner().getUserId()
         );
 
@@ -214,10 +310,11 @@ public class BookingServiceImpl implements BookingService {
         Booking booking = bookingRepository.findById(bookingId)
                 .orElseThrow(() -> new ResourceNotFoundException("Booking not found"));
 
-        assertCanManageOwnerSide(booking);
+        User currentUser = resolveCurrentUser();
+        assertCanManageOwnerSide(booking, currentUser);
 
         if (booking.getStatus() != Booking.BookingStatus.PENDING) {
-            throw new ConflictException("Only pending bookings can be rejected");
+            throw new ConflictException("Only pending bookings can be declined");
         }
 
         booking.setStatus(Booking.BookingStatus.REJECTED);
@@ -226,11 +323,11 @@ public class BookingServiceImpl implements BookingService {
         }
 
         Booking saved = bookingRepository.save(booking);
-        syncItemAvailability(saved.getItem());
+        itemAvailabilityService.sync(saved.getItem());
 
         auditLogService.logAction(
                 AuditLog.ActorType.USER,
-                resolveCurrentUser().getUserId(),
+                currentUser.getUserId(),
                 "BOOKING_REJECTED",
                 "BOOKING",
                 saved.getBookingId(),
@@ -242,7 +339,6 @@ public class BookingServiceImpl implements BookingService {
         notificationService.createBookingNotification(
                 saved.getRenter().getUserId(),
                 saved.getBookingId(),
-                "Booking Rejected",
                 "Your booking for \"" + saved.getItem().getTitle() + "\" was rejected."
                         + (reason != null && !reason.isBlank() ? " Reason: " + reason : ""),
                 saved.getItem().getOwner().getUserId()
@@ -257,7 +353,8 @@ public class BookingServiceImpl implements BookingService {
         Booking booking = bookingRepository.findById(bookingId)
                 .orElseThrow(() -> new ResourceNotFoundException("Booking not found"));
 
-        assertCanCancelBooking(booking);
+        User canceller = resolveCurrentUser();
+        assertCanCancelBooking(booking, canceller);
 
         if (booking.getStatus() == Booking.BookingStatus.COMPLETED
                 || booking.getStatus() == Booking.BookingStatus.CANCELLED
@@ -265,14 +362,22 @@ public class BookingServiceImpl implements BookingService {
             throw new ConflictException("This booking can no longer be cancelled");
         }
 
+        boolean wasApproved = booking.getStatus() == Booking.BookingStatus.APPROVED
+                || booking.getStatus() == Booking.BookingStatus.ACTIVE;
+
         booking.setStatus(Booking.BookingStatus.CANCELLED);
 
         Booking saved = bookingRepository.save(booking);
-        syncItemAvailability(saved.getItem());
+        itemAvailabilityService.sync(saved.getItem());
+
+        // Trust: cancelling an already-approved booking penalises the canceller (-5).
+        if (wasApproved) {
+            bookingTrustHandler.penalizeCancellationAfterApproval(canceller);
+        }
 
         auditLogService.logAction(
                 AuditLog.ActorType.USER,
-                resolveCurrentUser().getUserId(),
+                canceller.getUserId(),
                 "BOOKING_CANCELLED",
                 "BOOKING",
                 saved.getBookingId(),
@@ -281,14 +386,12 @@ public class BookingServiceImpl implements BookingService {
         );
 
         // Notify the counterparty (whoever did not cancel)
-        User canceller = resolveCurrentUser();
         Long ownerId = saved.getItem().getOwner().getUserId();
         Long renterId = saved.getRenter().getUserId();
         Long recipientId = canceller.getUserId().equals(renterId) ? ownerId : renterId;
         notificationService.createBookingNotification(
                 recipientId,
                 saved.getBookingId(),
-                "Booking Cancelled",
                 "The booking for \"" + saved.getItem().getTitle() + "\" was cancelled.",
                 canceller.getUserId()
         );
@@ -315,12 +418,12 @@ public class BookingServiceImpl implements BookingService {
         booking.setStatus(Booking.BookingStatus.CANCELLED);
 
         Booking saved = bookingRepository.save(booking);
-        syncItemAvailability(saved.getItem());
+        itemAvailabilityService.sync(saved.getItem());
 
         auditLogService.logAction(
                 AuditLog.ActorType.USER,
                 resolveCurrentUser().getUserId(),
-                "BOOKING_MODERATED_CANCEL",
+                "BOOKING_CANCELLED_BY_ADMIN",
                 "BOOKING",
                 saved.getBookingId(),
                 AuditLog.AuditOutcome.SUCCESS,
@@ -336,68 +439,43 @@ public class BookingServiceImpl implements BookingService {
         Booking booking = bookingRepository.findById(bookingId)
                 .orElseThrow(() -> new ResourceNotFoundException("Booking not found"));
 
-        assertCanManageOwnerSide(booking);
+        User currentUser = resolveCurrentUser();
+        assertCanManageOwnerSide(booking, currentUser);
 
-        if (booking.getStatus() != Booking.BookingStatus.APPROVED) {
-            throw new ConflictException("Only approved bookings can be completed");
+        if (booking.getStatus() != Booking.BookingStatus.ACTIVE) {
+            throw new ConflictException("Only active (handed-over) bookings can be marked as returned");
         }
 
         booking.setStatus(Booking.BookingStatus.COMPLETED);
         booking.setReturnedDate(LocalDate.now());
 
         Booking saved = bookingRepository.save(booking);
-        syncItemAvailability(saved.getItem());
+        itemAvailabilityService.sync(saved.getItem());
+
+        bookingTrustHandler.awardCompletionTrust(saved);
+
+        boolean forceCompleted = isStaff() && !isOwner(booking, currentUser);
+        String actionType = forceCompleted ? "BOOKING_FORCE_COMPLETED" : "BOOKING_COMPLETED";
 
         auditLogService.logAction(
                 AuditLog.ActorType.USER,
-                resolveCurrentUser().getUserId(),
-                "BOOKING_COMPLETED",
+                currentUser.getUserId(),
+                actionType,
                 "BOOKING",
                 saved.getBookingId(),
                 AuditLog.AuditOutcome.SUCCESS,
-                "Booking marked as completed"
+                forceCompleted ? "Booking force completed by admin" : "Booking marked as completed"
         );
 
         // Notify the renter that the rental is complete and a review can be left
         notificationService.createBookingNotification(
                 saved.getRenter().getUserId(),
                 saved.getBookingId(),
-                "Rental Completed",
                 "Your rental of \"" + saved.getItem().getTitle() + "\" is complete. You can now leave a review.",
                 saved.getItem().getOwner().getUserId()
         );
 
         return BookingMapper.toResponse(saved);
-    }
-
-    @Scheduled(cron = "0 0 0 * * *")
-    @Transactional
-    public void autoTransitionBookings() {
-        LocalDate today = LocalDate.now();
-        boolean itemSyncNeeded = false;
-
-        // TODO: replace with a query that fetches only approved bookings
-        List<Booking> bookings = bookingRepository.findAll();
-
-        for (Booking booking : bookings) {
-            boolean changed = false;
-
-            if (booking.getStatus() == Booking.BookingStatus.APPROVED
-                    && today.isAfter(booking.getEndDate())) {
-                booking.setStatus(Booking.BookingStatus.COMPLETED);
-                booking.setReturnedDate(booking.getEndDate());
-                changed = true;
-                itemSyncNeeded = true;
-            }
-
-            if (changed) {
-                bookingRepository.save(booking);
-            }
-        }
-
-        if (itemSyncNeeded) {
-            syncAllItemAvailability();
-        }
     }
 
     private void validateDates(LocalDate startDate, LocalDate endDate) {
@@ -427,35 +505,33 @@ public class BookingServiceImpl implements BookingService {
                 .orElseThrow(() -> new ResourceNotFoundException("User not found"));
     }
 
-    private void assertCanViewBooking(Booking booking) {
-        if (isStaff() || isRenter(booking) || isOwner(booking)) {
+    private void assertCanViewBooking(Booking booking, User currentUser) {
+        if (isStaff() || isRenter(booking, currentUser) || isOwner(booking, currentUser)) {
             return;
         }
         throw new ForbiddenException("You cannot access this booking");
     }
 
-    private void assertCanManageOwnerSide(Booking booking) {
-        if (isStaff() || isOwner(booking)) {
+    private void assertCanManageOwnerSide(Booking booking, User currentUser) {
+        if (isStaff() || isOwner(booking, currentUser)) {
             return;
         }
         throw new ForbiddenException("Only the listing owner can manage this booking");
     }
 
-    private void assertCanCancelBooking(Booking booking) {
-        if (isStaff() || isRenter(booking) || isOwner(booking)) {
+    private void assertCanCancelBooking(Booking booking, User currentUser) {
+        if (isStaff() || isRenter(booking, currentUser) || isOwner(booking, currentUser)) {
             return;
         }
         throw new ForbiddenException("You cannot cancel this booking");
     }
 
-    private boolean isRenter(Booking booking) {
-        User currentUser = resolveCurrentUser();
+    private boolean isRenter(Booking booking, User currentUser) {
         return booking.getRenter() != null
                 && booking.getRenter().getUserId().equals(currentUser.getUserId());
     }
 
-    private boolean isOwner(Booking booking) {
-        User currentUser = resolveCurrentUser();
+    private boolean isOwner(Booking booking, User currentUser) {
         return booking.getItem() != null
                 && booking.getItem().getOwner() != null
                 && booking.getItem().getOwner().getUserId().equals(currentUser.getUserId());
@@ -475,94 +551,15 @@ public class BookingServiceImpl implements BookingService {
                         || role.equals("ROLE_SUPER_ADMIN"));
     }
 
-    private void syncAllItemAvailability() {
-        List<Item> items = bookingRepository.findAll().stream()
-                .map(Booking::getItem)
-                .distinct()
-                .toList();
-
-        for (Item item : items) {
-            syncItemAvailability(item);
-        }
-    }
-
-    private void syncItemAvailability(Item item) {
-        if (item == null) {
-            return;
-        }
-
-        LocalDate today = LocalDate.now();
-
-        // TODO: replace with a dedicated existsActiveBookingForItem query to avoid full scan
-        boolean hasActiveBooking = bookingRepository.findAll().stream()
-                .filter(b -> b.getItem() != null
-                        && b.getItem().getItemId().equals(item.getItemId()))
-                .anyMatch(b -> b.getStatus() == Booking.BookingStatus.APPROVED
-                        && !today.isBefore(b.getStartDate())
-                        && !today.isAfter(b.getEndDate()));
-
-        if (item.getStatus() == Item.ItemStatus.BLOCKED) {
-            return;
-        }
-
-        item.setStatus(hasActiveBooking
-                ? Item.ItemStatus.UNAVAILABLE
-                : Item.ItemStatus.AVAILABLE);
-        itemRepository.save(item);
-    }
-
+    // Scheduler-invoked maintenance — delegated to BookingMaintenanceService so this
+    // service keeps only the interactive lifecycle. Interface contract is unchanged.
     @Override
-    @Transactional
     public void cancelExpiredPendingBookings(java.time.LocalDateTime threshold) {
-        List<Booking> expiredBookings = bookingRepository.findByStatusAndCreatedAtBefore(Booking.BookingStatus.PENDING, threshold);
-        for (Booking booking : expiredBookings) {
-            booking.setStatus(Booking.BookingStatus.CANCELLED);
-            bookingRepository.save(booking);
-            // Logging can be added here
-        }
+        bookingMaintenanceService.cancelExpiredPendingBookings(threshold);
     }
 
     @Override
-    @Transactional
     public void processOverdueBookings(java.time.LocalDate currentDate) {
-        List<Booking> overdueBookings = bookingRepository
-                .findByStatusAndEndDateBeforeAndReturnedDateIsNull(Booking.BookingStatus.APPROVED, currentDate);
-
-        for (Booking booking : overdueBookings) {
-            Long bookingId = booking.getBookingId();
-            Long renterId = booking.getRenter().getUserId();
-            Long ownerId = booking.getItem().getOwner().getUserId();
-            String itemTitle = booking.getItem().getTitle();
-            long daysOverdue = java.time.temporal.ChronoUnit.DAYS.between(booking.getEndDate(), currentDate);
-
-            // Notify renter
-            notificationService.createBookingNotification(
-                    renterId,
-                    bookingId,
-                    "Overdue Rental",
-                    "Your rental of \"" + itemTitle + "\" is " + daysOverdue + " day(s) overdue. Please return it immediately.",
-                    null
-            );
-
-            // Notify owner
-            notificationService.createBookingNotification(
-                    ownerId,
-                    bookingId,
-                    "Item Not Returned",
-                    "\"" + itemTitle + "\" has not been returned yet. It is " + daysOverdue + " day(s) overdue.",
-                    null
-            );
-
-            // Audit
-            auditLogService.logAction(
-                    AuditLog.ActorType.SYSTEM,
-                    null,
-                    "BOOKING_OVERDUE",
-                    "BOOKING",
-                    bookingId,
-                    AuditLog.AuditOutcome.SUCCESS,
-                    "Booking #" + bookingId + " is " + daysOverdue + " day(s) overdue. Renter and owner notified."
-            );
-        }
+        bookingMaintenanceService.processOverdueBookings(currentDate);
     }
 }

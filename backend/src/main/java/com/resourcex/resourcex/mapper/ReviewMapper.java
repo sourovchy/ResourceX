@@ -24,8 +24,8 @@ public class ReviewMapper {
                                 : null
                 )
                 .reviewee(
-                        review.getReviewee() != null
-                                ? UserMapper.toResponse(review.getReviewee())
+                        (review.getBooking() != null && review.getBooking().getItem() != null && review.getBooking().getItem().getOwner() != null)
+                                ? UserMapper.toResponse(review.getBooking().getItem().getOwner())
                                 : null
                 )
                 .rating(review.getRating())

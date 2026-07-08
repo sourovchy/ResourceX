@@ -3,18 +3,20 @@
 import React, { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import type { AxiosError } from "axios";
-import api, { getFileUrl } from "@/lib/api";
-import SafeImage from "@/components/ui/SafeImage";
+import api from "@/lib/api";
+import { Card } from "@/components/ui/Card";
+import ActionCard from "@/components/cards/ActionCard";
 import {
 	ShieldCheck,
 	Users,
 	Package,
-	AlertTriangle,
 	Settings,
 	Activity,
 	CheckCircle2,
 	Loader2,
 } from "lucide-react";
+import { ProfileHeaderCard } from "@/components/profile/ProfileHeaderCard";
+import { TiltCard } from "@/components/ui/TiltCard";
 import { useAutoRefresh } from "@/hooks/useAutoRefresh";
 
 type AdminProfile = {
@@ -29,7 +31,6 @@ type AdminProfile = {
 type DashboardStats = {
 	totalUsers?: number;
 	totalListings?: number;
-	openDisputes?: number;
 	pendingVerifs?: number;
 };
 
@@ -78,7 +79,6 @@ export default function AdminProfilePage() {
 			setStats({
 				totalUsers: (s as any).totalUsers ?? 0,
 				totalListings: (s as any).totalListings ?? 0,
-				openDisputes: (s as any).openDisputes ?? 0,
 				pendingVerifs: (s as any).pendingApprovals ?? 0,
 			});
 		} catch (err) {
@@ -116,17 +116,19 @@ export default function AdminProfilePage() {
 
 	return (
 		<div className="w-full space-y-6 px-4 pb-20 sm:px-6 lg:px-8">
-			<div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-				<h1 className="text-xl font-bold tracking-tight text-textPrimary sm:text-2xl">
-					Admin Control Center
-				</h1>
+			<div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+				<div className="min-w-0">
+<h2 className="mt-1 text-3xl font-bold tracking-tighter text-textPrimary sm:text-5xl">
+						Control <span className="text-gradient-brand italic">Center.</span>
+					</h2>
+				</div>
 			</div>
 
 			{loading ? (
-				<div className="rounded-2xl border border-borderLight bg-surface p-8 text-center text-textSecondary shadow-sm">
+				<Card padding="none" className="p-8 text-center text-textSecondary">
 					<Loader2 className="mx-auto mb-3 h-6 w-6 animate-spin text-primary" />
 					Loading admin data...
-				</div>
+				</Card>
 			) : error ? (
 				<div className="rounded-2xl border border-error bg-errorLight p-4 text-sm text-error">
 					{error}
@@ -135,90 +137,50 @@ export default function AdminProfilePage() {
 
 			<div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
 				<div className="space-y-6">
-					<div className="flex flex-col items-center rounded-2xl border border-borderLight bg-surface p-4 text-center shadow-sm sm:p-6">
-						<div className="relative mb-4 flex h-20 w-20 items-center justify-center overflow-hidden rounded-full bg-dashboardBlueTint text-2xl font-extrabold text-dashboardBlue sm:h-24 sm:w-24 sm:text-3xl">
-							{profile?.avatarUrl ? (
-								<SafeImage
-									src={getFileUrl(profile.avatarUrl)}
-									alt={adminName}
-									fill
-									className="object-cover"
-									sizes="96px"
-								/>
-							) : (
-								getInitials(profile?.name)
-							)}
-							<span className="absolute bottom-0 right-0 rounded-full border-2 border-surface bg-primary p-1 text-white z-10">
-								<ShieldCheck className="h-4 w-4" />
-							</span>
-						</div>
+					<ProfileHeaderCard
+						avatarUrl={profile?.avatarUrl}
+						initials={getInitials(profile?.name)}
+						avatarBadge={<ShieldCheck className="h-5 w-5" />}
+						avatarBgClass="bg-dashboardBlueTint text-dashboardBlue [&>span]:bg-primary [&>span]:text-white"
+						name={adminName}
+						infoRows={[
+							{ icon: <Users className="h-4 w-4" />, text: `User ID: ${profile?.userId ?? "N/A"}` },
+							{ icon: <Activity className="h-4 w-4" />, text: `Role: ${roleText}` },
+							...(profile?.email ? [{ icon: <Settings className="h-4 w-4" />, text: `Email: ${profile.email}` }] : [])
+						]}
+						actions={
+							<Link
+								href="/profile/edit"
+								className="inline-flex items-center justify-center gap-2 rounded-full bg-primary px-6 py-2.5 font-bold text-white shadow-sm transition-all hover:-translate-y-0.5 hover:bg-primaryDark hover:shadow-md"
+							>
+								<Settings className="h-4 w-4" /> Profile Settings
+							</Link>
+						}
+					/>
 
-						<h2 className="text-xl font-bold text-textPrimary">{adminName}</h2>
-						<p className="text-sm font-medium text-textSecondary">
-							User ID: {profile?.userId ?? "N/A"}
-						</p>
-
-						<div className="my-4 w-full border-t border-borderLight" />
-
-						<div className="flex w-full flex-col gap-3 text-left text-sm text-textSecondary">
-							<span className="flex items-center gap-2">
-								<Activity className="h-4 w-4" /> Role: {roleText}
-							</span>
-							<span className="flex items-center gap-2">
-								<Settings className="h-4 w-4" /> System Access: Full
-							</span>
-							{profile?.email && (
-								<span className="truncate">Email: {profile.email}</span>
-							)}
-						</div>
-
-						<Link
-							href="/profile/edit"
-							className="mt-6 flex w-full items-center justify-center gap-2 rounded-xl bg-primary py-2.5 font-bold text-white shadow-sm transition hover:bg-primaryDark">
-							<Settings className="h-4 w-4" /> Profile Settings
-						</Link>
-					</div>
-
-					<div className="rounded-2xl border border-borderLight bg-surface p-4 shadow-sm sm:p-6">
+					<Card padding="none" className="p-4 sm:p-6">
 						<h3 className="mb-4 text-sm font-bold uppercase tracking-wider text-textSecondary">
 							Quick Actions
 						</h3>
 						<div className="flex flex-col gap-2">
-							<Link
+							<ActionCard
+								variant="row"
 								href="/users"
-								className="flex items-center gap-3 rounded-xl p-3 transition hover:bg-surfaceVariant">
-								<div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-dashboardBlueTint text-dashboardBlue">
-									<Users className="h-5 w-5" />
-								</div>
-								<div>
-									<div className="font-semibold text-textPrimary">Manage Users</div>
-									<div className="text-xs text-textSecondary">View and manage all users</div>
-								</div>
-							</Link>
-							<Link
-								href="/disputes"
-								className="flex items-center gap-3 rounded-xl p-3 transition hover:bg-surfaceVariant">
-								<div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-warningLight text-warningDark">
-									<AlertTriangle className="h-5 w-5" />
-								</div>
-								<div>
-									<div className="font-semibold text-textPrimary">Review Disputes</div>
-									<div className="text-xs text-textSecondary">Handle user disputes</div>
-								</div>
-							</Link>
-							<Link
+								bgIcon="bg-dashboardBlueTint text-dashboardBlue"
+								icon={<Users className="h-5 w-5" />}
+								title="Manage Users"
+								description="View and manage all users"
+							/>
+							<ActionCard
+								variant="row"
 								href="/bookings"
-								className="flex items-center gap-3 rounded-xl p-3 transition hover:bg-surfaceVariant">
-								<div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-successLight text-success">
-									<Package className="h-5 w-5" />
-								</div>
-								<div>
-									<div className="font-semibold text-textPrimary">Monitor Bookings</div>
-									<div className="text-xs text-textSecondary">View all system bookings</div>
-								</div>
-							</Link>
+								bgIcon="bg-successLight text-success"
+								icon={<Package className="h-5 w-5" />}
+								title="Monitor Bookings"
+								description="View all system bookings"
+							/>
 						</div>
-					</div>
+					</Card>
 				</div>
 
 				<div className="space-y-6">
@@ -227,7 +189,11 @@ export default function AdminProfilePage() {
 					</h2>
 
 					<div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-						<div className="flex items-center gap-4 rounded-2xl border border-borderLight bg-surface p-4 sm:p-5">
+						<TiltCard
+							maxTilt={5}
+							glare={true}
+							className="flex items-center gap-4 rounded-2xl border border-borderLight bg-surface p-4 sm:p-5 transition-all duration-300 hover:border-primary/40 hover:shadow-md"
+						>
 							<div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-primaryLight text-primary">
 								<Users className="h-6 w-6" />
 							</div>
@@ -239,9 +205,13 @@ export default function AdminProfilePage() {
 									Total Users
 								</div>
 							</div>
-						</div>
+						</TiltCard>
 
-						<div className="flex items-center gap-4 rounded-2xl border border-borderLight bg-surface p-4 sm:p-5">
+						<TiltCard
+							maxTilt={5}
+							glare={true}
+							className="flex items-center gap-4 rounded-2xl border border-borderLight bg-surface p-4 sm:p-5 transition-all duration-300 hover:border-primary/40 hover:shadow-md"
+						>
 							<div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-dashboardBlueTint text-dashboardBlue">
 								<Package className="h-6 w-6" />
 							</div>
@@ -253,23 +223,13 @@ export default function AdminProfilePage() {
 									Total Listings
 								</div>
 							</div>
-						</div>
+						</TiltCard>
 
-						<div className="flex items-center gap-4 rounded-2xl border border-borderLight bg-surface p-4 sm:p-5">
-							<div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-warningLight text-warningDark">
-								<AlertTriangle className="h-6 w-6" />
-							</div>
-							<div>
-								<div className="text-xl font-extrabold text-textPrimary sm:text-2xl">
-									{formatNumber(stats?.openDisputes)}
-								</div>
-								<div className="text-xs font-bold uppercase tracking-wider text-textSecondary">
-									Open Disputes
-								</div>
-							</div>
-						</div>
-
-						<div className="flex items-center gap-4 rounded-2xl border border-borderLight bg-surface p-4 sm:p-5">
+						<TiltCard
+							maxTilt={5}
+							glare={true}
+							className="flex items-center gap-4 rounded-2xl border border-borderLight bg-surface p-4 sm:p-5 transition-all duration-300 hover:border-primary/40 hover:shadow-md"
+						>
 							<div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-successLight text-success">
 								<CheckCircle2 className="h-6 w-6" />
 							</div>
@@ -281,7 +241,7 @@ export default function AdminProfilePage() {
 									Pending Verifs
 								</div>
 							</div>
-						</div>
+						</TiltCard>
 					</div>
 
 				</div>

@@ -7,6 +7,9 @@ import api from "@/lib/api";
 import { useImageUpload } from "@/hooks/useImageUpload";
 import { Select } from "@/components/ui/Select";
 import { SearchableCombobox } from "@/components/ui/SearchableCombobox";
+import Button from "@/components/ui/Button";
+import { Field, Input, Textarea } from "@/components/ui/Field";
+import { TiltCard } from "@/components/ui/TiltCard";
 
 type FormState = {
   title: string;
@@ -14,7 +17,6 @@ type FormState = {
   condition: string;
   description: string;
   price: string;
-  deposit: string;
   availability: string;
 };
 
@@ -31,8 +33,7 @@ export default function AddItemPage() {
     condition: "",
     description: "",
     price: "",
-    deposit: "",
-    availability: "",
+    availability: "CAMPUS_ONLY",
   });
   const [categories, setCategories] = useState<
     { id: string | number; name: string }[]
@@ -98,11 +99,6 @@ export default function AddItemPage() {
     const price = parseFloat(form.price);
     if (!form.price || isNaN(price) || price <= 0)
       errors.price = "Enter a valid daily price greater than 0.";
-    if (form.deposit) {
-      const dep = parseFloat(form.deposit);
-      if (isNaN(dep) || dep < 0)
-        errors.deposit = "Deposit must be a non-negative number.";
-    }
     setFieldErrors(errors);
     return Object.keys(errors).length === 0;
   };
@@ -122,8 +118,8 @@ export default function AddItemPage() {
         itemCondition: form.condition,
         description: form.description,
         dailyRate: parseFloat(form.price),
-        deposit: form.deposit ? parseFloat(form.deposit) : null,
         imageUrls: uploadedImageUrls,
+        availabilityScope: form.availability || "CAMPUS_ONLY",
       };
 
       await api.post("/items", payload);
@@ -166,21 +162,20 @@ export default function AddItemPage() {
           to view right away.
         </p>
 
-        <Link
-          href="/my-posts"
-          className="mt-4 inline-block rounded-xl bg-primary px-5 py-3 text-sm font-bold text-white shadow-sm transition-colors hover:bg-primaryDark sm:px-6"
-        >
-          Back to My Posts
+        <Link href="/my-posts" className="mt-4 inline-block">
+          <Button className="px-5 py-3 sm:px-6">Back to My Posts</Button>
         </Link>
       </div>
     );
   }
 
   return (
-    <div className="mx-auto max-w-4xl space-y-6 px-4 pb-16 sm:px-6 sm:pb-20 lg:space-y-8 lg:px-8">
-      <h1 className="text-2xl font-bold tracking-tight text-textPrimary sm:text-3xl lg:text-4xl">
-        Add New Item
-      </h1>
+    <div className="mx-auto max-w-6xl space-y-6 px-4 pb-16 sm:px-6 sm:pb-20 lg:space-y-8 lg:px-8 w-full">
+      <div className="mb-2">
+        <h1 className="mt-1 text-3xl font-normal italic leading-tight text-textPrimary sm:text-4xl">
+          Publish <span className="text-primary font-bold">item.</span>
+        </h1>
+      </div>
 
       {(error || uploadError) && (
         <div className="rounded-xl bg-errorLight p-4 text-sm font-semibold text-error">
@@ -188,37 +183,36 @@ export default function AddItemPage() {
         </div>
       )}
 
+      <TiltCard
+        maxTilt={2}
+        glare={true}
+        className="rounded-2xl border border-borderLight bg-surface shadow-sm transition-all duration-300 hover:border-primary/40 hover:shadow-md"
+      >
       <form
         onSubmit={handleSubmit}
-        className="space-y-6 rounded-2xl border border-borderLight bg-surface p-5 shadow-sm transition-shadow duration-200 hover:shadow-md sm:p-8 lg:p-10"
+        className="grid grid-cols-1 lg:grid-cols-[1fr_400px] xl:grid-cols-[1fr_450px] gap-6 lg:gap-8 p-5 sm:p-8 lg:p-10"
       >
+        <div className="space-y-6 sm:space-y-8">
         {/* Basic Info */}
         <div className="space-y-4 sm:space-y-5">
           <h2 className="border-b border-borderLight pb-3 text-sm font-bold uppercase tracking-wider text-textSecondary sm:text-base">
             Basic Info
           </h2>
 
-          <div className="space-y-2">
-            <label className="text-sm font-bold text-textPrimary">Title</label>
-            <input
+          <Field label="Title" error={fieldErrors.title}>
+            <Input
               name="title"
               value={form.title}
               onChange={handleChange}
               type="text"
               placeholder="e.g. Sony Alpha A7III"
-              className={`w-full rounded-xl border bg-surface px-4 py-3 text-sm text-textPrimary transition focus:outline-none focus:ring-1 ${fieldErrors.title ? "border-error focus:border-error focus:ring-error" : "border-borderLight focus:border-primary focus:ring-primary"}`}
               maxLength={100}
+              error={!!fieldErrors.title}
             />
-            {fieldErrors.title && (
-              <p className="text-xs text-error">{fieldErrors.title}</p>
-            )}
-          </div>
+          </Field>
 
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-            <div className="space-y-2">
-              <label className="text-sm font-bold text-textPrimary">
-                Category
-              </label>
+            <Field label="Category" error={categoriesError || fieldErrors.category}>
               <SearchableCombobox
                 value={form.category}
                 onChange={(val) => setForm((prev) => ({ ...prev, category: val }))}
@@ -229,17 +223,9 @@ export default function AddItemPage() {
                 required
                 loading={isCategoriesLoading}
               />
-              {(categoriesError || fieldErrors.category) && (
-                <p className="mt-1 text-xs text-error">
-                  {categoriesError || fieldErrors.category}
-                </p>
-              )}
-            </div>
+            </Field>
 
-            <div className="space-y-2">
-              <label className="text-sm font-bold text-textPrimary">
-                Condition
-              </label>
+            <Field label="Condition" error={fieldErrors.condition}>
               <Select
                 value={form.condition}
                 onChange={(val) => setForm((prev) => ({ ...prev, condition: val }))}
@@ -252,76 +238,90 @@ export default function AddItemPage() {
                 error={!!fieldErrors.condition}
                 required
               />
-              {fieldErrors.condition && (
-                <p className="text-xs text-error">{fieldErrors.condition}</p>
-              )}
-            </div>
+            </Field>
           </div>
 
-          <div className="space-y-2">
-            <label className="text-sm font-bold text-textPrimary">
-              Description
-            </label>
-            <textarea
+          <Field label="Description" error={fieldErrors.description}>
+            <Textarea
               name="description"
               value={form.description}
               onChange={handleChange}
               rows={4}
               placeholder="Describe the item, what is included, and any important rules..."
-              className={`w-full resize-none rounded-xl border bg-surface px-4 py-3 text-sm text-textPrimary transition focus:outline-none focus:ring-1 ${fieldErrors.description ? "border-error focus:border-error focus:ring-error" : "border-borderLight focus:border-primary focus:ring-primary"}`}
               maxLength={1000}
+              error={!!fieldErrors.description}
             />
-            {fieldErrors.description && (
-              <p className="text-xs text-error">{fieldErrors.description}</p>
-            )}
+          </Field>
+        </div>
+        </div>
+
+        <div className="space-y-6 sm:space-y-8 lg:pl-6 lg:border-l lg:border-borderLight">
+        
+        {/* Rental Availability */}
+        <div className="space-y-4 sm:space-y-5">
+          <h2 className="border-b border-borderLight pb-3 text-sm font-bold uppercase tracking-wider text-textSecondary sm:text-base">
+            Rental Availability
+          </h2>
+
+          <div className="space-y-3">
+            <label className="text-sm font-bold text-textPrimary block">Where are you willing to rent this item?</label>
+            
+            <div className="space-y-3">
+              <label className={`flex cursor-pointer gap-3 rounded-xl border p-4 transition-all ${form.availability === "CAMPUS_ONLY" || !form.availability ? "border-primary bg-primaryLight/30" : "border-borderLight hover:border-primary/50"}`}>
+                <div className="flex h-5 items-center">
+                  <input
+                    type="radio"
+                    name="availability"
+                    value="CAMPUS_ONLY"
+                    checked={form.availability === "CAMPUS_ONLY" || !form.availability}
+                    onChange={handleChange}
+                    className="h-4 w-4 border-gray-300 text-primary focus:ring-primary"
+                  />
+                </div>
+                <div>
+                  <span className="block text-sm font-bold text-textPrimary">Campus Only</span>
+                  <span className="block text-xs text-textSecondary mt-0.5">You will only meet renters inside university campus.</span>
+                </div>
+              </label>
+
+              <label className={`flex cursor-pointer gap-3 rounded-xl border p-4 transition-all ${form.availability === "CAMPUS_AND_OUTSIDE" ? "border-primary bg-primaryLight/30" : "border-borderLight hover:border-primary/50"}`}>
+                <div className="flex h-5 items-center">
+                  <input
+                    type="radio"
+                    name="availability"
+                    value="CAMPUS_AND_OUTSIDE"
+                    checked={form.availability === "CAMPUS_AND_OUTSIDE"}
+                    onChange={handleChange}
+                    className="h-4 w-4 border-gray-300 text-primary focus:ring-primary"
+                  />
+                </div>
+                <div>
+                  <span className="block text-sm font-bold text-textPrimary">Campus & Outside Campus</span>
+                  <span className="block text-xs text-textSecondary mt-0.5">You are willing to meet renters both inside and outside campus.</span>
+                </div>
+              </label>
+            </div>
           </div>
         </div>
 
-        {/* Pricing & Deposit */}
+        {/* Pricing */}
         <div className="space-y-4 sm:space-y-5">
           <h2 className="border-b border-borderLight pb-3 text-sm font-bold uppercase tracking-wider text-textSecondary sm:text-base">
-            Pricing & Deposit
+            Pricing
           </h2>
 
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-            <div className="space-y-2">
-              <label className="text-sm font-bold text-textPrimary">
-                Daily Rental Price
-              </label>
-              <input
-                name="price"
-                value={form.price}
-                onChange={handleChange}
-                type="number"
-                min="0"
-                max="100000"
-                placeholder="Rental cost per day e.g. 500"
-                className={`w-full rounded-xl border bg-surface px-4 py-3 text-sm text-textPrimary transition focus:outline-none focus:ring-1 ${fieldErrors.price ? "border-error focus:border-error focus:ring-error" : "border-borderLight focus:border-primary focus:ring-primary"}`}
-              />
-              {fieldErrors.price && (
-                <p className="text-xs text-error">{fieldErrors.price}</p>
-              )}
-            </div>
-
-            <div className="space-y-2">
-              <label className="text-sm font-bold text-textPrimary">
-                Security Deposit
-              </label>
-              <input
-                name="deposit"
-                value={form.deposit}
-                onChange={handleChange}
-                type="number"
-                min="0"
-                max="100000"
-                placeholder="Optional security deposit e.g. 100"
-                className={`w-full rounded-xl border bg-surface px-4 py-3 text-sm text-textPrimary transition focus:outline-none focus:ring-1 ${fieldErrors.deposit ? "border-error focus:border-error focus:ring-error" : "border-borderLight focus:border-primary focus:ring-primary"}`}
-              />
-              {fieldErrors.deposit && (
-                <p className="text-xs text-error">{fieldErrors.deposit}</p>
-              )}
-            </div>
-          </div>
+          <Field label="Daily Rental Price" error={fieldErrors.price}>
+            <Input
+              name="price"
+              value={form.price}
+              onChange={handleChange}
+              type="number"
+              min="0"
+              max="100000"
+              placeholder="Rental cost per day e.g. 500"
+              error={!!fieldErrors.price}
+            />
+          </Field>
         </div>
 
         {/* Photos */}
@@ -354,6 +354,7 @@ export default function AddItemPage() {
                   key={i}
                   className="relative aspect-square overflow-hidden rounded-xl border border-borderLight bg-surfaceVariant"
                 >
+                  {/* eslint-disable-next-line @next/next/no-img-element -- blob/object-URL preview; next/image cannot optimize these */}
                   <img
                     src={p.url}
                     alt=""
@@ -372,21 +373,17 @@ export default function AddItemPage() {
           )}
         </div>
 
-        <button
+        <Button
           type="submit"
           disabled={isLoading || uploading}
-          className="mt-8 w-full rounded-xl bg-primary py-4 text-base font-bold text-white shadow-sm transition-all hover:bg-primaryDark hover:shadow-md active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50 sm:mt-10 sm:py-5 lg:text-lg"
+          loading={uploading || isLoading}
+          className="mt-8 w-full py-4 text-base font-bold shadow-sm sm:mt-10 sm:py-5 lg:text-lg"
         >
-          {uploading || isLoading ? (
-            <span className="flex items-center justify-center gap-2">
-              <Loader2 className="h-4 w-4 animate-spin" />
-              {uploading ? "Uploading images..." : "Publishing..."}
-            </span>
-          ) : (
-            "Publish Listing"
-          )}
-        </button>
+          {uploading ? "Uploading images..." : isLoading ? "Publishing..." : "Publish Listing"}
+        </Button>
+        </div>
       </form>
+      </TiltCard>
     </div>
   );
 }

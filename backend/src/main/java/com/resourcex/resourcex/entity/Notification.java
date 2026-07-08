@@ -12,8 +12,7 @@ import java.time.LocalDateTime;
                 @Index(name = "idx_notifications_user_id", columnList = "user_id"),
                 @Index(name = "idx_notifications_read", columnList = "is_read"),
                 @Index(name = "idx_notifications_created_at", columnList = "created_at"),
-                @Index(name = "idx_notifications_related_entity", columnList = "related_entity_type, related_entity_id"),
-                @Index(name = "idx_notifications_created_by_user_id", columnList = "created_by_user_id")
+                @Index(name = "idx_notifications_related_entity", columnList = "related_entity_type, related_entity_id")
         }
 )
 @Getter
@@ -21,7 +20,7 @@ import java.time.LocalDateTime;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-@ToString(exclude = {"user", "createdBy"})
+@ToString(exclude = {"user"})
 public class Notification {
 
     @Id
@@ -41,12 +40,6 @@ public class Notification {
     @Enumerated(EnumType.STRING)
     @Column(name = "notification_type", nullable = false, length = 30)
     private NotificationType notificationType;
-
-    /**
-     * Notification title
-     */
-    @Column(nullable = false, length = 255)
-    private String title;
 
     /**
      * Notification message
@@ -75,13 +68,6 @@ public class Notification {
     private Boolean isRead = false;
 
     /**
-     * Admin/User who created the notification (nullable for system notifications)
-     */
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "created_by_user_id")
-    private User createdBy;
-
-    /**
      * Timestamp when the notification was created
      */
     @Column(name = "created_at", nullable = false, updatable = false)
@@ -100,18 +86,24 @@ public class Notification {
 
     public enum NotificationType {
         BOOKING,
-        DISPUTE,
-        PENALTY,
         TRUST,
         ADMIN,
         MESSAGE,
-        REVIEW
+        REVIEW;
+
+        public String getHeading() {
+            return switch (this) {
+                case BOOKING -> "Booking Update";
+                case MESSAGE -> "New Message";
+                case REVIEW -> "New Review";
+                case TRUST -> "Trust Score Update";
+                case ADMIN -> "Administrative Notice";
+            };
+        }
     }
 
     public enum RelatedEntityType {
         BOOKING,
-        DISPUTE,
-        PENALTY,
         TRUST,
         ITEM,
         ADMIN,

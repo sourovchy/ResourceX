@@ -28,4 +28,7 @@ public class ResolutionRequest {
 
     @DecimalMin(value = "0.01", inclusive = true, message = "Penalty amount must be greater than 0")
     private BigDecimal penaltyAmount;
+
+    /** Optional: the user the moderator deems at fault. When set on a RESOLVED dispute, a trust penalty is applied. */
+    private Long atFaultUserId;
 }

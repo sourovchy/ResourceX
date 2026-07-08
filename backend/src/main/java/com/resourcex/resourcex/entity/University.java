@@ -27,11 +27,4 @@ public class University {
     @Column(name = "is_verified", nullable = false)
     @Builder.Default
     private boolean isVerified = false;
-
-    private LocalDateTime createdAt;
-
-    @PrePersist
-    public void onCreate() {
-        this.createdAt = LocalDateTime.now();
-    }
 }

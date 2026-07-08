@@ -19,14 +19,8 @@ public class MessageResponse {
     private String senderEmail;
     private String senderAvatarUrl;
 
-    private Long receiverUserId;
-    private String receiverName;
-    private String receiverEmail;
-    private String receiverAvatarUrl;
-
     private String content;
     private Boolean isRead;
-    private LocalDateTime readAt;
 
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;

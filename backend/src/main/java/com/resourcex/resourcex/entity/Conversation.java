@@ -11,8 +11,6 @@ import java.time.LocalDateTime;
         indexes = {
                 @Index(name = "idx_conversations_participant_one", columnList = "participant_one_user_id"),
                 @Index(name = "idx_conversations_participant_two", columnList = "participant_two_user_id"),
-                @Index(name = "idx_conversations_booking_id", columnList = "booking_id"),
-                @Index(name = "idx_conversations_dispute_id", columnList = "dispute_id"),
                 @Index(name = "idx_conversations_last_message_at", columnList = "last_message_at")
         }
 )
@@ -21,7 +19,7 @@ import java.time.LocalDateTime;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-@ToString(exclude = {"participantOneUser", "participantTwoUser", "booking", "dispute"})
+@ToString(exclude = {"participantOneUser", "participantTwoUser"})
 @EqualsAndHashCode(onlyExplicitlyIncluded = true)
 public class Conversation {
 
@@ -39,28 +37,11 @@ public class Conversation {
     @JoinColumn(name = "participant_two_user_id", referencedColumnName = "user_id", nullable = false)
     private User participantTwoUser;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "booking_id")
-    private Booking booking;
-
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "dispute_id")
-    private Dispute dispute;
-
     @Column(name = "last_message_at")
     private LocalDateTime lastMessageAt;
 
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
-
-    @Column(name = "updated_at")
-    private LocalDateTime updatedAt;
-
-    @Column(name = "participant_one_cleared_at")
-    private LocalDateTime participantOneClearedAt;
-
-    @Column(name = "participant_two_cleared_at")
-    private LocalDateTime participantTwoClearedAt;
 
     @Column(name = "participant_one_deleted", nullable = false)
     @Builder.Default
@@ -76,11 +57,5 @@ public class Conversation {
         if (createdAt == null) {
             createdAt = now;
         }
-        updatedAt = now;
-    }
-
-    @PreUpdate
-    protected void onUpdate() {
-        updatedAt = LocalDateTime.now();
     }
 }

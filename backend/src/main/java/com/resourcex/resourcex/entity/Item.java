@@ -49,9 +49,6 @@ public class Item {
     @Column(nullable = false, precision = 10, scale = 2)
     private BigDecimal dailyRate;
 
-    @Column(precision = 10, scale = 2)
-    private BigDecimal deposit;
-
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 40)
     @Builder.Default
@@ -65,14 +62,12 @@ public class Item {
     @Builder.Default
     private List<FileMetadata> images = new ArrayList<>();
 
-    @Version
-    private Long version;
-
     @Column(nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
-    @Column(nullable = false)
-    private LocalDateTime updatedAt;
+    @Column(name = "availability_scope", nullable = false, length = 50)
+    @Builder.Default
+    private String availabilityScope = "CAMPUS_ONLY";
 
     @PrePersist
     public void onCreate() {
@@ -80,7 +75,6 @@ public class Item {
         LocalDateTime now = LocalDateTime.now();
 
         this.createdAt = now;
-        this.updatedAt = now;
 
         normalizeFields();
 
@@ -91,8 +85,6 @@ public class Item {
 
     @PreUpdate
     public void onUpdate() {
-
-        this.updatedAt = LocalDateTime.now();
 
         normalizeFields();
 

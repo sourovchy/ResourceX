@@ -20,4 +20,6 @@ public class StudentProfileResponse {
     private Integer trustScore;
     private Boolean emailVerified;
     private Boolean phoneVerified;
+
+    private String rejectionReason;
 }

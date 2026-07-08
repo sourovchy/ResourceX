@@ -11,6 +11,11 @@ import {
 import api from "@/lib/api";
 import { extractErrorMessage } from "@/lib/errorUtils";
 import { formatShortDate } from "@/lib/dateUtils";
+import Button from "@/components/ui/Button";
+import Card from "@/components/ui/Card";
+import { TiltCard } from "@/components/ui/TiltCard";
+import { PageLoader } from "@/components/ui/PageLoader";
+import { PageError } from "@/components/ui/PageError";
 
 // ── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -40,7 +45,6 @@ function normalizeItem(data: unknown, fallbackId: string) {
 		title: String(d?.title ?? d?.name ?? "Untitled Item"),
 		// Backend field is `dailyRate` — check it first
 		pricePerDay: Number(d?.dailyRate ?? d?.pricePerDay ?? d?.rentalPricePerDay ?? 0),
-		deposit: Number(d?.deposit ?? d?.securityDeposit ?? 0),
 		imageUrls: Array.isArray(d?.imageUrls) ? (d.imageUrls as string[]) : [],
 		category: String(d?.category ?? ""),
 	};
@@ -57,7 +61,6 @@ export default function BookItemPage({ params }: { params: { id: string } }) {
 		id: params.id,
 		title: "",
 		pricePerDay: 0,
-		deposit: 0,
 		imageUrls: [] as string[],
 		category: "",
 	});
@@ -176,26 +179,12 @@ export default function BookItemPage({ params }: { params: { id: string } }) {
 	// ── Loading / error states ──────────────────────────────────────────────
 
 	if (fetchLoading) {
-		return (
-			<div className="flex min-h-[60vh] flex-col items-center justify-center gap-3 px-4 text-center">
-				<Loader2 className="h-10 w-10 animate-spin text-primary" />
-				<p className="text-sm font-medium text-textSecondary">Loading item details…</p>
-			</div>
-		);
+		return <PageLoader message="Loading item details..." />;
 	}
 
 	if (fetchError) {
 		return (
-			<div className="mx-auto max-w-lg px-4 py-20 text-center">
-				<AlertTriangle className="mx-auto mb-3 h-10 w-10 text-error" />
-				<p className="font-semibold text-textPrimary">Could not load item</p>
-				<p className="mt-1 text-sm text-textSecondary">{fetchError}</p>
-				<button
-					onClick={() => router.back()}
-					className="mt-6 rounded-xl border border-borderLight px-6 py-2.5 text-sm font-semibold text-textPrimary hover:bg-surfaceVariant">
-					Go back
-				</button>
-			</div>
+			<PageError message={fetchError} onRetry={() => window.location.reload()} />
 		);
 	}
 
@@ -217,7 +206,7 @@ export default function BookItemPage({ params }: { params: { id: string } }) {
 				)}
 
 				<div className="mx-auto mt-4 flex max-w-sm items-start gap-2.5 rounded-xl border border-primary/20 bg-primaryLight/40 px-4 py-3 text-left text-xs text-primaryDark">
-					<Info className="mt-0.5 h-4 w-4 shrink-0" />
+					<Info className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
 					<span>
 						Owners usually respond within 24 hours. You&apos;ll be notified once your
 						request is approved or declined.
@@ -225,16 +214,18 @@ export default function BookItemPage({ params }: { params: { id: string } }) {
 				</div>
 
 				<div className="mt-6 flex flex-col gap-3 sm:flex-row sm:justify-center">
-					<button
+					<Button
 						onClick={() => router.push("/bookings")}
-						className="rounded-xl bg-primary px-6 py-3 font-semibold text-white hover:bg-primaryDark">
+						variant="primary"
+					>
 						View My Bookings
-					</button>
-					<button
+					</Button>
+					<Button
 						onClick={() => router.push("/borrow")}
-						className="rounded-xl border border-borderLight px-6 py-3 font-semibold text-textPrimary hover:bg-surfaceVariant">
+						variant="subtle"
+					>
 						Browse More Items
-					</button>
+					</Button>
 				</div>
 			</div>
 		);
@@ -244,16 +235,22 @@ export default function BookItemPage({ params }: { params: { id: string } }) {
 
 	return (
 		<div className="mx-auto max-w-2xl space-y-5 px-3 pb-20 sm:space-y-6 sm:px-0">
-			<div className="rounded-2xl border border-borderLight bg-surface p-4 shadow-sm sm:p-6 md:p-8">
+			<div className="mb-2">
+				<h1 className="mt-1 text-3xl font-normal italic leading-tight text-textPrimary sm:text-4xl">
+					Rent <span className="text-primary italic font-bold">Item.</span>
+				</h1>
+			</div>
+
+			<Card padding="none" interactive className="p-4 sm:p-6 md:p-8">
 				{/* Header */}
-				<div className="mb-6 text-center sm:mb-8">
-					<p className="text-xs font-semibold uppercase tracking-widest text-textSecondary">
+				<div className="mb-6 text-center sm:mb-8 border-b border-borderLight pb-6">
+					<p className="text-xs font-bold uppercase tracking-widest text-textTertiary">
 						{item.category || "Item"}
 					</p>
-					<h1 className="mt-1 text-xl font-extrabold text-textPrimary sm:text-2xl">
+					<h2 className="mt-1 text-xl font-bold italic text-textPrimary sm:text-2xl">
 						{item.title}
-					</h1>
-					<p className="mt-1 text-sm text-textSecondary">
+					</h2>
+					<p className="mt-1 text-sm text-textSecondary font-semibold">
 						৳&thinsp;{item.pricePerDay} per day
 					</p>
 				</div>
@@ -261,8 +258,8 @@ export default function BookItemPage({ params }: { params: { id: string } }) {
 				<div className="space-y-5 sm:space-y-6">
 					{/* ── Dates ── */}
 					<div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-						<div className="space-y-1">
-							<label className="text-xs font-bold uppercase tracking-wider text-textSecondary">
+						<div className="space-y-1.5">
+							<label className="text-[11px] font-bold uppercase tracking-[0.12em] text-primary">
 								Start Date
 							</label>
 							<input
@@ -270,11 +267,11 @@ export default function BookItemPage({ params }: { params: { id: string } }) {
 								value={startDate}
 								min={todayStr()}
 								onChange={(e) => handleStartDateChange(e.target.value)}
-								className="w-full rounded-xl border border-borderLight bg-surface px-4 py-3 text-sm font-medium outline-none transition-all focus:border-primary focus:ring-1 focus:ring-primary"
+								className="w-full rounded-xl border border-borderLight bg-card px-4 py-3 text-sm font-medium outline-none transition-all focus:border-primary focus:ring-2 focus:ring-primary/20"
 							/>
 						</div>
-						<div className="space-y-1">
-							<label className="text-xs font-bold uppercase tracking-wider text-textSecondary">
+						<div className="space-y-1.5">
+							<label className="text-[11px] font-bold uppercase tracking-[0.12em] text-primary">
 								End Date
 							</label>
 							<input
@@ -282,7 +279,7 @@ export default function BookItemPage({ params }: { params: { id: string } }) {
 								value={endDate}
 								min={startDate}
 								onChange={(e) => handleEndDateChange(e.target.value)}
-								className="w-full rounded-xl border border-borderLight bg-surface px-4 py-3 text-sm font-medium outline-none transition-all focus:border-primary focus:ring-1 focus:ring-primary"
+								className="w-full rounded-xl border border-borderLight bg-card px-4 py-3 text-sm font-medium outline-none transition-all focus:border-primary focus:ring-2 focus:ring-primary/20"
 							/>
 						</div>
 					</div>
@@ -290,7 +287,7 @@ export default function BookItemPage({ params }: { params: { id: string } }) {
 					{/* ── Duration slider ── */}
 					<div className="space-y-2">
 						<div className="flex items-center justify-between">
-							<label className="text-xs font-bold uppercase tracking-wider text-textSecondary">
+							<label className="text-[11px] font-bold uppercase tracking-[0.12em] text-primary">
 								Rental Duration
 							</label>
 							<span className="rounded-lg border border-borderLight bg-surfaceVariant px-3 py-1 text-sm font-bold text-textPrimary">
@@ -308,7 +305,7 @@ export default function BookItemPage({ params }: { params: { id: string } }) {
 						<div className="flex justify-between text-xs text-textSecondary">
 							<span>1 day</span>
 							{startDate && endDate && (
-								<span className="text-textSecondary">
+								<span className="text-textSecondary font-mono">
 									{formatShortDate(startDate)} → {formatShortDate(endDate)}
 								</span>
 							)}
@@ -317,8 +314,8 @@ export default function BookItemPage({ params }: { params: { id: string } }) {
 					</div>
 
 					{/* ── Optional message ── */}
-					<div className="space-y-1">
-						<label className="text-xs font-bold uppercase tracking-wider text-textSecondary">
+					<div className="space-y-1.5">
+						<label className="text-[11px] font-bold uppercase tracking-[0.12em] text-primary">
 							Message to Owner{" "}
 							<span className="font-normal normal-case tracking-normal text-textSecondary">
 								(optional)
@@ -330,9 +327,9 @@ export default function BookItemPage({ params }: { params: { id: string } }) {
 							rows={3}
 							maxLength={1000}
 							placeholder="Introduce yourself, explain your use case, or ask a question…"
-							className="w-full resize-none rounded-xl border border-borderLight bg-surface px-4 py-3 text-sm text-textPrimary placeholder-textSecondary outline-none transition-all focus:border-primary focus:ring-1 focus:ring-primary"
+							className="w-full resize-none rounded-xl border border-borderLight bg-card px-4 py-3 text-sm text-textPrimary placeholder-textSecondary outline-none transition-all focus:border-primary focus:ring-2 focus:ring-primary/20"
 						/>
-						<p className="text-right text-xs text-textSecondary">
+						<p className="text-right text-xs text-textSecondary font-mono">
 							{message.length}/1000
 						</p>
 					</div>
@@ -340,14 +337,14 @@ export default function BookItemPage({ params }: { params: { id: string } }) {
 					{/* ── Errors ── */}
 					{submitError && (
 						<div className="flex items-start gap-3 rounded-xl border border-error bg-errorLight/30 p-4 text-sm text-errorDark">
-							<AlertTriangle className="mt-0.5 h-5 w-5 shrink-0" />
+							<AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-error" />
 							<span>{submitError}</span>
 						</div>
 					)}
 
 					{/* ── Booking request summary ── */}
-					<div className="space-y-4 rounded-xl border border-borderLight bg-surfaceVariant p-4 sm:p-5">
-						<h3 className="text-sm font-bold uppercase tracking-wider text-textPrimary">
+					<Card padding="md" interactive className="bg-surfaceVariant/40 border border-borderLight space-y-4">
+						<h3 className="text-xs font-bold uppercase tracking-[0.12em] text-textPrimary">
 							Booking Request Summary
 						</h3>
 						<div className="space-y-2 text-sm">
@@ -356,62 +353,48 @@ export default function BookItemPage({ params }: { params: { id: string } }) {
 									৳&thinsp;{item.pricePerDay} × {duration}{" "}
 									{duration === 1 ? "day" : "days"}
 								</span>
-								<span className="font-semibold text-textPrimary">
+								<span className="font-semibold text-textPrimary font-mono">
 									৳&thinsp;{totalRental.toFixed(2)}
 								</span>
 							</div>
-							{item.deposit > 0 && (
-								<div className="flex items-center justify-between text-textSecondary">
-									<span className="flex items-center gap-1.5">
-										Refundable Deposit
-										<Info className="h-3.5 w-3.5" />
-									</span>
-									<span className="font-semibold text-textPrimary">
-										৳&thinsp;{item.deposit.toFixed(2)}
-									</span>
-								</div>
-							)}
 							<div className="mt-3 flex items-center justify-between border-t border-borderLight pt-3">
 								<span className="font-bold text-textPrimary">
 									Estimated Total
 								</span>
-								<span className="text-xl font-extrabold text-primary sm:text-2xl">
-									৳&thinsp;{(totalRental + item.deposit).toFixed(2)}
+								<span className="text-xl font-extrabold text-primary sm:text-2xl font-mono">
+									৳&thinsp;{totalRental.toFixed(2)}
 								</span>
 							</div>
 						</div>
-					</div>
+					</Card>
 
 					{/* ── Payment info notice ── */}
-					<div className="flex items-start gap-3 rounded-xl border border-borderLight bg-surface p-4 text-sm">
+					<TiltCard maxTilt={3} glare={true} className="flex items-start gap-3 rounded-xl border border-borderLight bg-surface p-4 text-sm transition-all duration-300 hover:border-primary/40 hover:shadow-sm">
 						<Info className="mt-0.5 h-5 w-5 shrink-0 text-textSecondary" />
 						<div className="text-textSecondary">
-							<strong className="mb-0.5 block text-textPrimary">How payment works</strong>
+							<strong className="mb-0.5 block text-textPrimary uppercase text-xs tracking-wider">How payment works</strong>
 							Payment is arranged directly with the owner after they approve your
-							request. The refundable deposit is settled between you and the owner
-							at handover and returned when the item is safely back.
+							request — ResourceX does not process online payments. Coordinate
+							handover and return face-to-face.
 						</div>
-					</div>
+					</TiltCard>
 
 					{/* ── Submit ── */}
-					<button
+					<Button
 						disabled={submitting}
+						loading={submitting}
 						onClick={handleSubmit}
-						className="flex w-full items-center justify-center gap-2 rounded-xl bg-primary px-4 py-4 text-base font-bold text-white shadow-sm transition-colors hover:bg-primaryDark disabled:cursor-not-allowed disabled:opacity-60 sm:text-lg">
-						{submitting ? (
-							<>
-								<Loader2 className="h-5 w-5 animate-spin" />
-								Submitting Request…
-							</>
-						) : (
-							"Confirm Booking Request"
-						)}
-					</button>
+						variant="primary"
+						size="lg"
+						fullWidth
+					>
+						Confirm Booking Request
+					</Button>
 					<p className="px-2 text-center text-xs text-textSecondary">
 						No payment is collected now. You&apos;ll coordinate with the owner after approval.
 					</p>
 				</div>
-			</div>
+			</Card>
 		</div>
 	);
 }

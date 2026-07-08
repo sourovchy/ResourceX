@@ -2,9 +2,10 @@ import React from 'react';
 import { Loader2, Database } from 'lucide-react';
 import { Pagination } from './Pagination';
 import { PageEmpty } from './PageEmpty';
+import Card from './Card';
 
 export interface ColumnDef<T> {
-  header: string;
+  header: React.ReactNode;
   accessorKey?: keyof T;
   cell?: (row: T) => React.ReactNode;
 }
@@ -47,11 +48,14 @@ export function DataTable<T>({
   }
 
   return (
-    <div className="w-full overflow-hidden rounded-lg border border-border bg-surface shadow-sm">
+    <Card padding="none" className="w-full overflow-hidden border border-border bg-card shadow-sm">
       <div className="relative min-h-[150px] overflow-x-auto">
         {isLoading && (
-          <div className="absolute inset-0 z-10 flex items-center justify-center bg-surface/70 px-4 backdrop-blur-[1px]">
-            <Loader2 className="h-8 w-8 animate-spin text-primary" />
+          <div className="absolute inset-0 z-10 flex items-center justify-center glass-surface px-4">
+            <div className="relative h-12 w-12 flex items-center justify-center">
+              <div className="absolute h-10 w-10 rounded-full border border-dashed border-primary/25 animate-[spin_4s_linear_infinite]" />
+              <div className="absolute h-8 w-8 rounded-full border-2 border-transparent border-t-primary border-b-primary/30 animate-[spin_1.5s_linear_infinite_reverse]" />
+            </div>
           </div>
         )}
 
@@ -62,7 +66,7 @@ export function DataTable<T>({
                 <th
                   key={index}
                   scope="col"
-                  className="whitespace-nowrap px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-textSecondary sm:px-6 sm:py-4 sm:text-xs"
+                  className="whitespace-nowrap px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-textTertiary sm:px-6 sm:py-4 sm:text-xs"
                 >
                   {col.header}
                 </th>
@@ -103,6 +107,6 @@ export function DataTable<T>({
           onPageChange={onPageChange}
         />
       </div>
-    </div>
+    </Card>
   );
 }

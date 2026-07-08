@@ -3,16 +3,16 @@ package com.resourcex.resourcex.service.impl;
 import com.resourcex.resourcex.dto.request.OtpRequest;
 import com.resourcex.resourcex.dto.request.OtpVerifyRequest;
 import com.resourcex.resourcex.dto.response.OtpResponse;
-import com.resourcex.resourcex.entity.OtpStatus;
 import com.resourcex.resourcex.entity.OtpToken;
 import com.resourcex.resourcex.entity.TokenPurpose;
-import com.resourcex.resourcex.entity.PendingUser;
-import com.resourcex.resourcex.entity.PendingUserStatus;
+import com.resourcex.resourcex.entity.User;
+import com.resourcex.resourcex.entity.UserStatus;
+import com.resourcex.resourcex.entity.StudentProfile;
 import com.resourcex.resourcex.exception.ConflictException;
 import com.resourcex.resourcex.exception.ResourceNotFoundException;
 import com.resourcex.resourcex.exception.UnauthorizedException;
 import com.resourcex.resourcex.repository.OtpRepository;
-import com.resourcex.resourcex.repository.PendingUserRepository;
+import com.resourcex.resourcex.repository.StudentProfileRepository;
 import com.resourcex.resourcex.repository.UserRepository;
 import com.resourcex.resourcex.service.EmailService;
 import com.resourcex.resourcex.service.OtpService;
@@ -27,11 +27,7 @@ import org.springframework.transaction.support.TransactionTemplate;
 import java.security.SecureRandom;
 import java.time.Clock;
 import java.time.Instant;
-import java.time.LocalDateTime;
-import java.time.ZoneId;
 import java.time.temporal.ChronoUnit;
-import java.util.EnumSet;
-import java.util.List;
 import java.util.Optional;
 
 @Service
@@ -40,7 +36,6 @@ import java.util.Optional;
 public class OtpServiceImpl implements OtpService {
 
     private static final int OTP_LENGTH = 6;
-    private static final int MAX_ATTEMPTS = 5;
     private static final long OTP_TTL_MINUTES = 3;
     private static final long RESEND_COOLDOWN_SECONDS = 300;
     private static final int MAX_OTP_REQUESTS_PER_DAY = 3;
@@ -48,7 +43,7 @@ public class OtpServiceImpl implements OtpService {
 
     private final OtpRepository otpRepository;
     private final UserRepository userRepository;
-    private final PendingUserRepository pendingUserRepository;
+    private final StudentProfileRepository studentProfileRepository;
     private final PasswordEncoder passwordEncoder;
     private final EmailService emailService;
     private final TransactionTemplate transactionTemplate;
@@ -73,47 +68,28 @@ public class OtpServiceImpl implements OtpService {
         String inputOtp = normalizeOtp(request.otp());
         Instant now = now();
 
-        expireExpiredPendingTokens(email, purpose, now);
-
         OtpToken token = findLatestPendingTokenForUpdate(email, purpose)
                 .orElseThrow(() -> new UnauthorizedException("OTP expired or not found"));
 
         if (isExpired(token, now)) {
-            token.setStatus(OtpStatus.EXPIRED);
-            otpRepository.save(token);
             throw new UnauthorizedException("OTP expired or not found");
         }
 
-        if (token.getAttemptCount() >= MAX_ATTEMPTS) {
-            token.setStatus(OtpStatus.CANCELLED);
-            otpRepository.save(token);
-            throw new UnauthorizedException("OTP cancelled due to too many attempts");
-        }
-
         if (!passwordEncoder.matches(inputOtp, token.getOtpHash())) {
-            token.setAttemptCount(token.getAttemptCount() + 1);
-
-            if (token.getAttemptCount() >= MAX_ATTEMPTS) {
-                token.setStatus(OtpStatus.CANCELLED);
-            }
-
-            otpRepository.save(token);
             throw new UnauthorizedException("Invalid OTP");
         }
 
-        token.setStatus(OtpStatus.USED);
-        token.setVerifiedAt(now);
         token.setUsedAt(now);
         otpRepository.save(token);
 
         if (purpose == TokenPurpose.EMAIL_VERIFICATION) {
-            PendingUser pendingUser = pendingUserRepository.findByEmailIgnoreCase(email)
-                    .orElseThrow(() -> new ResourceNotFoundException("Pending user not found"));
+            User user = userRepository.findByEmailIgnoreCase(email)
+                    .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+            StudentProfile profile = studentProfileRepository.findByUser(user)
+                    .orElseThrow(() -> new ResourceNotFoundException("Student profile not found"));
             
-            pendingUser.setEmailVerified(true);
-            pendingUser.setVerifiedAt(LocalDateTime.ofInstant(now, ZoneId.systemDefault()));
-            pendingUser.setStatus(PendingUserStatus.PENDING_REVIEW);
-            pendingUserRepository.save(pendingUser);
+            profile.setEmailVerified(true);
+            studentProfileRepository.save(profile);
         } else if (purpose == TokenPurpose.PASSWORD_RESET) {
             userRepository.findByEmailIgnoreCase(email)
                     .orElseThrow(() -> new ResourceNotFoundException("User not found"));
@@ -165,8 +141,8 @@ public class OtpServiceImpl implements OtpService {
     private void validateOtpRequest(String email, TokenPurpose purpose) {
         Instant now = now();
 
-        // Check 24-hour daily limit
-        long dailyRequestCount = otpRepository.countByEmailAndTokenPurposeAndCreatedAtAfter(
+        // Check 24-hour daily limit using last_sent_at proxying for creation time
+        long dailyRequestCount = otpRepository.countByEmailAndTokenPurposeAndLastSentAtAfter(
                 email,
                 purpose,
                 now.minus(24, ChronoUnit.HOURS));
@@ -182,27 +158,24 @@ public class OtpServiceImpl implements OtpService {
         Instant now = now();
 
         if (purpose == TokenPurpose.EMAIL_VERIFICATION) {
-            if (userRepository.existsByEmailIgnoreCase(email)) {
-                throw new ConflictException("Email is already registered");
-            }
-
-            PendingUser pendingUser = pendingUserRepository.findByEmailIgnoreCase(email)
+            User user = userRepository.findByEmailIgnoreCase(email)
                     .orElseThrow(() -> new ResourceNotFoundException("Please register first"));
 
-            if (pendingUser.isEmailVerified()) {
-                throw new ConflictException("Email is already verified");
+            StudentProfile profile = studentProfileRepository.findByUser(user)
+                    .orElseThrow(() -> new ResourceNotFoundException("Please register first"));
+
+            if (user.getStatus() == UserStatus.DELETED && profile.getRejectionReason() != null) {
+                throw new UnauthorizedException("Registration was rejected");
             }
 
-            if (pendingUser.getStatus() == PendingUserStatus.REJECTED) {
-                throw new UnauthorizedException("Registration was rejected");
+            if (profile.getEmailVerified()) {
+                throw new ConflictException("Email is already verified");
             }
         } else if (purpose == TokenPurpose.PASSWORD_RESET) {
             if (!userRepository.existsByEmailIgnoreCase(email)) {
                 throw new ResourceNotFoundException("User not found");
             }
         }
-
-        expireExpiredPendingTokens(email, purpose, now);
 
         Optional<OtpToken> existingPendingOtp = findLatestPendingTokenForUpdate(email, purpose);
 
@@ -220,8 +193,6 @@ public class OtpServiceImpl implements OtpService {
             }
 
             if (existing.getResendCount() >= MAX_OTP_REQUESTS_PER_DAY) {
-                existing.setStatus(OtpStatus.CANCELLED);
-                otpRepository.save(existing);
                 log.warn("Resend attempt limit exceeded for email: {}", email);
                 throw new UnauthorizedException(
                         "Maximum resend attempts (" + MAX_OTP_REQUESTS_PER_DAY + ") exceeded. Try again later.");
@@ -234,7 +205,6 @@ public class OtpServiceImpl implements OtpService {
             existing.setResendCount(existing.getResendCount() + 1);
             existing.setLastSentAt(now);
             existing.setExpiresAt(now.plus(OTP_TTL_MINUTES, ChronoUnit.MINUTES));
-            existing.setAttemptCount(0);
 
             OtpToken updatedToken = otpRepository.save(existing);
 
@@ -255,10 +225,7 @@ public class OtpServiceImpl implements OtpService {
                 .email(email)
                 .tokenPurpose(purpose)
                 .otpHash(hashedOtp)
-                .status(OtpStatus.PENDING)
-                .attemptCount(0)
                 .resendCount(0)
-                .createdAt(now)
                 .expiresAt(now.plus(OTP_TTL_MINUTES, ChronoUnit.MINUTES))
                 .lastSentAt(now)
                 .build();
@@ -279,33 +246,14 @@ public class OtpServiceImpl implements OtpService {
     @Transactional
     public void cleanupOtpTokens() {
         Instant now = now();
-        otpRepository.expireExpiredOtp(
-                OtpStatus.EXPIRED,
-                OtpStatus.PENDING,
-                now);
-        otpRepository.deleteByStatusInAndExpiresAtBefore(
-                List.copyOf(EnumSet.of(
-                        OtpStatus.EXPIRED,
-                        OtpStatus.USED,
-                        OtpStatus.CANCELLED)),
-                now.minus(RETAIN_FINISHED_TOKENS_HOURS, ChronoUnit.HOURS));
+        Instant threshold = now.minus(RETAIN_FINISHED_TOKENS_HOURS, ChronoUnit.HOURS);
+        otpRepository.deleteExpiredBefore(threshold);
     }
 
     private Optional<OtpToken> findLatestPendingTokenForUpdate(String email, TokenPurpose purpose) {
-        return otpRepository.findByEmailAndTokenPurposeAndStatusForUpdate(
-                email,
-                purpose,
-                OtpStatus.PENDING).stream()
+        return otpRepository.findUnusedTokenForUpdate(email, purpose).stream()
+                .filter(t -> !isExpired(t, now()))
                 .findFirst();
-    }
-
-    private void expireExpiredPendingTokens(String email, TokenPurpose purpose, Instant now) {
-        otpRepository.expireExpiredOtpForEmailAndTokenPurpose(
-                email,
-                purpose,
-                OtpStatus.EXPIRED,
-                OtpStatus.PENDING,
-                now);
     }
 
     private boolean isExpired(OtpToken token, Instant now) {
@@ -313,10 +261,7 @@ public class OtpServiceImpl implements OtpService {
     }
 
     private void cancelIssuedOtp(Long tokenId) {
-        transactionTemplate.executeWithoutResult(status -> otpRepository.findById(tokenId).ifPresent(token -> {
-            token.setStatus(OtpStatus.CANCELLED);
-            otpRepository.save(token);
-        }));
+        transactionTemplate.executeWithoutResult(status -> otpRepository.deleteById(tokenId));
     }
 
     private String generateOtp() {
@@ -326,17 +271,13 @@ public class OtpServiceImpl implements OtpService {
     }
 
     private String normalizeOtp(String otp) {
-
         if (otp == null) {
             throw new UnauthorizedException("OTP is required");
         }
-
         String normalized = otp.trim();
-
         if (!normalized.matches("\\d{6}")) {
             throw new UnauthorizedException("OTP must be 6 digits");
         }
-
         return normalized;
     }
 

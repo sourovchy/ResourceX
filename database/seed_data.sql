@@ -192,8 +192,7 @@ INSERT INTO bookings (
     start_date,
     end_date,
     total_price,
-    approved_by_user_id,
-    approved_at
+    created_at
 ) VALUES
       (
           1,
@@ -202,7 +201,6 @@ INSERT INTO bookings (
           '2026-05-20',
           '2026-05-25',
           2500.00,
-          2,
           NOW()
       ),
       (
@@ -212,8 +210,7 @@ INSERT INTO bookings (
           '2026-05-23',
           '2026-05-26',
           2400.00,
-          NULL,
-          NULL
+          NOW()
       );
 
 -- =========================================================
@@ -244,14 +241,12 @@ INSERT INTO payments (
 INSERT INTO reviews (
     booking_id,
     reviewer_id,
-    reviewee_id,
     rating,
     comment
 ) VALUES
     (
         1,
         5,
-        4,
         5,
         'Very smooth rental experience'
     );
@@ -264,19 +259,13 @@ INSERT INTO reports (
     reporter_id,
     entity_type,
     entity_id,
-    status,
-    reviewed_by_user_id,
-    reason,
-    reviewed_at
+    reason
 ) VALUES
     (
         6,
         'ITEM',
         1,
-        'REVIEWED',
-        3,
-        'Item description was misleading',
-        NOW()
+        'Item description was misleading'
     );
 
 -- =========================================================
@@ -321,30 +310,7 @@ INSERT INTO penalties (
         NOW()
     );
 
--- =========================================================
--- TRUST EVENTS
--- =========================================================
 
-INSERT INTO trust_events (
-    user_id,
-    source_type,
-    source_id,
-    change_amount,
-    old_score,
-    new_score,
-    reason,
-    created_by_user_id
-) VALUES
-    (
-        4,
-        'PENALTY',
-        1,
-        -10,
-        100,
-        90,
-        'Late return penalty',
-        2
-    );
 
 -- =========================================================
 -- AUDIT LOGS
@@ -385,29 +351,26 @@ INSERT INTO audit_logs (
 INSERT INTO notifications (
     user_id,
     notification_type,
-    title,
     message,
     related_entity_type,
     related_entity_id,
-    created_by_user_id
+    created_at
 ) VALUES
       (
           4,
-          'PENALTY',
-          'Penalty Applied',
+          'TRUST',
           'A late return penalty has been applied to your account.',
-          'PENALTY',
+          'TRUST',
           1,
-          2
+          NOW()
       ),
       (
           5,
           'BOOKING',
-          'Booking Approved',
           'Your booking request has been approved.',
           'BOOKING',
           1,
-          2
+          NOW()
       );
 
 -- =========================================================
@@ -434,21 +397,18 @@ INSERT INTO conversations (
 INSERT INTO messages (
     conversation_id,
     sender_user_id,
-    receiver_user_id,
     content,
     is_read
 ) VALUES
       (
           1,
           5,
-          4,
           'Hello ভাই, কখন laptop collect করতে পারি?',
           TRUE
       ),
       (
           1,
           4,
-          5,
           'আগামীকাল দুপুরের পর collect করতে পারবেন.',
           FALSE
       );

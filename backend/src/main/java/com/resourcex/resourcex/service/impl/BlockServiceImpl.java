@@ -9,7 +9,6 @@ import com.resourcex.resourcex.exception.BadRequestException;
 import com.resourcex.resourcex.exception.ResourceNotFoundException;
 import com.resourcex.resourcex.repository.UserBlockRepository;
 import com.resourcex.resourcex.repository.UserRepository;
-import com.resourcex.resourcex.repository.UserRoleRepository;
 import com.resourcex.resourcex.service.AuditLogService;
 import com.resourcex.resourcex.service.BlockService;
 import lombok.RequiredArgsConstructor;
@@ -24,7 +23,6 @@ public class BlockServiceImpl implements BlockService {
 
     private final UserBlockRepository userBlockRepository;
     private final UserRepository userRepository;
-    private final UserRoleRepository userRoleRepository;
     private final AuditLogService auditLogService;
 
     @Override
@@ -39,9 +37,11 @@ public class BlockServiceImpl implements BlockService {
         User target = userRepository.findById(targetUserId)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found"));
 
-        boolean isTargetStaff = userRoleRepository.findAllByUser_UserId(target.getUserId()).stream()
-                .map(ur -> ur.getRole().getName().toUpperCase())
-                .anyMatch(role -> role.equals("ROLE_ADMIN") || role.equals("ROLE_SUPER_ADMIN") || role.equals("ROLE_MODERATOR"));
+        boolean isTargetStaff = target.getRole() != null && target.getRole().getName() != null
+                && switch (target.getRole().getName().toUpperCase()) {
+                    case "ROLE_ADMIN", "ROLE_SUPER_ADMIN", "ROLE_MODERATOR" -> true;
+                    default -> false;
+                };
         
         if (isTargetStaff) {
             throw new BadRequestException("Staff and Administrators cannot be blocked");
@@ -106,13 +106,13 @@ public class BlockServiceImpl implements BlockService {
         User currentUser = getAuthenticatedUser(currentUserEmail);
 
         return userBlockRepository
-                .findByBlocker_UserIdOrderByCreatedAtDesc(currentUser.getUserId())
+                .findByBlocker_UserId(currentUser.getUserId())
                 .stream()
                 .map(block -> BlockedUserResponse.builder()
                         .userId(block.getBlocked().getUserId())
                         .name(block.getBlocked().getName())
                         .email(block.getBlocked().getEmail())
-                        .blockedAt(block.getCreatedAt())
+                        .blockedAt(null)
                         .build())
                 .toList();
     }

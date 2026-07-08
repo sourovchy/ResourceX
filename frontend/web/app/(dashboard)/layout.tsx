@@ -37,7 +37,7 @@ export default function DashboardLayout({
     const filteredNavItems = useMemo(() => getNavForRole(currentRole), [currentRole]);
 
     if (loading) {
-        return <PageLoader message="Loading dashboard..." />;
+        return <PageLoader message="Loading dashboard..." fullScreen />;
     }
 
     if (!currentRole || !user) {

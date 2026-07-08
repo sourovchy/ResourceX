@@ -13,9 +13,6 @@ export interface Conversation {
 	participantTwoIsStaff?: boolean;
 	participantTwoAvatarUrl?: string | null;
 
-	bookingId?: number | null;
-	disputeId?: number | null;
-
 	lastMessageId?: number | null;
 	lastMessageContent?: string | null;
 	lastMessageSenderId?: number | null;
@@ -37,14 +34,8 @@ export interface Message {
 	senderEmail: string;
 	senderAvatarUrl?: string | null;
 
-	receiverUserId: number;
-	receiverName: string;
-	receiverEmail: string;
-	receiverAvatarUrl?: string | null;
-
 	content: string;
 	isRead: boolean;
-	readAt?: string | null;
 
 	createdAt: string;
 	updatedAt?: string | null;
@@ -52,11 +43,18 @@ export interface Message {
 
 export interface ConversationRequest {
 	otherUserId: number;
-	bookingId?: number;
-	disputeId?: number;
 	initialMessage?: string;
 }
 
 export interface MessageRequest {
 	content: string;
+}
+
+export interface BlockStatus {
+	/** The current user has blocked the other user. */
+	blockedByMe: boolean;
+	/** The other user has blocked the current user. */
+	blockedByThem: boolean;
+	/** A block exists in either direction — the conversation is read-only. */
+	blocked: boolean;
 }

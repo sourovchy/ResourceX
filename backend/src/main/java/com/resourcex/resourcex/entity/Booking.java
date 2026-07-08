@@ -49,29 +49,16 @@ public class Booking {
     @Builder.Default
     private BookingStatus status = BookingStatus.PENDING;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "approved_by_user_id")
-    private User approvedBy;
-
-    @Column(name = "approved_at")
-    private LocalDateTime approvedAt;
-
     @Column(name = "rejection_reason", length = 1000)
     private String rejectionReason;
 
     @Column(name = "booking_message", length = 1000)
     private String bookingMessage;
 
-    @OneToOne(mappedBy = "booking", fetch = FetchType.LAZY)
-    private Payment payment;
-
-    @Version
-    private Long version;
-
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
-    @Column(name = "updated_at", nullable = false)
+    @Column(name = "updated_at")
     private LocalDateTime updatedAt;
 
     @PrePersist
@@ -91,10 +78,11 @@ public class Booking {
     }
 
     public enum BookingStatus {
-        PENDING,
-        APPROVED,
-        COMPLETED,
-        CANCELLED,
-        REJECTED
+        PENDING,     // request submitted, awaiting owner approval
+        APPROVED,    // owner approved, awaiting physical handoff
+        ACTIVE,      // item handed over, rental in progress
+        COMPLETED,   // item returned, rental closed
+        CANCELLED,   // cancelled/declined by either party or staff
+        REJECTED     // rejected by owner
     }
 }

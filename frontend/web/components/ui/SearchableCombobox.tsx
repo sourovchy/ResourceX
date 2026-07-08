@@ -181,7 +181,7 @@ export function SearchableCombobox({
 			</div>
 
 			{isOpen && (
-				<div className="absolute z-50 mt-1 w-full overflow-hidden rounded-xl border border-borderLight bg-popover shadow-lg animate-in fade-in zoom-in-95 duration-100 flex flex-col">
+				<div className="absolute z-50 mt-1 w-full overflow-hidden rounded-xl glass-surface shadow-2xl border border-borderLight/60 animate-in fade-in zoom-in-95 duration-100 flex flex-col">
 					{/* Search Header */}
 					<div className="flex items-center border-b border-borderLight px-3 py-2 bg-popover">
 						<Search className="h-4 w-4 text-textSecondary mr-2 shrink-0" />
@@ -238,7 +238,7 @@ export function SearchableCombobox({
 										aria-selected={isSelected}
 										onClick={() => handleSelect(option.value)}
 										onMouseEnter={() => setFocusedIndex(index)}
-										className={`relative flex cursor-pointer select-none items-center rounded-lg px-3 py-2 text-sm transition-colors
+										className={`relative flex cursor-pointer select-none items-center rounded-lg px-3 py-2 text-sm transition-all duration-150 ease-out hover:scale-[1.015] active:scale-[0.99]
 											${isSelected ? "text-primary font-bold bg-primary/10" : ""}
 											${isFocused && !isSelected ? "bg-primary text-white" : ""}
 											${!isSelected && !isFocused ? "text-textPrimary hover:bg-primary hover:text-white" : ""}

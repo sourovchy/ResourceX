@@ -2,8 +2,6 @@ package com.resourcex.resourcex.service.impl;
 
 import com.resourcex.resourcex.dto.response.AnalyticsResponse;
 import com.resourcex.resourcex.entity.Booking;
-import com.resourcex.resourcex.entity.Dispute;
-import com.resourcex.resourcex.entity.Penalty;
 import com.resourcex.resourcex.repository.*;
 import com.resourcex.resourcex.service.AnalyticsService;
 import lombok.RequiredArgsConstructor;
@@ -11,7 +9,6 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -25,10 +22,7 @@ public class AnalyticsServiceImpl implements AnalyticsService {
     private final UserRepository userRepository;
     private final ItemRepository itemRepository;
     private final BookingRepository bookingRepository;
-    private final PaymentRepository paymentRepository;
-    private final DisputeRepository disputeRepository;
-    private final PenaltyRepository penaltyRepository;
-    private final TrustEventRepository trustEventRepository;
+    private final ReportRepository reportRepository;
 
     @Override
     public AnalyticsResponse getAnalytics() {
@@ -54,49 +48,15 @@ public class AnalyticsServiceImpl implements AnalyticsService {
         metrics.put(
                 "cancelledBookings",
                 bookingRepository.countByStatus(Booking.BookingStatus.CANCELLED)
+                        + bookingRepository.countByStatus(Booking.BookingStatus.REJECTED)
         );
 
         metrics.put(
-                "totalDisputes",
-                disputeRepository.count()
+                "totalReports",
+                reportRepository.count()
         );
 
-        metrics.put(
-                "openDisputes",
-                disputeRepository.countByStatus(Dispute.DisputeStatus.OPEN)
-        );
 
-        metrics.put(
-                "resolvedDisputes",
-                disputeRepository.countByStatus(Dispute.DisputeStatus.RESOLVED)
-        );
-
-        metrics.put(
-                "totalPenalties",
-                penaltyRepository.count()
-        );
-
-        metrics.put(
-                "appliedPenalties",
-                penaltyRepository.countByStatus(Penalty.PenaltyStatus.APPLIED)
-        );
-
-        metrics.put(
-                "waivedPenalties",
-                penaltyRepository.countByStatus(Penalty.PenaltyStatus.WAIVED)
-        );
-
-        metrics.put(
-                "totalTrustEvents",
-                trustEventRepository.count()
-        );
-
-        BigDecimal revenue = paymentRepository.sumSuccessfulRevenue();
-
-        metrics.put(
-                "revenue",
-                revenue != null ? revenue : BigDecimal.ZERO
-        );
 
         // ── Real chart data (replaces previously fabricated client-side charts) ──
         Map<String, Object> charts = new HashMap<>();

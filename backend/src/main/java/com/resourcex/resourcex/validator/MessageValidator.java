@@ -37,7 +37,14 @@ public class MessageValidator {
             throw new BadRequestException("Message is required");
         }
 
-        if (!message.getReceiverUser().getUserId().equals(currentUserId)) {
+        Long senderId = message.getSenderUser().getUserId();
+        Conversation conv = message.getConversation();
+        Long participantOneId = conv.getParticipantOneUser().getUserId();
+        Long participantTwoId = conv.getParticipantTwoUser().getUserId();
+        
+        Long receiverId = participantOneId.equals(senderId) ? participantTwoId : participantOneId;
+
+        if (!receiverId.equals(currentUserId)) {
             throw new ForbiddenException("Only the receiver can mark this message as read");
         }
     }

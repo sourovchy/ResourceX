@@ -20,8 +20,6 @@ public class NotificationResponse {
 
     private Notification.NotificationType notificationType;
 
-    private String title;
-
     private String message;
 
     private Notification.RelatedEntityType relatedEntityType;

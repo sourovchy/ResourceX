@@ -2,7 +2,7 @@ import api from "../api";
 
 export interface AnalyticsResponse {
   summary: {
-    totalRevenue: number;
+    totalReports: number;
     totalBookings: number;
     totalUsers: number;
     totalItems: number;
@@ -10,8 +10,6 @@ export interface AnalyticsResponse {
   topItems: { label: string; value: number }[];
   bookingRatio: { label: string; pct: number; color: string }[];
   categoryDistribution: { label: string; pct: number; color: string }[];
-  penalties: { label: string; value: number; color: string }[];
-  disputes: { label: string; value: number; color: string }[];
 }
 
 type LabelValue = { label: string; value: number };
@@ -24,14 +22,8 @@ interface BackendMetrics {
   activeBookings: number;
   completedBookings: number;
   cancelledBookings: number;
-  totalDisputes: number;
-  openDisputes: number;
-  resolvedDisputes: number;
-  totalPenalties: number;
-  appliedPenalties: number;
-  waivedPenalties: number;
+  totalReports: number;
   totalTrustEvents: number;
-  revenue: number;
 }
 
 const CATEGORY_COLORS = [
@@ -77,14 +69,8 @@ export const analyticsService = {
       activeBookings: toNumber(m.activeBookings),
       completedBookings: toNumber(m.completedBookings),
       cancelledBookings: toNumber(m.cancelledBookings),
-      totalDisputes: toNumber(m.totalDisputes),
-      openDisputes: toNumber(m.openDisputes),
-      resolvedDisputes: toNumber(m.resolvedDisputes),
-      totalPenalties: toNumber(m.totalPenalties),
-      appliedPenalties: toNumber(m.appliedPenalties),
-      waivedPenalties: toNumber(m.waivedPenalties),
+      totalReports: toNumber(m.totalReports),
       totalTrustEvents: toNumber(m.totalTrustEvents),
-      revenue: toNumber(m.revenue),
     };
 
     // Booking status distribution (real)
@@ -112,7 +98,7 @@ export const analyticsService = {
 
     return {
       summary: {
-        totalRevenue: metrics.revenue,
+        totalReports: metrics.totalReports,
         totalBookings: metrics.totalBookings,
         totalUsers: metrics.totalUsers,
         totalItems: metrics.totalItems,
@@ -121,14 +107,6 @@ export const analyticsService = {
       topItems: normalizeLabelValues(charts.topItems),
       bookingRatio,
       categoryDistribution,
-      penalties: [
-        { label: "Applied", value: metrics.appliedPenalties, color: "bg-error" },
-        { label: "Waived", value: metrics.waivedPenalties, color: "bg-success" },
-      ],
-      disputes: [
-        { label: "Open", value: metrics.openDisputes, color: "bg-warning" },
-        { label: "Resolved", value: metrics.resolvedDisputes, color: "bg-success" },
-      ],
     };
   },
 };

@@ -26,4 +26,7 @@ public interface StudentProfileRepository extends JpaRepository<StudentProfile, 
     boolean existsByPhoneAndUser_UserIdNot(String phone, Long userId);
 
     boolean existsByStudentIdIgnoreCaseAndUser_UserIdNot(String studentId, Long userId);
+
+    long countByEmailVerifiedTrue();
 }
+

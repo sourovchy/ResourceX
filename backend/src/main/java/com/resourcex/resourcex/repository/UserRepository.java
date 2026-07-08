@@ -14,13 +14,13 @@ import java.time.LocalDateTime;
 
 public interface UserRepository extends JpaRepository<User, Long> {
 
-    @Query("SELECT DISTINCT u FROM User u JOIN UserRole ur ON ur.user = u JOIN Role r ON ur.role = r WHERE r.name IN :roleNames")
+    @Query("SELECT u FROM User u WHERE u.role.name IN :roleNames")
     Page<User> findAllByRoleNames(@Param("roleNames") List<String> roleNames, Pageable pageable);
 
-    @Query("SELECT DISTINCT u FROM User u JOIN UserRole ur ON ur.user = u JOIN Role r ON ur.role = r WHERE r.name IN :roleNames")
+    @Query("SELECT u FROM User u WHERE u.role.name IN :roleNames")
     List<User> findAllByRoleNamesList(@Param("roleNames") List<String> roleNames);
 
-    @Query("SELECT DISTINCT u FROM User u WHERE NOT EXISTS (SELECT 1 FROM UserRole ur JOIN Role r ON ur.role = r WHERE ur.user = u AND r.name IN :excludedRoles)")
+    @Query("SELECT u FROM User u WHERE u.role.name NOT IN :excludedRoles")
     Page<User> findAllExcludingRoles(@Param("excludedRoles") List<String> excludedRoles, Pageable pageable);
 
     /**
@@ -41,6 +41,8 @@ public interface UserRepository extends JpaRepository<User, Long> {
 
     List<User> findByStatus(UserStatus status);
 
+    Page<User> findByStatus(UserStatus status, Pageable pageable);
+
     List<User> findAllByOrderByUserIdDesc();
 
     List<User> findByStatusOrderByUserIdDesc(UserStatus status);
@@ -54,15 +56,6 @@ public interface UserRepository extends JpaRepository<User, Long> {
 
     long countByStatus(UserStatus status);
 
-    /** Timed suspensions whose suspendedUntil has passed — to be auto-lifted. */
-    @Query("SELECT u FROM User u WHERE u.status = com.resourcex.resourcex.entity.UserStatus.SUSPENDED " +
-           "AND u.suspensionType <> com.resourcex.resourcex.entity.SuspensionType.PERMANENT " +
-           "AND u.suspendedUntil IS NOT NULL AND u.suspendedUntil <= :now")
-    List<User> findExpiredTemporarySuspensions(@Param("now") LocalDateTime now);
-
-    /** Permanently suspended users whose retention window has elapsed — to be deleted. */
-    @Query("SELECT u FROM User u WHERE u.status = com.resourcex.resourcex.entity.UserStatus.SUSPENDED " +
-           "AND u.suspensionType = com.resourcex.resourcex.entity.SuspensionType.PERMANENT " +
-           "AND u.scheduledDeletionAt IS NOT NULL AND u.scheduledDeletionAt <= :now")
-    List<User> findUsersScheduledForDeletion(@Param("now") LocalDateTime now);
+    // Suspension lifecycle queries moved to StudentRestrictionRepository
+    // (suspension state now lives on student_restrictions).
 }

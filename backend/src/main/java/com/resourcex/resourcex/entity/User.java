@@ -8,7 +8,9 @@ import java.time.LocalDateTime;
 @Entity
 @Table(name = "users", indexes = {
         @Index(name = "idx_users_email", columnList = "email"),
-        @Index(name = "idx_users_status", columnList = "status")
+        @Index(name = "idx_users_status", columnList = "status"),
+        @Index(name = "idx_users_role_id", columnList = "role_id"),
+        @Index(name = "idx_users_avatar_file_id", columnList = "avatar_file_id")
 })
 @Getter
 @Setter
@@ -36,44 +38,26 @@ public class User {
     @Builder.Default
     private UserStatus status = UserStatus.ACTIVE;
 
+    /** Exactly one role per user (total participation). */
+    @ManyToOne(fetch = FetchType.EAGER)
+    @JoinColumn(name = "role_id", nullable = false)
+    private Role role;
+
     @Column(nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
-    @Column(nullable = false)
-    private LocalDateTime updatedAt;
+    /** Avatar lives in the files table (purpose = AVATAR); this is the file reference. */
+    @Column(name = "avatar_file_id")
+    private Long avatarFileId;
 
-    @Column(name = "avatar_url", length = 1000)
-    private String avatarUrl;
-
-    // ── Suspension ──────────────────────────────────────────────────────────
-
-    @Enumerated(EnumType.STRING)
-    @Column(name = "suspension_type", length = 30)
-    private SuspensionType suspensionType;
-
-    @Column(name = "suspension_reason", length = 500)
-    private String suspensionReason;
-
-    @Column(name = "suspended_at")
-    private LocalDateTime suspendedAt;
-
-    /** Null for PERMANENT suspensions; non-null for timed suspensions. */
-    @Column(name = "suspended_until")
-    private LocalDateTime suspendedUntil;
-
-    @Column(name = "suspended_by_user_id")
-    private Long suspendedByUserId;
-
-    /** Set for PERMANENT suspensions; account deleted on/after this date. */
-    @Column(name = "scheduled_deletion_at")
-    private LocalDateTime scheduledDeletionAt;
+    @OneToOne(mappedBy = "user", fetch = FetchType.LAZY)
+    private com.resourcex.resourcex.entity.StudentProfile studentProfile;
 
     @PrePersist
     public void onCreate() {
         LocalDateTime now = LocalDateTime.now();
 
         this.createdAt = now;
-        this.updatedAt = now;
 
         if (this.email != null) {
             this.email = this.email.trim().toLowerCase();
@@ -82,8 +66,6 @@ public class User {
 
     @PreUpdate
     public void onUpdate() {
-        this.updatedAt = LocalDateTime.now();
-
         if (this.email != null) {
             this.email = this.email.trim().toLowerCase();
         }

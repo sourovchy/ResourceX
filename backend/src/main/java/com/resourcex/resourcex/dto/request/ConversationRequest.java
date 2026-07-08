@@ -15,9 +15,6 @@ public class ConversationRequest {
     @NotNull(message = "Other user ID is required")
     private Long otherUserId;
 
-    private Long bookingId;
-
-    private Long disputeId;
     @NotBlank(message = "Initial message is required")
     @Size(max = 4000, message = "Initial message must not exceed 4000 characters")
     private String initialMessage;

@@ -4,6 +4,7 @@ import React, { useEffect, useId, useState } from "react";
 import { createPortal } from "react-dom";
 import { AlertTriangle, AlertCircle, X } from "lucide-react";
 import { useDialog } from "@/hooks/useDialog";
+import { TiltCard } from "./TiltCard";
 
 type ConfirmModalProps = {
     isOpen: boolean;
@@ -88,15 +89,33 @@ export function ConfirmModal({
     return createPortal(
         <div
             onClick={() => !isLoading && onCancel()}
-            className="fixed inset-0 z-[100] flex items-end justify-center sm:items-center p-3 sm:p-4 bg-black/50 backdrop-blur-sm animate-in fade-in duration-200">
-            <div
-                ref={dialogRef}
+            className="fixed inset-0 z-[100] flex items-end justify-center sm:items-center p-3 sm:p-4 bg-black/35 backdrop-blur-md animate-in fade-in duration-200">
+            <style dangerouslySetInnerHTML={{ __html: `
+				@keyframes confirm-modal-scale-up {
+					0% { transform: scale(0.94); opacity: 0; }
+					100% { transform: scale(1); opacity: 1; }
+				}
+				.animate-confirm-modal-enter {
+					animation: confirm-modal-scale-up 350ms cubic-bezier(0.34, 1.56, 0.64, 1) both;
+				}
+				@media (prefers-reduced-motion: reduce) {
+					.animate-confirm-modal-enter {
+						animation: none !important;
+						transform: none !important;
+					}
+				}
+			`}} />
+            <TiltCard
+                ref={dialogRef as any}
                 role="dialog"
                 aria-modal="true"
                 aria-label={title}
                 tabIndex={-1}
+                maxTilt={2}
+                hoverScale={1.01}
+                glare={false}
                 onClick={(e) => e.stopPropagation()}
-                className="flex w-full max-w-md max-h-[90dvh] flex-col overflow-hidden rounded-2xl bg-surface shadow-xl border border-borderLight outline-none animate-in fade-in zoom-in-95 slide-in-from-bottom-2 sm:slide-in-from-bottom-0 duration-200">
+                className="flex w-full max-w-md max-h-[90dvh] flex-col overflow-hidden border border-borderLight/60 bg-surface/90 shadow-2xl backdrop-blur-md outline-none animate-confirm-modal-enter">
                 {/* Header */}
                 <div className="flex items-start justify-between gap-4 border-b border-borderLight p-4 sm:p-5">
                     <div className="flex items-start gap-3 min-w-0">
@@ -105,7 +124,7 @@ export function ConfirmModal({
                                 <AlertTriangle className="w-5 h-5" />
                             </div>
                         ) : null}
-                        <h2 className="text-lg sm:text-xl font-semibold text-textPrimary leading-tight break-words">
+                        <h2 className="text-lg sm:text-xl font-bold text-textPrimary leading-tight break-words">
                             {title}
                         </h2>
                     </div>
@@ -166,13 +185,13 @@ export function ConfirmModal({
                     <button
                         onClick={onCancel}
                         disabled={isLoading}
-                        className="w-full sm:w-auto px-4 py-2 text-sm font-medium text-textPrimary bg-surface border border-borderLight rounded-xl hover:bg-surfaceVariant transition disabled:opacity-50">
+                        className="w-full sm:w-auto px-4 py-2 text-sm font-medium text-textPrimary bg-surface border border-borderLight rounded-xl hover:bg-surfaceVariant enabled:active:scale-[0.97] transition-all disabled:opacity-50">
                         {cancelText}
                     </button>
                     <button
                         onClick={handleConfirm}
                         disabled={confirmIsDisabled}
-                        className={`w-full sm:w-auto px-4 py-2 text-sm font-medium rounded-xl transition shadow-sm disabled:cursor-not-allowed disabled:opacity-50 ${
+                        className={`w-full sm:w-auto px-4 py-2 text-sm font-medium rounded-xl transition-all shadow-sm enabled:active:scale-[0.97] disabled:cursor-not-allowed disabled:opacity-50 ${
                             isDestructive
                                 ? "bg-error text-white hover:bg-error/90"
                                 : "bg-primary text-onPrimary hover:bg-primaryDark"
@@ -180,7 +199,7 @@ export function ConfirmModal({
                         {isLoading ? "Please wait..." : confirmText}
                     </button>
                 </div>
-            </div>
+            </TiltCard>
         </div>,
         document.body,
     );

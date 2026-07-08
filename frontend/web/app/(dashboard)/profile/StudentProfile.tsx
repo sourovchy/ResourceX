@@ -2,21 +2,24 @@
 
 import React, { useEffect, useState } from "react";
 import Link from "next/link";
-import api, { getFileUrl } from "@/lib/api";
+import api from "@/lib/api";
 import { useAuth } from "@/context/AuthContext";
-import SafeImage from "@/components/ui/SafeImage";
+import { ProfileHeaderCard } from "@/components/profile/ProfileHeaderCard";
+import TrustBadge from "@/components/TrustBadge";
+import { PageLoader } from "@/components/ui/PageLoader";
+import TrustSummaryCard from "@/components/TrustSummaryCard";
+import { TiltCard } from "@/components/ui/TiltCard";
 import { formatShortDate } from "@/lib/dateUtils";
 import {
 	Mail,
 	CalendarDays,
-	Shield,
 	Star,
 	Edit3,
 	Package,
 	BookOpen,
 	CheckCircle2,
-	Loader2,
 	MessageSquare,
+	AlertTriangle,
 } from "lucide-react";
 
 type Item = {
@@ -92,15 +95,13 @@ export default function ProfilePage() {
 		return () => {
 			active = false;
 		};
+		// Refetch only when the signed-in user identity changes, not on every
+		// auth-context object refresh.
+		// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, [user?.userId]);
 
 	if (loading) {
-		return (
-			<div className="min-h-[60vh] flex items-center justify-center text-textSecondary">
-				<Loader2 className="w-5 h-5 animate-spin mr-2" />
-				Loading profile...
-			</div>
-		);
+		return <PageLoader message="Loading profile..." />;
 	}
 
 	const safeItems = Array.isArray(items) ? items : [];
@@ -123,150 +124,94 @@ export default function ProfilePage() {
 		(fallbackUser && fallbackUser.studentProfile) ||
 		null;
 	const displayUser = user ?? fallbackUser;
-	const trustScore = studentProfile?.trustScore ?? 0;
 
 	return (
 		<div className="w-full space-y-6 px-4 pb-20 sm:px-6 lg:px-8">
-			<h1 className="text-xl font-bold tracking-tight text-textPrimary sm:text-2xl">
-				Profile Overview
-			</h1>
+			<div>
+				<h2 className="mt-1 text-3xl font-bold tracking-tighter text-textPrimary sm:text-5xl">
+					My <span className="text-gradient-brand italic">Profile.</span>
+				</h2>
+			</div>
 
 			<div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
-				<div className="space-y-6 lg:col-span-1">
-					<div className="flex flex-col items-center rounded-lg border border-borderLight bg-surface p-4 text-center shadow-sm sm:p-6">
-						<div className="relative mb-4 flex h-20 w-20 items-center justify-center overflow-hidden rounded-full bg-primaryLight text-2xl font-extrabold text-primary sm:h-24 sm:w-24 sm:text-3xl">
-							{displayUser?.avatarUrl ? (
-								<SafeImage
-									src={getFileUrl(displayUser.avatarUrl)}
-									alt={displayUser.name ?? "Profile"}
-									fill
-									className="object-cover"
-									sizes="96px"
-								/>
-							) : (
-								displayUser?.name?.[0] ?? "U"
-							)}
-							<span className="absolute bottom-0 right-0 bg-success text-white p-1 rounded-full border-2 border-surface z-10">
-								<CheckCircle2 className="w-4 h-4" />
-							</span>
-						</div>
-						<h2 className="break-words text-lg font-bold text-textPrimary sm:text-xl">
-							{displayUser?.name}
-						</h2>
-						<p className="break-all text-sm font-medium text-textSecondary">
-							Student ID: {studentProfile?.studentId ?? "N/A"}
-						</p>
+				<div className="space-y-6 lg:col-span-3">
+					<ProfileHeaderCard
+						avatarUrl={displayUser?.avatarUrl}
+						initials={displayUser?.name?.[0] ?? "U"}
+						avatarBadge={<CheckCircle2 className="w-5 h-5" />}
+						avatarBgClass="bg-primaryLight text-primary [&>span]:bg-success [&>span]:text-white"
+						name={displayUser?.name ?? "Student"}
+						infoRows={[
+							{ text: `Student ID: ${studentProfile?.studentId ?? "N/A"}` },
+							{ icon: <Mail className="w-4 h-4" />, text: displayUser?.email },
+							{ icon: <CalendarDays className="w-4 h-4" />, text: studentProfile?.department || "Department not set" }
+						]}
+						actions={
+							<Link
+								href="/profile/edit"
+								className="inline-flex items-center justify-center gap-2 rounded-full bg-surfaceVariant px-6 py-2.5 font-bold text-textPrimary shadow-sm transition-all hover:-translate-y-0.5 hover:bg-borderLight hover:shadow-md"
+							>
+								<Edit3 className="w-4 h-4" /> Edit Profile
+							</Link>
+						}
+					/>
 
-						{/* Quick stat row */}
-						<p className="mt-2 text-xs font-semibold text-textSecondary">
-							{activeListings.length} listings · {successfulReturns} rentals
-							completed · {avgRating.toFixed(1)} avg rating
-						</p>
-
-						<div className="w-full border-t border-borderLight my-4" />
-
-						<div className="flex w-full flex-col gap-3 break-words text-left text-sm text-textSecondary">
-							<span className="flex items-center gap-2">
-								<Mail className="w-4 h-4" /> {displayUser?.email}
-							</span>
-							<span className="flex items-center gap-2">
-								<CalendarDays className="w-4 h-4" />{" "}
-								{studentProfile?.department || "Department not set"}
-							</span>
-						</div>
-
-						<Link
-							href="/profile/edit"
-							className="mt-6 flex w-full items-center justify-center gap-2 rounded-xl border border-borderLight bg-surfaceVariant py-2.5 font-bold text-textPrimary transition-colors hover:bg-borderLight">
-							<Edit3 className="w-4 h-4" /> Edit Profile
-						</Link>
-						<Link
-							href="/profile/my-reviews"
-							className="mt-2 flex w-full items-center justify-center gap-2 rounded-xl border border-primaryLight bg-primaryLight py-2.5 font-bold text-primary transition-colors hover:bg-primary hover:text-white">
-							<MessageSquare className="w-4 h-4" /> My Reviews
-						</Link>
-					</div>
-
-					<div className="relative overflow-hidden rounded-lg bg-gradient-to-br from-primaryDark to-primary p-4 text-center text-white shadow-sm sm:p-6">
-						<Shield className="absolute -right-4 -top-4 w-24 h-24 opacity-10" />
-						<div className="mb-2 text-xs font-bold uppercase tracking-wider opacity-90 sm:text-sm">
-							Trust Score
-						</div>
-						<div className="mb-1 text-4xl font-extrabold leading-none sm:text-5xl">
-							{trustScore}
-						</div>
-						<div className="mt-3 rounded-full bg-white/20 px-3 py-1 text-xs font-bold backdrop-blur-sm sm:text-sm">
-							{user?.status ?? "ACTIVE"}
-						</div>
-					</div>
+					<TrustSummaryCard />
 				</div>
 
-				<div className="space-y-6 lg:col-span-2">
-					<h2 className="text-lg font-bold text-textPrimary">Stats Summary</h2>
-					<div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-						<ProfileStat
-							icon={<Package className="w-6 h-6" />}
-							label="Items Listed"
-							value={safeItems.length}
-						/>
-						<ProfileStat
-							icon={<BookOpen className="w-6 h-6" />}
-							label="Total Rentals"
-							value={safeBookings.length}
-						/>
-						<ProfileStat
-							icon={<CheckCircle2 className="w-6 h-6" />}
-							label="Succ. Returns"
-							value={successfulReturns}
-						/>
-						<ProfileStat
-							icon={<Star className="w-6 h-6" />}
-							label="Avg Rating"
-							value={avgRating.toFixed(1)}
-						/>
-					</div>
-
-					<div className="space-y-4 rounded-lg border border-borderLight bg-surface p-4 sm:p-6">
-						<div className="mb-2 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-							<h2 className="text-lg font-bold text-textPrimary">
-								Reviews Received
+				<div className="space-y-6 lg:col-span-3">
+					<TiltCard
+						maxTilt={3}
+						glare={true}
+						className="rounded-2xl border border-borderLight bg-surface p-6 shadow-sm transition-all duration-300 hover:border-primary/40 hover:shadow-md"
+					>
+						<div className="mb-5 flex items-center justify-between">
+							<h2 className="flex items-center gap-2 text-base font-bold tracking-tight text-textPrimary">
+								<Package className="h-5 w-5 text-primary" />
+								<span>Marketplace Activity &amp; Statistics</span>
 							</h2>
-							<Link
-								href="/profile/my-reviews"
-								className="text-sm font-bold text-primary hover:underline">
-								View All
-							</Link>
 						</div>
 
-						<div className="divide-y divide-borderLight">
-							{safeReviews.length === 0 ? (
-								<div className="py-8 text-sm text-textSecondary">
-									No reviews received yet.
-								</div>
-							) : (
-								safeReviews.slice(0, 3).map((review) => (
-									<div key={review.reviewId} className="py-4">
-										<div className="mb-2 flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
-											<div className="break-words text-sm font-bold text-textPrimary">
-												{review.reviewer?.name ?? "Reviewer"}
-											</div>
-											<div className="flex items-center gap-2 text-sm font-bold text-warning sm:justify-end">
-												<span>{review.rating}/5</span>
-												{review.createdAt && (
-													<span className="text-xs font-medium text-textSecondary">
-														{formatShortDate(review.createdAt)}
-													</span>
-												)}
-											</div>
-										</div>
-										<p className="break-words text-sm text-textSecondary">
-											{review.comment || "No comment provided."}
-										</p>
-									</div>
-								))
-							)}
+						<div className="grid grid-cols-2 gap-4 md:grid-cols-3">
+							<ProfileStat
+								label="Items Listed"
+								value={safeItems.length}
+								icon={<Package className="h-4 w-4" />}
+							/>
+							<ProfileStat
+								label="Active Listings"
+								value={activeListings.length}
+								valueClass="text-primary"
+								icon={<BookOpen className="h-4 w-4" />}
+							/>
+							<ProfileStat
+								label="Completed Rentals"
+								value={successfulReturns}
+								icon={<CheckCircle2 className="h-4 w-4" />}
+							/>
+							<ProfileStat
+								label="Reviews Received"
+								value={safeReviews.length}
+								icon={<MessageSquare className="h-4 w-4" />}
+							/>
+							<ProfileStat
+								label="Average Rating"
+								value={safeReviews.length > 0 ? avgRating.toFixed(1) : "N/A"}
+								valueClass="text-amber-500"
+								icon={<Star className="h-4 w-4" />}
+							/>
+							<ProfileStat
+								label="Member Since"
+								value={
+									displayUser?.createdAt
+										? formatShortDate(displayUser.createdAt)
+										: "N/A"
+								}
+								valueSize="text-xl"
+								icon={<CalendarDays className="h-4 w-4" />}
+							/>
 						</div>
-					</div>
+					</TiltCard>
 				</div>
 			</div>
 		</div>
@@ -274,25 +219,40 @@ export default function ProfilePage() {
 }
 
 function ProfileStat({
-	icon,
 	label,
 	value,
+	icon,
+	valueClass = "text-textPrimary",
+	valueSize = "text-2xl",
 }: {
-	icon: React.ReactNode;
 	label: string;
 	value: number | string;
+	icon?: React.ReactNode;
+	valueClass?: string;
+	valueSize?: string;
 }) {
 	return (
-		<div className="flex items-center gap-4 rounded-lg border border-borderLight bg-surface p-4 sm:p-5">
-			<div className="w-12 h-12 bg-primaryLight text-primary rounded-xl flex items-center justify-center shrink-0">
-				{icon}
-			</div>
-			<div>
-				<div className="text-xl font-extrabold text-textPrimary sm:text-2xl">{value}</div>
-				<div className="text-xs font-bold text-textSecondary uppercase tracking-wider">
+		<TiltCard
+			maxTilt={5}
+			glare={true}
+			className="group rounded-2xl border border-borderLight bg-surfaceVariant p-5 transition-all duration-300 hover:border-primary/40 hover:shadow-md"
+		>
+			<div className="flex items-center justify-between">
+				<span className="block text-[10px] font-bold uppercase tracking-wider text-textSecondary">
 					{label}
-				</div>
+				</span>
+
+				{icon && (
+					<div className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary/10 text-primary">
+						{icon}
+					</div>
+				)}
 			</div>
-		</div>
+
+			<div
+				className={`mt-3 ${valueSize} font-extrabold tracking-tight ${valueClass}`}>
+				{value}
+			</div>
+		</TiltCard>
 	);
 }

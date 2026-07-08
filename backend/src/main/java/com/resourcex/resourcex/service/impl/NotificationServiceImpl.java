@@ -43,11 +43,7 @@ public class NotificationServiceImpl implements NotificationService {
         notificationValidator.validateCreateRequest(request);
 
         // Fetch user
-        User user = userRepository.findById(request.getUserId())
-                .orElseThrow(() -> {
-                    log.error("User not found: {}", request.getUserId());
-                    return new ResourceNotFoundException("User not found");
-                });
+        User user = requireUser(request.getUserId());
 
         // Fetch user if createdByUserId is provided
         User createdBy = null;
@@ -63,12 +59,10 @@ public class NotificationServiceImpl implements NotificationService {
         Notification notification = Notification.builder()
                 .user(user)
                 .notificationType(request.getNotificationType())
-                .title(request.getTitle())
                 .message(request.getMessage())
                 .relatedEntityType(request.getRelatedEntityType())
                 .relatedEntityId(request.getRelatedEntityId())
                 .isRead(false)
-                .createdBy(createdBy)
                 .build();
 
         Notification saved = notificationRepository.save(notification);
@@ -99,12 +93,7 @@ public class NotificationServiceImpl implements NotificationService {
     public List<NotificationResponse> getNotificationsByUserId(Long userId) {
         log.info("Fetching all notifications for user: {}", userId);
 
-        // Verify user exists
-        userRepository.findById(userId)
-                .orElseThrow(() -> {
-                    log.error("User not found: {}", userId);
-                    return new ResourceNotFoundException("User not found");
-                });
+        requireUser(userId);
 
         List<Notification> notifications = notificationRepository.findByUserUserIdOrderByCreatedAtDesc(userId);
         return notifications.stream()
@@ -115,8 +104,7 @@ public class NotificationServiceImpl implements NotificationService {
     @Override
     @Transactional(readOnly = true)
     public Page<NotificationResponse> getNotificationsByUserId(Long userId, Pageable pageable) {
-        userRepository.findById(userId)
-                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+        requireUser(userId);
 
         return notificationRepository
                 .findByUserUserIdOrderByCreatedAtDesc(userId, pageable)
@@ -128,12 +116,7 @@ public class NotificationServiceImpl implements NotificationService {
     public List<NotificationResponse> getUnreadNotificationsByUserId(Long userId) {
         log.info("Fetching unread notifications for user: {}", userId);
 
-        // Verify user exists
-        userRepository.findById(userId)
-                .orElseThrow(() -> {
-                    log.error("User not found: {}", userId);
-                    return new ResourceNotFoundException("User not found");
-                });
+        requireUser(userId);
 
         List<Notification> notifications = notificationRepository
                 .findByUserUserIdAndIsReadFalseOrderByCreatedAtDesc(userId);
@@ -147,12 +130,7 @@ public class NotificationServiceImpl implements NotificationService {
     public List<NotificationResponse> getReadNotificationsByUserId(Long userId) {
         log.info("Fetching read notifications for user: {}", userId);
 
-        // Verify user exists
-        userRepository.findById(userId)
-                .orElseThrow(() -> {
-                    log.error("User not found: {}", userId);
-                    return new ResourceNotFoundException("User not found");
-                });
+        requireUser(userId);
 
         List<Notification> notifications = notificationRepository
                 .findByUserUserIdAndIsReadTrueOrderByCreatedAtDesc(userId);
@@ -166,12 +144,7 @@ public class NotificationServiceImpl implements NotificationService {
     public List<NotificationResponse> getNotificationsByUserIdAndType(Long userId, Notification.NotificationType type) {
         log.info("Fetching notifications for user: {} with type: {}", userId, type);
 
-        // Verify user exists
-        userRepository.findById(userId)
-                .orElseThrow(() -> {
-                    log.error("User not found: {}", userId);
-                    return new ResourceNotFoundException("User not found");
-                });
+        requireUser(userId);
 
         List<Notification> notifications = notificationRepository
                 .findByUserUserIdAndNotificationTypeOrderByCreatedAtDesc(userId, type);
@@ -200,8 +173,7 @@ public class NotificationServiceImpl implements NotificationService {
         log.debug("Getting unread count for user: {}", userId);
 
         // Verify user exists
-        userRepository.findById(userId)
-                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+        requireUser(userId);
 
         return notificationRepository.countByUserUserIdAndIsReadFalse(userId);
     }
@@ -212,8 +184,7 @@ public class NotificationServiceImpl implements NotificationService {
         log.debug("Getting total count for user: {}", userId);
 
         // Verify user exists
-        userRepository.findById(userId)
-                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+        requireUser(userId);
 
         return notificationRepository.countByUserUserId(userId);
     }
@@ -243,12 +214,7 @@ public class NotificationServiceImpl implements NotificationService {
     public void markAllAsRead(Long userId) {
         log.info("Marking all notifications as read for user: {}", userId);
 
-        // Verify user exists
-        userRepository.findById(userId)
-                .orElseThrow(() -> {
-                    log.error("User not found: {}", userId);
-                    return new ResourceNotFoundException("User not found");
-                });
+        requireUser(userId);
 
         List<Notification> unreadNotifications = notificationRepository
                 .findByUserUserIdAndIsReadFalseOrderByCreatedAtDesc(userId);
@@ -302,12 +268,7 @@ public class NotificationServiceImpl implements NotificationService {
     public void deleteReadNotifications(Long userId) {
         log.info("Deleting all read notifications for user: {}", userId);
 
-        // Verify user exists
-        userRepository.findById(userId)
-                .orElseThrow(() -> {
-                    log.error("User not found: {}", userId);
-                    return new ResourceNotFoundException("User not found");
-                });
+        requireUser(userId);
 
         notificationRepository.deleteReadNotificationsByUserId(userId);
         log.info("Read notifications deleted for user: {}", userId);
@@ -315,161 +276,70 @@ public class NotificationServiceImpl implements NotificationService {
 
     @Override
     public NotificationResponse createBookingNotification(
-            Long userId,
-            Long bookingId,
-            String title,
-            String message,
-            Long createdByUserId) {
-        log.info("Creating booking notification for user: {}, booking: {}", userId, bookingId);
-
-        NotificationRequest request = NotificationRequest.builder()
-                .userId(userId)
-                .notificationType(Notification.NotificationType.BOOKING)
-                .title(title)
-                .message(message)
-                .relatedEntityType(Notification.RelatedEntityType.BOOKING)
-                .relatedEntityId(bookingId)
-                .createdByUserId(createdByUserId)
-                .build();
-
-        return createNotification(request);
-    }
-
-    @Override
-    public NotificationResponse createDisputeNotification(
-            Long userId,
-            Long disputeId,
-            String title,
-            String message,
-            Long createdByUserId) {
-        log.info("Creating dispute notification for user: {}, dispute: {}", userId, disputeId);
-
-        NotificationRequest request = NotificationRequest.builder()
-                .userId(userId)
-                .notificationType(Notification.NotificationType.DISPUTE)
-                .title(title)
-                .message(message)
-                .relatedEntityType(Notification.RelatedEntityType.DISPUTE)
-                .relatedEntityId(disputeId)
-                .createdByUserId(createdByUserId)
-                .build();
-
-        return createNotification(request);
-    }
-
-    @Override
-    public NotificationResponse createPenaltyNotification(
-            Long userId,
-            Long penaltyId,
-            String title,
-            String message,
-            Long createdByUserId) {
-        log.info("Creating penalty notification for user: {}, penalty: {}", userId, penaltyId);
-
-        NotificationRequest request = NotificationRequest.builder()
-                .userId(userId)
-                .notificationType(Notification.NotificationType.PENALTY)
-                .title(title)
-                .message(message)
-                .relatedEntityType(Notification.RelatedEntityType.PENALTY)
-                .relatedEntityId(penaltyId)
-                .createdByUserId(createdByUserId)
-                .build();
-
-        return createNotification(request);
+            Long userId, Long bookingId, String message, Long createdByUserId) {
+        return createTyped(userId, Notification.NotificationType.BOOKING,
+                Notification.RelatedEntityType.BOOKING, bookingId, message, createdByUserId);
     }
 
     @Override
     public NotificationResponse createTrustNotification(
-            Long userId,
-            Long trustEventId,
-            String title,
-            String message,
-            Long createdByUserId) {
-        log.info("Creating trust notification for user: {}, trust event: {}", userId, trustEventId);
-
-        NotificationRequest request = NotificationRequest.builder()
-                .userId(userId)
-                .notificationType(Notification.NotificationType.TRUST)
-                .title(title)
-                .message(message)
-                .relatedEntityType(Notification.RelatedEntityType.TRUST)
-                .relatedEntityId(trustEventId)
-                .createdByUserId(createdByUserId)
-                .build();
-
-        return createNotification(request);
+            Long userId, Long trustEventId, String message, Long createdByUserId) {
+        return createTyped(userId, Notification.NotificationType.TRUST,
+                Notification.RelatedEntityType.TRUST, trustEventId, message, createdByUserId);
     }
 
     @Override
     public NotificationResponse createMessageNotification(
-            Long userId,
-            Long conversationId,
-            String title,
-            String message,
-            Long createdByUserId) {
-        log.info("Creating message notification for user: {}, conversation: {}", userId, conversationId);
-
-        NotificationRequest request = NotificationRequest.builder()
-                .userId(userId)
-                .notificationType(Notification.NotificationType.MESSAGE)
-                .title(title)
-                .message(message)
-                .relatedEntityType(Notification.RelatedEntityType.MESSAGE)
-                .relatedEntityId(conversationId)
-                .createdByUserId(createdByUserId)
-                .build();
-
-        return createNotification(request);
+            Long userId, Long conversationId, String message, Long createdByUserId) {
+        return createTyped(userId, Notification.NotificationType.MESSAGE,
+                Notification.RelatedEntityType.MESSAGE, conversationId, message, createdByUserId);
     }
 
     @Override
     public NotificationResponse createReviewNotification(
-            Long userId,
-            Long reviewId,
-            String title,
-            String message,
-            Long createdByUserId) {
-        log.info("Creating review notification for user: {}, review: {}", userId, reviewId);
-
-        NotificationRequest request = NotificationRequest.builder()
-                .userId(userId)
-                .notificationType(Notification.NotificationType.REVIEW)
-                .title(title)
-                .message(message)
-                .relatedEntityType(Notification.RelatedEntityType.REVIEW)
-                .relatedEntityId(reviewId)
-                .createdByUserId(createdByUserId)
-                .build();
-
-        return createNotification(request);
+            Long userId, Long reviewId, String message, Long createdByUserId) {
+        return createTyped(userId, Notification.NotificationType.REVIEW,
+                Notification.RelatedEntityType.REVIEW, reviewId, message, createdByUserId);
     }
 
     @Override
     public NotificationResponse createAdminNotification(
+            Long userId, String message, Long createdByUserId) {
+        return createTyped(userId, Notification.NotificationType.ADMIN,
+                Notification.RelatedEntityType.ADMIN, null, message, createdByUserId);
+    }
+
+    /** Shared builder for the typed convenience factories above. */
+    private NotificationResponse createTyped(
             Long userId,
-            String title,
+            Notification.NotificationType type,
+            Notification.RelatedEntityType entityType,
+            Long entityId,
             String message,
             Long createdByUserId) {
-        log.info("Creating admin notification for user: {}", userId);
-
-        NotificationRequest request = NotificationRequest.builder()
+        return createNotification(NotificationRequest.builder()
                 .userId(userId)
-                .notificationType(Notification.NotificationType.ADMIN)
-                .title(title)
+                .notificationType(type)
                 .message(message)
-                .relatedEntityType(Notification.RelatedEntityType.ADMIN)
+                .relatedEntityType(entityType)
+                .relatedEntityId(entityId)
                 .createdByUserId(createdByUserId)
-                .build();
+                .build());
+    }
 
-        return createNotification(request);
+    /** Fetch a user or throw a 404 — the verify-user guard repeated across reads/mutations. */
+    private User requireUser(Long userId) {
+        return userRepository.findById(userId)
+                .orElseThrow(() -> {
+                    log.error("User not found: {}", userId);
+                    return new ResourceNotFoundException("User not found");
+                });
     }
 
     @Override
     public void broadcastNotification(
             List<Long> userIds,
             Notification.NotificationType type,
-            String title,
             String message,
             Notification.RelatedEntityType entityType,
             Long entityId,
@@ -500,12 +370,10 @@ public class NotificationServiceImpl implements NotificationService {
                     return Notification.builder()
                             .user(user)
                             .notificationType(type)
-                            .title(title)
                             .message(message)
                             .relatedEntityType(entityType)
                             .relatedEntityId(entityId)
                             .isRead(false)
-                            .createdBy(createdBy)
                             .createdAt(now)
                             .build();
                 })

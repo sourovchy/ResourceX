@@ -13,7 +13,7 @@ export function Skeleton({ className = "" }: { className?: string }) {
 /** A KPI / stat card placeholder. */
 export function StatCardSkeleton() {
 	return (
-		<div className="rounded-xl border border-borderLight bg-surface p-4 shadow-sm">
+		<div className="rounded-2xl border border-border bg-card p-4 shadow-sm">
 			<Skeleton className="h-3 w-20" />
 			<Skeleton className="mt-3 h-7 w-24" />
 		</div>
@@ -23,7 +23,7 @@ export function StatCardSkeleton() {
 /** A grid of generic content cards. */
 export function CardGridSkeleton({
 	count = 6,
-	className = "grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3",
+	className = "grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 xl:gap-5",
 }: {
 	count?: number;
 	className?: string;
@@ -33,7 +33,7 @@ export function CardGridSkeleton({
 			{Array.from({ length: count }).map((_, i) => (
 				<div
 					key={i}
-					className="overflow-hidden rounded-2xl border border-borderLight bg-surface shadow-sm">
+					className="overflow-hidden rounded-2xl border border-border bg-card shadow-sm">
 					<Skeleton className="h-40 w-full rounded-none" />
 					<div className="space-y-2.5 p-4">
 						<Skeleton className="h-3 w-16" />
@@ -66,7 +66,7 @@ export function ListRowSkeleton({ count = 6 }: { count?: number }) {
 /** Table placeholder: header + rows. */
 export function TableSkeleton({ rows = 6, cols = 4 }: { rows?: number; cols?: number }) {
 	return (
-		<div className="overflow-hidden rounded-2xl border border-borderLight bg-surface shadow-sm">
+		<div className="overflow-hidden rounded-2xl border border-border bg-card shadow-sm">
 			<div className="flex gap-4 border-b border-borderLight bg-surfaceVariant/40 px-5 py-3">
 				{Array.from({ length: cols }).map((_, i) => (
 					<Skeleton key={i} className="h-3 flex-1" />
@@ -88,7 +88,7 @@ export function TableSkeleton({ rows = 6, cols = 4 }: { rows?: number; cols?: nu
 /** Profile header placeholder. */
 export function ProfileSkeleton() {
 	return (
-		<div className="rounded-2xl border border-borderLight bg-surface p-5 shadow-sm sm:p-6">
+		<div className="rounded-2xl border border-border bg-card p-5 shadow-sm sm:p-6">
 			<div className="flex items-center gap-4">
 				<Skeleton className="h-16 w-16 shrink-0 rounded-full" />
 				<div className="flex-1 space-y-2.5">

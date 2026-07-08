@@ -1,9 +1,9 @@
 package com.resourcex.resourcex.security;
 
-import com.resourcex.resourcex.entity.SuspensionType;
+import com.resourcex.resourcex.entity.StudentRestriction;
 import com.resourcex.resourcex.entity.User;
 import com.resourcex.resourcex.entity.UserStatus;
-import com.resourcex.resourcex.repository.UserRoleRepository;
+import com.resourcex.resourcex.repository.StudentRestrictionRepository;
 import com.resourcex.resourcex.repository.UserRepository;
 import com.resourcex.resourcex.util.constants.RoleConstants;
 
@@ -24,7 +24,7 @@ import java.util.List;
 public class CustomUserDetailsServiceImpl implements UserDetailsService {
 
     private final UserRepository userRepository;
-    private final UserRoleRepository userRoleRepository;
+    private final StudentRestrictionRepository studentRestrictionRepository;
 
     @Override
     public UserDetails loadUserByUsername(String email) throws UsernameNotFoundException {
@@ -41,22 +41,12 @@ public class CustomUserDetailsServiceImpl implements UserDetailsService {
                     return new UsernameNotFoundException("User not found");
                 });
 
-        List<SimpleGrantedAuthority> authorities = userRoleRepository.findAllByUser(user).stream()
-                .map(userRole -> userRole.getRole())
-                .filter(role -> role != null && role.getName() != null && !role.getName().isBlank())
-                .map(role -> {
-                    String roleName = role.getName();
-                    log.debug("Loading role: {} for user: {}", roleName, normalizedEmail);
-                    return new SimpleGrantedAuthority(roleName);
-                })
-                .toList();
-
-        if (authorities.isEmpty()) {
-            log.debug("No roles found for user: {}. Assigning default ROLE_USER", normalizedEmail);
-            authorities = List.of(new SimpleGrantedAuthority(RoleConstants.ROLE_USER));
-        } else {
-            log.debug("Loaded {} authorities for user {}: {}", authorities.size(), normalizedEmail, authorities);
-        }
+        // Each user has exactly one role.
+        String roleName = (user.getRole() != null && user.getRole().getName() != null
+                && !user.getRole().getName().isBlank())
+                ? user.getRole().getName()
+                : RoleConstants.ROLE_USER;
+        List<SimpleGrantedAuthority> authorities = List.of(new SimpleGrantedAuthority(roleName));
 
         // Account is "enabled" only when ACTIVE, or when a timed suspension has naturally expired.
         boolean enabled = isAccountEnabled(user);
@@ -73,29 +63,33 @@ public class CustomUserDetailsServiceImpl implements UserDetailsService {
                 true,     // isAccountNonLocked
                 authorities);
 
-        log.debug("Successfully loaded user details for: {} with {} authorities, enabled={}",
-                normalizedEmail, authorities.size(), enabled);
+        log.debug("Successfully loaded user details for: {} with role {}, enabled={}",
+                normalizedEmail, roleName, enabled);
         return userDetails;
     }
 
     /**
-     * An account is enabled when:
+     * Account is enabled when:
      * <ul>
      *   <li>Status is ACTIVE, OR</li>
      *   <li>Status is SUSPENDED but the timed suspension window has already expired.</li>
      * </ul>
+     * Suspension details live on the student's {@link StudentRestriction} record.
      */
     private boolean isAccountEnabled(User user) {
-        if (user.getStatus() == UserStatus.ACTIVE) {
-            return true;
+        if (user.getStatus() != UserStatus.ACTIVE) {
+            return false;
         }
-        if (user.getStatus() == UserStatus.SUSPENDED) {
-            if (user.getSuspensionType() == SuspensionType.PERMANENT) {
+        StudentRestriction restriction = studentRestrictionRepository
+                .findByStudentUserId(user.getUserId())
+                .orElse(null);
+        if (restriction != null && restriction.getSuspendedAt() != null) {
+            LocalDateTime until = restriction.getSuspendedUntil();
+            if (until == null) {
                 return false;
             }
-            LocalDateTime until = user.getSuspendedUntil();
-            return until != null && LocalDateTime.now().isAfter(until);
+            return LocalDateTime.now().isAfter(until);
         }
-        return false; // BANNED or unknown
+        return true;
     }
 }

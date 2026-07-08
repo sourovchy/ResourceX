@@ -2,6 +2,7 @@
 
 import React, { useState } from "react";
 import Image, { ImageProps } from "next/image";
+import { getFileUrl } from "@/lib/api";
 
 const PLACEHOLDER = "/img-placeholder.svg";
 
@@ -20,7 +21,7 @@ export default function SafeImage({
 	alt,
 	...props
 }: SafeImageProps) {
-	const resolved = src || fallbackSrc;
+	const resolved = (typeof src === "string" && src.trim() !== "") ? getFileUrl(src) : (src || fallbackSrc);
 	const [imgSrc, setImgSrc] = useState<ImageProps["src"]>(resolved);
 
 	return (

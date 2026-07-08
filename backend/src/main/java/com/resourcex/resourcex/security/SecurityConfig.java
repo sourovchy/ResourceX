@@ -77,9 +77,11 @@ public class SecurityConfig {
                                                 .requestMatchers("/api/superadmin/**")
                                                 .hasRole("SUPER_ADMIN")
 
-                                                // Admin endpoints
+                                                // Admin endpoints — moderators included here so the
+                                                // per-method @PreAuthorize rules decide (reports/moderation
+                                                // allow MODERATOR; stricter endpoints exclude it)
                                                 .requestMatchers("/api/admin/**")
-                                                .hasAnyRole("SUPER_ADMIN", "ADMIN")
+                                                .hasAnyRole("SUPER_ADMIN", "ADMIN", "MODERATOR")
 
                                                 // Analytics endpoints
                                                 .requestMatchers("/api/analytics/**")
@@ -102,14 +104,6 @@ public class SecurityConfig {
 
                                                 // Review endpoints
                                                 .requestMatchers("/api/reviews/**")
-                                                .hasAnyRole("USER", "ADMIN", "SUPER_ADMIN", "MODERATOR")
-
-                                                // Payment endpoints
-                                                .requestMatchers("/api/payments/**")
-                                                .hasAnyRole("USER", "ADMIN", "SUPER_ADMIN", "MODERATOR")
-
-                                                // Dispute endpoints
-                                                .requestMatchers("/api/disputes/**")
                                                 .hasAnyRole("USER", "ADMIN", "SUPER_ADMIN", "MODERATOR")
 
                                                 // Everything else

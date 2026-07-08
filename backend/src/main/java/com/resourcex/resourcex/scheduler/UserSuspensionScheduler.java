@@ -1,8 +1,10 @@
 package com.resourcex.resourcex.scheduler;
 
 import com.resourcex.resourcex.entity.AuditLog;
+import com.resourcex.resourcex.entity.StudentRestriction;
 import com.resourcex.resourcex.entity.User;
 import com.resourcex.resourcex.entity.UserStatus;
+import com.resourcex.resourcex.repository.StudentRestrictionRepository;
 import com.resourcex.resourcex.repository.UserRepository;
 import com.resourcex.resourcex.service.AuditLogService;
 import lombok.RequiredArgsConstructor;
@@ -29,6 +31,7 @@ import java.util.List;
 public class UserSuspensionScheduler {
 
     private final UserRepository userRepository;
+    private final StudentRestrictionRepository restrictionRepository;
     private final AuditLogService auditLogService;
 
     // ── 1. Lift expired timed suspensions ───────────────────────────────────
@@ -37,7 +40,7 @@ public class UserSuspensionScheduler {
     @Transactional
     public void liftExpiredSuspensions() {
         LocalDateTime now = LocalDateTime.now();
-        List<User> expired = userRepository.findExpiredTemporarySuspensions(now);
+        List<StudentRestriction> expired = restrictionRepository.findExpiredTimedSuspensions(now);
 
         if (expired.isEmpty()) {
             log.debug("[Scheduler] No expired suspensions to lift.");
@@ -46,17 +49,18 @@ public class UserSuspensionScheduler {
 
         log.info("[Scheduler] Lifting {} expired suspension(s).", expired.size());
 
-        for (User user : expired) {
+        for (StudentRestriction restriction : expired) {
+            User user = userRepository.findById(restriction.getStudentUserId()).orElse(null);
+            if (user == null) {
+                continue;
+            }
             String email = user.getEmail();
             try {
                 user.setStatus(UserStatus.ACTIVE);
-                user.setSuspensionType(null);
-                user.setSuspensionReason(null);
-                user.setSuspendedAt(null);
-                user.setSuspendedUntil(null);
-                user.setSuspendedByUserId(null);
-                user.setScheduledDeletionAt(null);
                 userRepository.save(user);
+
+                restriction.clearSuspension();
+                restrictionRepository.save(restriction);
 
                 auditLogService.logAction(
                         AuditLog.ActorType.SYSTEM,
@@ -80,7 +84,7 @@ public class UserSuspensionScheduler {
     @Transactional
     public void deletePermanentlySuspendedAccounts() {
         LocalDateTime now = LocalDateTime.now();
-        List<User> toDelete = userRepository.findUsersScheduledForDeletion(now);
+        List<StudentRestriction> toDelete = restrictionRepository.findScheduledForDeletion(now);
 
         if (toDelete.isEmpty()) {
             log.debug("[Scheduler] No permanently suspended accounts due for deletion.");
@@ -89,7 +93,11 @@ public class UserSuspensionScheduler {
 
         log.info("[Scheduler] Deleting {} permanently suspended account(s).", toDelete.size());
 
-        for (User user : toDelete) {
+        for (StudentRestriction restriction : toDelete) {
+            User user = userRepository.findById(restriction.getStudentUserId()).orElse(null);
+            if (user == null) {
+                continue;
+            }
             Long userId = user.getUserId();
             String email = user.getEmail();
             try {

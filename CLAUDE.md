@@ -30,7 +30,7 @@ cp .env.example .env
 cd backend
 mvn spring-boot:run
 # API is available at http://localhost:8082
-# Swagger UI at http://localhost:8082/swagger-ui/index.html
+# (No Swagger/OpenAPI UI — springdoc is not a dependency; explore endpoints via the controller classes)
 ```
 
 ### Frontend

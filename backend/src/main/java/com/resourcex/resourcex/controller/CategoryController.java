@@ -1,11 +1,13 @@
 package com.resourcex.resourcex.controller;
 
+import com.resourcex.resourcex.dto.request.CategoryRequest;
 import com.resourcex.resourcex.dto.response.CategoryResponse;
 import com.resourcex.resourcex.entity.Category;
 import com.resourcex.resourcex.exception.BadRequestException;
 import com.resourcex.resourcex.exception.ResourceNotFoundException;
 import com.resourcex.resourcex.repository.CategoryRepository;
 import com.resourcex.resourcex.repository.ItemRepository;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -62,11 +64,7 @@ public class CategoryController {
 
     @PostMapping("")
     @PreAuthorize("hasAnyRole('ADMIN','MODERATOR','SUPER_ADMIN')")
-    public ResponseEntity<CategoryResponse> createCategory(@RequestBody Category req) {
-        if (req.getName() == null || req.getName().isBlank()) {
-            throw new BadRequestException("Category name is required");
-        }
-
+    public ResponseEntity<CategoryResponse> createCategory(@Valid @RequestBody CategoryRequest req) {
         categoryRepository.findByNameIgnoreCase(req.getName().trim()).ifPresent(c -> {
             throw new BadRequestException("Category already exists");
         });
@@ -80,7 +78,7 @@ public class CategoryController {
 
     @PutMapping("/{id}")
     @PreAuthorize("hasAnyRole('ADMIN','MODERATOR','SUPER_ADMIN')")
-    public ResponseEntity<CategoryResponse> updateCategory(@PathVariable Long id, @RequestBody Category req) {
+    public ResponseEntity<CategoryResponse> updateCategory(@PathVariable Long id, @Valid @RequestBody CategoryRequest req) {
         Category cat = categoryRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Category not found"));
 

@@ -3,22 +3,31 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import StatCard from "@/components/cards/StatCard";
-import ActionCard from "@/components/cards/ActionCard";
+import { TiltCard } from "@/components/ui/TiltCard";
+import { StatusBadge } from "@/components/ui/StatusBadge";
+import { Reveal } from "@/components/ui/Reveal";
 import api from "@/lib/api";
 import { useAuth } from "@/context/AuthContext";
 import { useAutoRefresh } from "@/hooks/useAutoRefresh";
 import { ListRowSkeleton } from "@/components/ui/Skeleton";
+import { trustLevelFor, TRUST_LEVEL_LABEL } from "@/types/trust";
+import {
+  formatDateRange,
+  formatRelativeTime,
+  formatShortDate,
+} from "@/lib/dateUtils";
 import {
   ShieldCheck,
-  PackageSearch,
   PlusCircle,
-  KeyRound,
   PackageOpen,
-  Bell,
-  Wallet,
+  Inbox,
   Star,
-  HistoryIcon,
   AlertCircle,
+  AlertTriangle,
+  Clock,
+  KeyRound,
+  CheckCircle2,
+  ChevronRight,
   TrendingUp,
 } from "lucide-react";
 
@@ -28,61 +37,41 @@ type Item = {
   dailyRate: number;
   status: string;
 };
-type Booking = { bookingId: number; status: string; item?: Item };
-
-/* ── Status badge colours */
-const STATUS_STYLE: Record<string, string> = {
-  ACTIVE: "bg-successLight text-successDark",
-  APPROVED: "bg-successLight text-successDark",
-  PENDING: "bg-warningLight text-warningDark",
-  REJECTED: "bg-errorLight   text-errorDark",
-  RETURNED: "bg-surfaceVariant text-textSecondary",
+type Booking = {
+  bookingId: number;
+  status: string;
+  startDate?: string;
+  endDate?: string;
+  item?: Item;
+  renter?: { userId: number; name?: string };
 };
-
-function StatusBadge({ status }: { status: string }) {
-  const cls = STATUS_STYLE[status] ?? "bg-surfaceVariant text-textSecondary";
-  return (
-    <span
-      className={`inline-flex items-center rounded-md px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wide ${cls}`}
-    >
-      {status}
-    </span>
-  );
-}
 
 /* ── Main component  */
 export default function StudentDashboard() {
   const { user } = useAuth();
   const [items, setItems] = useState<Item[]>([]);
   const [bookings, setBookings] = useState<Booking[]>([]);
+  const [ownerRequests, setOwnerRequests] = useState<Booking[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
   const loadDashboard = useCallback(async (silent = false) => {
     try {
       if (!silent) setLoading(true);
-      const [itemsRes, bookingsRes] = await Promise.all([
-        api.get<Item[]>("/items/me").catch(() => ({ data: [] as Item[] })),
-        api.get<Booking[]>("/bookings/me").catch(() => ({ data: [] as Booking[] })),
-      ]);
+      const [itemsRes, bookingsRes, requestsRes] =
+        await Promise.all([
+          api.get<Item[]>("/items/me").catch(() => ({ data: [] as Item[] })),
+          api
+            .get<Booking[]>("/bookings/me")
+            .catch(() => ({ data: [] as Booking[] })),
+          api
+            .get<Booking[]>("/bookings/owner")
+            .catch(() => ({ data: [] as Booking[] })),
+        ]);
 
-      const rawItems = itemsRes.data as unknown;
-      setItems(
-        Array.isArray(rawItems)
-          ? (rawItems as Item[])
-          : Array.isArray((rawItems as any)?.content)
-            ? (rawItems as any).content
-            : [],
-      );
-
-      const rawBookings = bookingsRes.data as unknown;
-      setBookings(
-        Array.isArray(rawBookings)
-          ? (rawBookings as Booking[])
-          : Array.isArray((rawBookings as any)?.content)
-            ? (rawBookings as any).content
-            : [],
-      );
+      setItems(toArray<Item>(itemsRes.data));
+      setBookings(toArray<Booking>(bookingsRes.data));
+      setOwnerRequests(toArray<Booking>(requestsRes.data));
     } catch {
       setError("Could not load your dashboard data.");
     } finally {
@@ -102,17 +91,19 @@ export default function StudentDashboard() {
       bookings.filter((b) => ["APPROVED", "ACTIVE"].includes(b.status)).length,
     [bookings],
   );
-  const pendingRequests = useMemo(
-    () => bookings.filter((b) => b.status === "PENDING").length,
-    [bookings],
+  const incomingRequests = useMemo(
+    () => ownerRequests.filter((b) => b.status === "PENDING"),
+    [ownerRequests],
   );
 
-  /* ── Loading ─────── */
-  // Removed full page loader in favor of skeleton state
+  const attention = useMemo(
+    () => buildAttentionItems(bookings, incomingRequests),
+    [bookings, incomingRequests],
+  );
 
   /* ── Dashboard ───── */
   return (
-    <div className="space-y-6 pb-20 sm:pb-0">
+    <div className="space-y-6 pb-20 sm:pb-0 graph-grid">
       {/* Error banner */}
       {error && (
         <div className="flex items-center gap-3 rounded-xl border border-error/40 bg-errorLight px-4 py-3 text-sm font-medium text-error animate-slide-down">
@@ -122,16 +113,18 @@ export default function StudentDashboard() {
       )}
 
       {/* ── Welcome strip ─────────────────────────────────── */}
-      <div className="flex flex-col gap-4 rounded-xl border border-borderLight bg-surface p-5 shadow-sm sm:flex-row sm:items-center sm:justify-between sm:p-6">
+      <div className="glass-surface flex flex-col gap-4 rounded-xl p-5 shadow-sm sm:flex-row sm:items-center sm:justify-between sm:p-6">
         <div className="min-w-0">
-          <p className="text-xs font-semibold uppercase tracking-widest text-textTertiary">
-            Student Dashboard
-          </p>
           <h1 className="mt-1 truncate text-xl font-bold tracking-tight text-textPrimary sm:text-2xl">
-            Welcome back, {user?.name ?? "student"}.
+            Welcome back,{" "}
+            <span className="text-gradient-brand italic">
+              {user?.name ?? "student"}.
+            </span>
           </h1>
           <p className="mt-1 text-sm text-textSecondary">
-            Your dashboard is synced with your ResourceX account.
+            {attention.length > 0
+              ? `${attention.length} thing${attention.length === 1 ? "" : "s"} need${attention.length === 1 ? "s" : ""} your attention today.`
+              : "You're all caught up."}
           </p>
         </div>
 
@@ -151,84 +144,93 @@ export default function StudentDashboard() {
       </div>
 
       {/* ── Stat cards ────────────────────────────────────── */}
-      <div className="grid grid-cols-2 gap-4 xl:grid-cols-4 stagger-children">
+      <div className="grid grid-cols-2 gap-4 lg:grid-cols-4 stagger-children">
         <StatCard
           loading={loading}
-          icon={<PackageOpen className="h-5 w-5 text-dashboardBlue" />}
+          href="/bookings"
+          icon={<PackageOpen className="h-5 w-5 text-primary" />}
           title="Active Rentals"
           value={String(activeRentals)}
-          tint="bg-dashboardBlueTint"
+          tint="bg-primaryLight"
         />
         <StatCard
           loading={loading}
-          icon={<PlusCircle className="h-5 w-5 text-dashboardPurple" />}
+          href="/my-posts"
+          icon={<PlusCircle className="h-5 w-5 text-primary" />}
           title="Items Listed"
           value={String(items.length)}
-          tint="bg-dashboardPurpleTint"
+          tint="bg-primaryLight"
         />
         <StatCard
           loading={loading}
-          icon={<Bell className="h-5 w-5 text-dashboardYellow" />}
-          title="Pending Requests"
-          value={String(pendingRequests)}
-          tint="bg-dashboardYellowTint"
+          href="/my-posts/requests"
+          icon={<Inbox className="h-5 w-5 text-primary" />}
+          title="Requests to Approve"
+          value={String(incomingRequests.length)}
+          tint="bg-primaryLight"
         />
         <StatCard
           loading={loading}
-          icon={<Star className="h-5 w-5 text-dashboardGreen" />}
+          href="/profile"
+          icon={<Star className="h-5 w-5 text-primary" />}
           title="Trust Score"
-          value={String(user?.studentProfile?.trustScore ?? 0)}
-          tint="bg-dashboardGreenTint"
+          value={
+            <span className="inline-flex items-baseline gap-1">
+              {user?.studentProfile?.trustScore ?? 0}
+              <span className="text-sm font-medium text-textTertiary sm:text-base">
+                / 200
+              </span>
+            </span>
+          }
+          subtitle={
+            TRUST_LEVEL_LABEL[
+              trustLevelFor(user?.studentProfile?.trustScore ?? 0)
+            ]
+          }
+          tint="bg-primaryLight"
         />
       </div>
 
-      {/* ── Quick actions */}
-      <div>
-        <h2 className="mb-3 text-sm font-semibold uppercase tracking-widest text-textTertiary">
-          Quick actions
-        </h2>
-        <div className="grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-3 xl:grid-cols-5 stagger-children">
-          <ActionCard
-            href="/borrow"
-            icon={<PackageSearch className="h-6 w-6 text-primary" />}
-            bgIcon="bg-primaryLight"
-            title="Browse Items"
-            description="Find items to rent"
-          />
-          <ActionCard
-            href="/my-posts/add"
-            icon={<PlusCircle className="h-6 w-6 text-accent" />}
-            bgIcon="bg-accentLight"
-            title="List an Item"
-            description="Rent out your gear"
-          />
-          <ActionCard
-            href="/my-posts/active-rentals"
-            icon={<KeyRound className="h-6 w-6 text-dashboardBlue" />}
-            bgIcon="bg-dashboardBlueTint"
-            title="Active Rentals"
-            description="Manage your currently rented items"
-          />
-
-          <ActionCard
-            href="/my-posts/earnings"
-            icon={<Wallet className="h-6 w-6 text-dashboardYellow" />}
-            bgIcon="bg-dashboardYellowTint"
-            title="My Earnings"
-            description="Track your rental income and payouts"
-          />
-          <ActionCard
-            href="/history"
-            icon={<HistoryIcon className="h-6 w-6 text-dashboardPurple" />}
-            bgIcon="bg-dashboardPurpleTint"
-            title="History"
-            description="Past transactions"
-          />
-        </div>
-      </div>
+      {/* ── Attention queue ───────────────── */}
+      <Reveal className="w-full">
+        <Panel
+          title="Needs your attention"
+          action={
+            incomingRequests.length > 0 ? (
+              <Link
+                href="/my-posts/requests"
+                className="text-xs font-semibold text-primary hover:underline"
+              >
+                Review requests
+              </Link>
+            ) : null
+          }
+          isEmpty={!loading && attention.length === 0}
+          emptyState={
+            <div className="flex flex-col items-center justify-center gap-2 px-5 py-10 text-center">
+              <CheckCircle2 className="h-8 w-8 text-success/60" />
+              <p className="text-sm font-semibold text-textPrimary">
+                All caught up
+              </p>
+              <p className="text-xs text-textSecondary">
+                Requests, due dates and pickups will appear here when they need
+                action.
+              </p>
+            </div>
+          }
+        >
+          {loading ? (
+            <ListRowSkeleton count={3} />
+          ) : (
+            attention
+              .slice(0, 6)
+              .map((entry) => <AttentionRow key={entry.key} entry={entry} />)
+          )}
+        </Panel>
+      </Reveal>
 
       {/* ── Listings + Bookings panels ────────────────────── */}
-      <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
+      <Reveal delay={90} className="grid grid-cols-1 gap-5 md:grid-cols-2">
         {/* Your Listings */}
         <Panel
           title="Your Listings"
@@ -240,8 +242,10 @@ export default function StudentDashboard() {
               + New listing
             </Link>
           }
-          empty="No listings yet. Create your first listing."
           isEmpty={!loading && items.length === 0}
+          emptyState={
+            <PanelEmpty text="No listings yet. Create your first listing." />
+          }
         >
           {loading ? (
             <ListRowSkeleton count={3} />
@@ -271,8 +275,10 @@ export default function StudentDashboard() {
               Browse items
             </Link>
           }
-          empty="No bookings yet. Browse items to get started."
           isEmpty={!loading && bookings.length === 0}
+          emptyState={
+            <PanelEmpty text="No bookings yet. Browse items to get started." />
+          }
         >
           {loading ? (
             <ListRowSkeleton count={3} />
@@ -290,8 +296,132 @@ export default function StudentDashboard() {
             </>
           )}
         </Panel>
-      </div>
+      </Reveal>
     </div>
+  );
+}
+
+/* ── Attention queue derivation ───────────────────────────── */
+
+type AttentionEntry = {
+  key: string;
+  tone: "error" | "warning" | "info" | "primary";
+  icon: React.ReactNode;
+  title: string;
+  detail: string;
+  href: string;
+};
+
+function buildAttentionItems(
+  bookings: Booking[],
+  incomingRequests: Booking[],
+): AttentionEntry[] {
+  const entries: AttentionEntry[] = [];
+  const today = startOfToday();
+  const soonCutoff = new Date(today);
+  soonCutoff.setDate(soonCutoff.getDate() + 3);
+
+  // Overdue returns (I am the renter and the end date has passed)
+  bookings
+    .filter(
+      (b) => b.status === "ACTIVE" && b.endDate && new Date(b.endDate) < today,
+    )
+    .forEach((b) =>
+      entries.push({
+        key: `overdue-${b.bookingId}`,
+        tone: "error",
+        icon: <AlertTriangle className="h-4 w-4" />,
+        title: `Overdue: ${b.item?.title ?? `booking #${b.bookingId}`}`,
+        detail: `Was due ${formatShortDate(b.endDate)} — return it as soon as possible.`,
+        href: "/bookings",
+      }),
+    );
+
+  // Incoming requests awaiting my approval
+  incomingRequests.forEach((b) =>
+    entries.push({
+      key: `request-${b.bookingId}`,
+      tone: "primary",
+      icon: <Inbox className="h-4 w-4" />,
+      title: `${b.renter?.name ?? "A student"} wants "${b.item?.title ?? "your item"}"`,
+      detail: b.startDate
+        ? formatDateRange(b.startDate, b.endDate)
+        : "Awaiting your approval",
+      href: "/my-posts/requests",
+    }),
+  );
+
+  // Due soon (within 3 days)
+  bookings
+    .filter(
+      (b) =>
+        b.status === "ACTIVE" &&
+        b.endDate &&
+        new Date(b.endDate) >= today &&
+        new Date(b.endDate) <= soonCutoff,
+    )
+    .forEach((b) =>
+      entries.push({
+        key: `due-${b.bookingId}`,
+        tone: "warning",
+        icon: <Clock className="h-4 w-4" />,
+        title: `Due soon: ${b.item?.title ?? `booking #${b.bookingId}`}`,
+        detail: formatDateRange(b.startDate, b.endDate),
+        href: "/bookings",
+      }),
+    );
+
+  // Approved bookings waiting for pickup (I am the renter)
+  bookings
+    .filter((b) => b.status === "APPROVED")
+    .forEach((b) =>
+      entries.push({
+        key: `pickup-${b.bookingId}`,
+        tone: "info",
+        icon: <KeyRound className="h-4 w-4" />,
+        title: `Pickup approved: ${b.item?.title ?? `booking #${b.bookingId}`}`,
+        detail: "Coordinate pickup with the owner.",
+        href: "/bookings",
+      }),
+    );
+
+  return entries;
+}
+
+function startOfToday(): Date {
+  const d = new Date();
+  d.setHours(0, 0, 0, 0);
+  return d;
+}
+
+const TONE_STYLES: Record<AttentionEntry["tone"], string> = {
+  error: "bg-errorLight text-error",
+  warning: "bg-warningLight text-warningDark",
+  info: "bg-infoLight text-infoDark",
+  primary: "bg-primaryLight text-primary",
+};
+
+function AttentionRow({ entry }: { entry: AttentionEntry }) {
+  return (
+    <Link
+      href={entry.href}
+      className="flex items-center gap-3 px-5 py-3.5 transition-colors hover:bg-surfaceVariant/60"
+    >
+      <span
+        className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ${TONE_STYLES[entry.tone]}`}
+      >
+        {entry.icon}
+      </span>
+      <span className="min-w-0 flex-1">
+        <span className="block truncate text-sm font-semibold text-textPrimary">
+          {entry.title}
+        </span>
+        <span className="block truncate text-xs text-textTertiary">
+          {entry.detail}
+        </span>
+      </span>
+      <ChevronRight className="h-4 w-4 shrink-0 text-textTertiary" />
+    </Link>
   );
 }
 
@@ -299,18 +429,24 @@ export default function StudentDashboard() {
 function Panel({
   title,
   action,
-  empty,
   isEmpty,
+  emptyState,
+  className = "",
   children,
 }: {
   title: string;
-  action: React.ReactNode;
-  empty: string;
+  action?: React.ReactNode;
   isEmpty: boolean;
+  emptyState: React.ReactNode;
+  className?: string;
   children: React.ReactNode;
 }) {
   return (
-    <section className="overflow-hidden rounded-xl border border-borderLight bg-surface shadow-sm">
+    <TiltCard
+      maxTilt={3}
+      glare={true}
+      className={`overflow-hidden rounded-xl border border-borderLight bg-surface shadow-sm ${className}`}
+    >
       {/* Header */}
       <div className="flex items-center justify-between border-b border-borderLight px-5 py-4">
         <h2 className="text-sm font-bold text-textPrimary">{title}</h2>
@@ -319,14 +455,20 @@ function Panel({
 
       {/* Body */}
       {isEmpty ? (
-        <div className="flex flex-col items-center justify-center gap-2 px-5 py-10 text-center">
-          <TrendingUp className="h-8 w-8 text-borderLight" />
-          <p className="text-sm text-textSecondary">{empty}</p>
-        </div>
+        emptyState
       ) : (
         <div className="divide-y divide-borderLight">{children}</div>
       )}
-    </section>
+    </TiltCard>
+  );
+}
+
+function PanelEmpty({ text }: { text: string }) {
+  return (
+    <div className="flex flex-col items-center justify-center gap-2 px-5 py-10 text-center">
+      <TrendingUp className="h-8 w-8 text-borderLight" />
+      <p className="text-sm text-textSecondary">{text}</p>
+    </div>
   );
 }
 
@@ -349,9 +491,16 @@ function ListingRow({ item }: { item: Item }) {
 function BookingRow({ booking }: { booking: Booking }) {
   return (
     <div className="flex items-center justify-between gap-4 px-5 py-3.5 transition-colors hover:bg-surfaceVariant/60">
-      <p className="min-w-0 truncate text-sm font-semibold text-textPrimary">
-        {booking.item?.title ?? `Booking #${booking.bookingId}`}
-      </p>
+      <div className="min-w-0">
+        <p className="truncate text-sm font-semibold text-textPrimary">
+          {booking.item?.title ?? `Booking #${booking.bookingId}`}
+        </p>
+        {booking.startDate && (
+          <p className="text-xs text-textTertiary">
+            {formatDateRange(booking.startDate, booking.endDate)}
+          </p>
+        )}
+      </div>
       <StatusBadge status={booking.status} />
     </div>
   );
@@ -367,4 +516,11 @@ function ViewAll({ href, label }: { href: string; label: string }) {
       {label} →
     </Link>
   );
+}
+
+/* ── Helpers ───────────── */
+function toArray<T>(raw: unknown): T[] {
+  if (Array.isArray(raw)) return raw as T[];
+  if (Array.isArray((raw as any)?.content)) return (raw as any).content as T[];
+  return [];
 }

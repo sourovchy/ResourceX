@@ -10,14 +10,12 @@ const PROTECTED_PATHS = [
 	"/users",
 	"/categories",
 	"/penalties",
-	"/trust-scores",
 	"/staff-management",
 	"/notifications",
 	"/profile",
 	"/borrow",
 	"/my-posts",
 	"/inbox",
-	"/history",
 ];
 
 export function middleware(request: NextRequest) {
@@ -45,13 +43,11 @@ export const config = {
 		"/users/:path*",
 		"/categories/:path*",
 		"/penalties/:path*",
-		"/trust-scores/:path*",
 		"/staff-management/:path*",
 		"/notifications/:path*",
 		"/profile/:path*",
 		"/borrow/:path*",
 		"/my-posts/:path*",
 		"/inbox/:path*",
-		"/history/:path*",
 	],
 };

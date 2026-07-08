@@ -15,4 +15,7 @@ export interface ItemResponse {
   imageUrls: string[];
   createdAt?: string;
   updatedAt?: string;
+  availabilityScope?: string;
+  rating?: number;
+  reviews?: number;
 }

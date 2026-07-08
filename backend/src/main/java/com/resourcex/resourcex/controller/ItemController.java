@@ -33,10 +33,11 @@ public class ItemController {
     @GetMapping
     public Page<ItemResponse> getAllItems(
             @RequestParam(required = false) String category,
+            @RequestParam(required = false) String availabilityScope,
             @RequestParam(required = false) String searchQuery,
             @PageableDefault(size = 10, sort = "itemId", direction = Sort.Direction.DESC) Pageable pageable
     ) {
-        return itemService.getAllItems(category, searchQuery, pageable);
+        return itemService.getAllItems(category, availabilityScope, searchQuery, pageable);
     }
 
     @GetMapping("/me")
@@ -63,13 +64,18 @@ public class ItemController {
         return itemService.updateItem(itemId, request);
     }
 
+    /**
+     * Unified delete for owners and admins. The service enforces ownership /
+     * admin authorization and runs the single core deletion routine.
+     */
     @DeleteMapping("/{itemId}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     @PreAuthorize("isAuthenticated()")
     public void deleteItem(
-            @PathVariable Long itemId
+            @PathVariable Long itemId,
+            @RequestParam(required = false) String reason
     ) {
-        itemService.deleteItem(itemId);
+        itemService.deleteItem(itemId, reason);
     }
 
     @GetMapping("/user/{userId}")

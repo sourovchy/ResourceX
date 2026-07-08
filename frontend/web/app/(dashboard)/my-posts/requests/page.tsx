@@ -1,7 +1,6 @@
 "use client";
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { createPortal } from "react-dom";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import {
@@ -16,26 +15,29 @@ import {
 	ChevronUp,
 	Clock,
 	GraduationCap,
-	Loader2,
-	Mail,
 	MessageSquare,
 	Package,
-	Phone,
 	Shield,
-	User,
+	Star,
 	X,
 } from "lucide-react";
 import api from "@/lib/api";
 import { extractErrorMessage } from "@/lib/errorUtils";
 import { formatDateRange } from "@/lib/dateUtils";
-import SafeImage from "@/components/ui/SafeImage";
+import Avatar from "@/components/ui/Avatar";
 import MessageModal from "@/components/misc/MessageModal";
+import Button from "@/components/ui/Button";
+import { StatusBadge } from "@/components/ui/StatusBadge";
+import { PageLoader } from "@/components/ui/PageLoader";
+import { PageError } from "@/components/ui/PageError";
+import { PageEmpty } from "@/components/ui/PageEmpty";
+import { TiltCard } from "@/components/ui/TiltCard";
+import { ConfirmModal } from "@/components/ui/ConfirmModal";
+import { trustLevelFor, TRUST_LEVEL_LABEL, trustColor } from "@/types/trust";
 
 // ── Backend-aligned types ─────────────────────────────────────────────────────
 
 type StudentProfile = {
-	studentId: string | null;
-	phone: string | null;
 	university: string | null;
 	department: string | null;
 	trustScore: number | null;
@@ -44,7 +46,6 @@ type StudentProfile = {
 type RenterProfile = {
 	userId: number;
 	name: string;
-	email: string;
 	avatarUrl: string | null;
 	studentProfile: StudentProfile | null;
 };
@@ -81,29 +82,10 @@ const STATUS_LABELS: Record<string, { label: string; classes: string }> = {
 	APPROVED:  { label: "Approved", classes: "bg-successLight text-successDark" },
 	COMPLETED: { label: "Completed", classes: "bg-successLight text-successDark" },
 	REJECTED:  { label: "Rejected", classes: "bg-errorLight text-error" },
-	CANCELLED: { label: "Cancelled", classes: "bg-outlineVariant text-textSecondary" },
 };
 
 function statusLabel(raw: string) {
 	return STATUS_LABELS[raw?.toUpperCase()] ?? { label: raw, classes: "bg-outlineVariant text-textSecondary" };
-}
-
-function trustColor(score: number | null): string {
-	if (score == null) return "bg-outlineVariant text-textSecondary";
-	if (score >= 90) return "bg-successLight text-successDark";
-	if (score >= 75) return "bg-primaryLight text-primaryDark";
-	if (score >= 60) return "bg-warningLight text-warningDark";
-	if (score >= 40) return "bg-errorLight/60 text-errorDark";
-	return "bg-errorLight text-error";
-}
-
-function trustLabel(score: number | null): string {
-	if (score == null) return "No score";
-	if (score >= 90) return "Excellent";
-	if (score >= 75) return "Good";
-	if (score >= 60) return "Fair";
-	if (score >= 40) return "Warning";
-	return "Suspended";
 }
 
 // ── Main page ─────────────────────────────────────────────────────────────────
@@ -128,27 +110,22 @@ export default function RequestsPage() {
 	const [messageTarget, setMessageTarget] = useState<{ userId: number; name: string } | null>(null);
 
 	// ── Data fetch ──────────────────────────────────────────────────────────
-	useEffect(() => {
-		let active = true;
+	const load = useCallback(async () => {
 		setLoading(true);
 		setPageError(null);
-
-		api.get<BookingResponse[]>("/bookings/owner")
-			.then((res) => {
-				if (!active) return;
-				const all = Array.isArray(res.data) ? res.data : [];
-				setBookings(all);
-			})
-			.catch((err) => {
-				if (!active) return;
-				setPageError(extractErrorMessage(err));
-			})
-			.finally(() => {
-				if (active) setLoading(false);
-			});
-
-		return () => { active = false; };
+		try {
+			const res = await api.get<BookingResponse[]>("/bookings/owner");
+			setBookings(Array.isArray(res.data) ? res.data : []);
+		} catch (err) {
+			setPageError(extractErrorMessage(err));
+		} finally {
+			setLoading(false);
+		}
 	}, []);
+
+	useEffect(() => {
+		load();
+	}, [load]);
 
 	// ── Derived lists ───────────────────────────────────────────────────────
 	const scoped = useMemo(() => {
@@ -233,25 +210,12 @@ export default function RequestsPage() {
 
 	// ── Loading state ───────────────────────────────────────────────────────
 	if (loading) {
-		return (
-			<div className="mx-auto flex max-w-4xl flex-col items-center justify-center gap-3 px-4 py-20 text-center">
-				<Loader2 className="h-10 w-10 animate-spin text-primary" />
-				<p className="text-sm font-medium text-textSecondary">
-					Loading booking requests…
-				</p>
-			</div>
-		);
+		return <PageLoader message="Loading booking requests..." />;
 	}
 
 	// ── Page error ──────────────────────────────────────────────────────────
 	if (pageError) {
-		return (
-			<div className="mx-auto max-w-lg px-4 py-20 text-center">
-				<AlertTriangle className="mx-auto mb-3 h-10 w-10 text-error" />
-				<p className="font-semibold text-textPrimary">Failed to load requests</p>
-				<p className="mt-1 text-sm text-textSecondary">{pageError}</p>
-			</div>
-		);
+		return <PageError message={pageError} onRetry={load} />;
 	}
 
 	// ── Main render ─────────────────────────────────────────────────────────
@@ -259,8 +223,8 @@ export default function RequestsPage() {
 		<div className="w-full space-y-6 px-4 pb-20 sm:px-6 lg:space-y-8 lg:px-8">
 			{/* Header */}
 			<div className="space-y-1">
-				<h1 className="text-2xl font-bold tracking-tight text-textPrimary sm:text-3xl lg:text-4xl">
-					Booking Requests
+				<h1 className="text-3xl font-normal italic leading-tight text-textPrimary sm:text-4xl">
+					Review <span className="text-primary font-bold">requests.</span>
 				</h1>
 				<p className="text-sm text-textSecondary sm:text-base lg:text-lg">
 					{postId
@@ -318,15 +282,15 @@ export default function RequestsPage() {
 
 			{/* Empty state */}
 			{filtered.length === 0 && (
-				<div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-borderLight bg-surface px-6 py-16 text-center">
-					<BookOpen className="mb-3 h-10 w-10 text-outlineVariant" />
-					<p className="font-semibold text-textPrimary">No {filter === "ALL" ? "" : filter.toLowerCase() + " "}requests</p>
-					<p className="mt-1 text-sm text-textSecondary">
-						{filter === "PENDING"
+				<PageEmpty
+					icon={BookOpen}
+					title={`No ${filter === "ALL" ? "" : filter.toLowerCase() + " "}requests`}
+					description={
+						filter === "PENDING"
 							? "No one has requested a booking yet."
-							: `There are no ${filter.toLowerCase()} bookings${postId ? " for this item" : ""}.`}
-					</p>
-				</div>
+							: `There are no ${filter.toLowerCase()} bookings${postId ? " for this item" : ""}.`
+					}
+				/>
 			)}
 
 			{/* Request cards */}
@@ -336,14 +300,16 @@ export default function RequestsPage() {
 					const renter = booking.renter;
 					const profile = renter?.studentProfile;
 					const trust = profile?.trustScore ?? null;
-					const sl = statusLabel(booking.status);
 					const isPending = booking.status?.toUpperCase() === "PENDING";
 					const isRejected = booking.status?.toUpperCase() === "REJECTED";
 
 					return (
-						<div
+						<TiltCard
 							key={booking.bookingId}
-							className="overflow-hidden rounded-2xl border border-borderLight bg-surface shadow-sm transition-all duration-200 hover:shadow-md">
+							maxTilt={4}
+							glare={true}
+							className="overflow-hidden rounded-2xl border border-borderLight bg-surface shadow-sm transition-all duration-300 hover:border-primary/40 hover:shadow-md"
+						>
 
 							{/* ── Card header: item + dates + status ── */}
 							<div className="flex flex-col gap-2 border-b border-borderLight bg-surfaceVariant/40 px-4 py-3 sm:flex-row sm:items-center sm:justify-between sm:px-5">
@@ -363,9 +329,8 @@ export default function RequestsPage() {
 										)}
 									</div>
 								</div>
-								<div
-									className={`self-start whitespace-nowrap rounded-lg px-2.5 py-1 text-xs font-bold ${sl.classes}`}>
-									{sl.label}
+								<div className="self-start">
+									<StatusBadge status={booking.status} />
 								</div>
 							</div>
 
@@ -375,13 +340,12 @@ export default function RequestsPage() {
 									{/* Avatar */}
 									<Link
 										href={`/profile/${renter?.userId}`}
-										className="relative h-12 w-12 shrink-0 overflow-hidden rounded-full border-2 border-borderLight sm:h-14 sm:w-14">
-										<SafeImage
-											src={renter?.avatarUrl ?? null}
-											alt={renter?.name ?? "Renter"}
-											fill
-											className="object-cover"
-											sizes="56px"
+										className="shrink-0 rounded-full outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-1">
+										<Avatar
+											src={renter?.avatarUrl}
+											name={renter?.name}
+											size={56}
+											className="!h-12 !w-12 sm:!h-14 sm:!w-14 border-2 border-borderLight"
 										/>
 									</Link>
 
@@ -397,14 +361,14 @@ export default function RequestsPage() {
 												<span
 													className={`flex items-center gap-1 rounded-md px-2 py-0.5 text-xs font-bold ${trustColor(trust)}`}>
 													<Shield className="h-3 w-3" />
-													{trust} · {trustLabel(trust)}
+													{trust} · {TRUST_LEVEL_LABEL[trustLevelFor(trust)]}
 												</span>
 											)}
 										</div>
 
 										{/* University / dept */}
 										{(profile?.university || profile?.department) && (
-											<div className="mt-0.5 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-xs text-textSecondary">
+											<div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-xs text-textSecondary">
 												{profile.university && (
 													<span className="flex items-center gap-1">
 														<Building2 className="h-3.5 w-3.5" />
@@ -421,41 +385,6 @@ export default function RequestsPage() {
 										)}
 									</div>
 								</div>
-
-								{/* ── Private contact details ── */}
-								{(profile?.studentId || renter?.email || profile?.phone) && (
-									<div className="flex flex-wrap items-center gap-x-4 gap-y-2 pt-3 mt-3 border-t border-borderLight text-xs">
-										{profile?.studentId && (
-											<span className="flex items-center gap-1.5 text-textSecondary">
-												<User className="h-3.5 w-3.5 shrink-0" />
-												<span>
-													<span className="mr-1 font-semibold text-textPrimary">ID:</span>
-													{profile.studentId}
-												</span>
-											</span>
-										)}
-										{renter?.email && (
-											<span className="flex items-center gap-1.5 text-textSecondary">
-												<Mail className="h-3.5 w-3.5 shrink-0" />
-												<a
-													href={`mailto:${renter.email}`}
-													className="truncate hover:text-primary hover:underline">
-													{renter.email}
-												</a>
-											</span>
-										)}
-										{profile?.phone && (
-											<span className="flex items-center gap-1.5 text-textSecondary">
-												<Phone className="h-3.5 w-3.5 shrink-0" />
-												<a
-													href={`tel:${profile.phone}`}
-													className="hover:text-primary hover:underline">
-													{profile.phone}
-												</a>
-											</span>
-										)}
-									</div>
-								)}
 
 								{/* ── Booking message ── */}
 								{booking.bookingMessage && (
@@ -486,41 +415,40 @@ export default function RequestsPage() {
 									<div className="flex flex-col gap-3 pt-5 mt-5 border-t border-borderLight sm:flex-row sm:items-center">
 										{isPending && (
 											<>
-												<button
+												<Button
 													onClick={() => approve(booking.bookingId)}
 													disabled={isBusy}
-													className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-primary py-3 text-sm font-bold text-white transition-all hover:bg-primaryDark active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-60">
-													{isBusy ? (
-														<Loader2 className="h-4 w-4 animate-spin" />
-													) : (
-														<Check className="h-4 w-4" />
-													)}
-													Approve
-												</button>
-												<button
+													loading={isBusy}
+													className="flex-1"
+												>
+													{!isBusy && <Check className="mr-2 h-4 w-4" />} Approve
+												</Button>
+												<Button
+													variant="ghost"
 													onClick={() => openRejectModal(booking.bookingId)}
 													disabled={isBusy}
-													className="flex flex-1 items-center justify-center gap-2 rounded-xl border border-error bg-surface py-3 text-sm font-bold text-error transition-all hover:bg-errorLight active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-60">
-													<X className="h-4 w-4" />
-													Reject
-												</button>
+													className="flex-1 border-error text-error hover:bg-errorLight hover:text-errorDark"
+												>
+													<X className="mr-2 h-4 w-4" /> Reject
+												</Button>
 											</>
 										)}
 										
 										{renter?.userId && (
-											<button
+											<Button
+												variant="ghost"
 												onClick={() =>
 													setMessageTarget({ userId: renter.userId, name: renter.name ?? "Renter" })
 												}
-												className="flex items-center justify-center gap-2 rounded-xl border border-borderLight bg-surface px-5 py-3 text-sm font-semibold text-textSecondary transition-all hover:border-primary hover:bg-primaryLight hover:text-primary active:scale-[0.98] sm:w-auto w-full">
-												<MessageSquare className="h-4 w-4" />
-												Message Renter
-											</button>
+												className="w-full sm:w-auto"
+											>
+												<MessageSquare className="mr-2 h-4 w-4" /> Message Renter
+											</Button>
 										)}
 									</div>
 								)}
 							</div>
-						</div>
+						</TiltCard>
 					);
 				})}
 			</div>
@@ -536,77 +464,22 @@ export default function RequestsPage() {
 			)}
 
 			{/* ── Reject modal ── */}
-			{rejectModalOpen && createPortal(
-				<div
-					className="fixed inset-0 z-[100] flex items-end justify-center bg-black/50 p-3 backdrop-blur-sm animate-in fade-in duration-200 sm:items-center sm:p-4"
-					role="dialog"
-					aria-modal="true"
-					aria-labelledby="reject-modal-title">
-					<div className="flex max-h-[90dvh] w-full max-w-lg flex-col space-y-5 overflow-y-auto rounded-2xl border border-borderLight bg-surface p-5 shadow-xl sm:p-6">
-						<div className="flex items-start justify-between gap-4">
-							<div>
-								<h2
-									id="reject-modal-title"
-									className="text-lg font-bold text-textPrimary">
-									Reject Booking Request
-								</h2>
-								<p className="mt-1 text-sm text-textSecondary">
-									Provide a clear reason so the renter understands why it was
-									rejected.
-								</p>
-							</div>
-							<button
-								type="button"
-								onClick={closeRejectModal}
-								aria-label="Close modal"
-								className="rounded-lg p-1 text-textSecondary hover:bg-surfaceVariant hover:text-textPrimary">
-								<X className="h-5 w-5" />
-							</button>
-						</div>
-
-						<div className="space-y-1.5">
-							<label
-								htmlFor="rejection-reason"
-								className="text-sm font-bold text-textPrimary">
-								Reason <span className="text-error">*</span>
-							</label>
-							<textarea
-								id="rejection-reason"
-								value={rejectionReason}
-								onChange={(e) => setRejectionReason(e.target.value)}
-								rows={4}
-								maxLength={1000}
-								placeholder="e.g. The item is already reserved for these dates."
-								className="w-full resize-none rounded-xl border border-borderLight bg-surface px-4 py-3 text-sm text-textPrimary placeholder-textSecondary outline-none transition focus:border-primary focus:ring-1 focus:ring-primary"
-							/>
-							<p className="text-right text-xs text-textSecondary">
-								{rejectionReason.length}/1000
-							</p>
-						</div>
-
-						<div className="flex gap-3">
-							<button
-								type="button"
-								onClick={closeRejectModal}
-								className="flex-1 rounded-xl border border-borderLight py-3 text-sm font-bold text-textPrimary transition-colors hover:bg-surfaceVariant">
-								Cancel
-							</button>
-							<button
-								type="button"
-								onClick={confirmReject}
-								disabled={!rejectionReason.trim() || busyId !== null}
-								className="flex-1 rounded-xl py-3 text-sm font-bold text-white transition-colors enabled:bg-error enabled:hover:opacity-90 disabled:cursor-not-allowed disabled:bg-outlineVariant disabled:text-textSecondary">
-								{busyId !== null ? (
-									<Loader2 className="mx-auto h-4 w-4 animate-spin" />
-								) : (
-									"Confirm Reject"
-								)}
-							</button>
-						</div>
-					</div>
-				</div>,
-			document.body,
-			)}
+			<ConfirmModal
+				isOpen={rejectModalOpen}
+				title="Reject Booking Request"
+				message="Provide a clear reason so the renter understands why it was rejected."
+				confirmText="Confirm Reject"
+				cancelText="Cancel"
+				isDestructive
+				requireReason
+				reasonLabel="Reason"
+				reasonPlaceholder="e.g. The item is already reserved for these dates."
+				reasonValue={rejectionReason}
+				onReasonChange={setRejectionReason}
+				isLoading={busyId !== null}
+				onConfirm={confirmReject}
+				onCancel={closeRejectModal}
+			/>
 		</div>
 	);
 }

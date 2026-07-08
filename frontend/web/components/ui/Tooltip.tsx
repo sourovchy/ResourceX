@@ -68,7 +68,7 @@ export default function Tooltip({ children, content, position = "right", disable
                   'translate(-50%, -100%)'
             }}
           >
-            <div className="rounded-md bg-black px-3 py-1.5 text-xs font-medium text-white shadow-xl whitespace-nowrap">
+            <div className="rounded-lg glass-surface px-3 py-1.5 text-xs font-mono font-medium text-textPrimary shadow-xl whitespace-nowrap border border-borderLight/50">
               {content}
             </div>
           </div>,

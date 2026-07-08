@@ -7,12 +7,12 @@ import { useRouter } from "next/navigation";
 import api from "@/lib/api";
 import { extractErrorMessage } from "@/lib/errorUtils";
 import { useDialog } from "@/hooks/useDialog";
+import { TiltCard } from "@/components/ui/TiltCard";
 
 interface MessageModalProps {
 	isOpen: boolean;
 	targetUserId: number;
 	targetName: string;
-	bookingId?: number;
 	onClose: () => void;
 }
 
@@ -20,7 +20,6 @@ export default function MessageModal({
 	isOpen,
 	targetUserId,
 	targetName,
-	bookingId,
 	onClose,
 }: MessageModalProps) {
 	const router = useRouter();
@@ -35,8 +34,6 @@ export default function MessageModal({
 		try {
 			await api.post("/conversations", {
 				otherUserId: targetUserId,
-				bookingId: bookingId ?? null,
-				disputeId: null,
 				initialMessage: message.trim(),
 			});
 			onClose();
@@ -66,17 +63,20 @@ export default function MessageModal({
 		<div className="fixed inset-0 z-[100] flex items-end justify-center p-3 sm:items-center sm:p-4">
 			{/* Backdrop */}
 			<div
-				className="absolute inset-0 bg-black/50 backdrop-blur-sm animate-in fade-in duration-200"
+				className="absolute inset-0 bg-black/35 backdrop-blur-md animate-in fade-in duration-200"
 				onClick={handleClose}
 			/>
 
 			{/* Modal */}
-			<div
-				ref={dialogRef}
+			<TiltCard
+				ref={dialogRef as any}
 				role="dialog"
 				aria-modal="true"
 				tabIndex={-1}
-				className="relative z-10 flex max-h-[90dvh] w-full max-w-md flex-col overflow-y-auto rounded-2xl border border-borderLight bg-surface p-5 shadow-xl outline-none animate-in fade-in zoom-in-95 duration-200 sm:p-6">
+				maxTilt={2}
+				hoverScale={1.01}
+				glare={false}
+				className="relative z-10 flex max-h-[90dvh] w-full max-w-md flex-col overflow-y-auto rounded-2xl border border-borderLight/60 bg-surface/90 p-5 shadow-2xl backdrop-blur-md outline-none animate-in fade-in zoom-in-95 duration-200 sm:p-6">
 				{/* Header */}
 				<div className="mb-4 flex items-center justify-between gap-3">
 					<div className="flex items-center gap-2">
@@ -138,7 +138,7 @@ export default function MessageModal({
 						)}
 					</button>
 				</div>
-			</div>
+			</TiltCard>
 		</div>,
 		document.body,
 	);

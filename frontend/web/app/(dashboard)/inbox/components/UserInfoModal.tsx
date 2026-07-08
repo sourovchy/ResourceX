@@ -8,8 +8,9 @@ import { ConfirmModal } from "@/components/ui/ConfirmModal";
 import { useToast } from "@/context/ToastContext";
 import { extractErrorMessage } from "@/lib/errorUtils";
 import { chatService } from "../services/chatService";
-import type { BlockStatus } from "../types/chat";
-import { getFileUrl } from "@/lib/api";
+import type { BlockStatus } from "@/types/chat";
+import SafeImage from "@/components/ui/SafeImage";
+import Avatar from "@/components/ui/Avatar";
 import { useDialog } from "@/hooks/useDialog";
 
 interface ConversationUser {
@@ -39,7 +40,6 @@ export default function UserInfoModal({
 }: UserInfoModalProps) {
 	const router = useRouter();
 	const { toast } = useToast();
-	const initial = user.name ? user.name.charAt(0).toUpperCase() : "U";
 
 	const blockedByMe = blockStatus?.blockedByMe ?? false;
 	const blockedByThem = blockStatus?.blockedByThem ?? false;
@@ -103,8 +103,18 @@ export default function UserInfoModal({
 						<>
 							<div className="flex flex-col gap-4 rounded-2xl border border-dashboardBlue/20 bg-dashboardBlueTint/30 p-5">
 								<div className="flex flex-col items-center gap-3 text-center">
-									<div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-full bg-dashboardBlueTint text-dashboardBlue shadow-sm">
-										<ShieldCheck className="h-8 w-8" />
+									<div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-full bg-dashboardBlueTint text-dashboardBlue shadow-sm overflow-hidden">
+										{user.avatarUrl ? (
+											<SafeImage
+												src={user.avatarUrl}
+												alt={user.name}
+												width={64}
+												height={64}
+												className="h-full w-full object-cover"
+											/>
+										) : (
+											<ShieldCheck className="h-8 w-8" />
+										)}
 									</div>
 									<div>
 										<h4 className="text-lg font-bold text-textPrimary">
@@ -143,17 +153,14 @@ export default function UserInfoModal({
 							{/* Contact Card */}
 							<div className="flex flex-col gap-4 rounded-2xl border border-borderLight bg-surfaceVariant/50 p-4">
 								<div className="flex items-center gap-4">
-									<div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-primary text-xl font-bold text-white shadow-sm">
-										{user.avatarUrl ? (
-											<img
-												src={getFileUrl(user.avatarUrl)}
-												alt={user.name}
-												className="h-full w-full rounded-full object-cover"
-											/>
-										) : (
-											initial
-										)}
-									</div>
+									<Avatar
+										src={user.avatarUrl}
+										name={user.name}
+										size={56}
+										bgClass="bg-primary text-white"
+										textClass="text-xl"
+										className="shadow-sm"
+									/>
 									<div className="min-w-0 flex-1">
 										<h4 className="truncate text-base font-bold text-textPrimary">
 											{user.name}

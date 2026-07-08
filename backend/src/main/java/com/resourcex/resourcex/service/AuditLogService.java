@@ -29,4 +29,16 @@ public interface AuditLogService {
     List<AuditLogResponse> getLogsByDateRange(LocalDateTime startDate, LocalDateTime endDate);
 
     List<AuditLogResponse> getLogsByEntityTypeAndId(String entityType, Long entityId);
+
+    org.springframework.data.domain.Page<AuditLogResponse> getLogsWithFilters(
+            String actionType,
+            String entityType,
+            String outcome,
+            Long actorId,
+            LocalDateTime startDate,
+            LocalDateTime endDate,
+            org.springframework.data.domain.Pageable pageable
+    );
+
+    void cleanupOldLogs(LocalDateTime threshold);
 }

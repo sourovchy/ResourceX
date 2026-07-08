@@ -93,27 +93,6 @@ public interface NotificationService {
     NotificationResponse createBookingNotification(
             Long userId,
             Long bookingId,
-            String title,
-            String message,
-            Long createdByUserId);
-
-    /**
-     * Create notification for dispute event
-     */
-    NotificationResponse createDisputeNotification(
-            Long userId,
-            Long disputeId,
-            String title,
-            String message,
-            Long createdByUserId);
-
-    /**
-     * Create notification for penalty event
-     */
-    NotificationResponse createPenaltyNotification(
-            Long userId,
-            Long penaltyId,
-            String title,
             String message,
             Long createdByUserId);
 
@@ -123,7 +102,6 @@ public interface NotificationService {
     NotificationResponse createTrustNotification(
             Long userId,
             Long trustEventId,
-            String title,
             String message,
             Long createdByUserId);
 
@@ -134,7 +112,6 @@ public interface NotificationService {
     NotificationResponse createMessageNotification(
             Long userId,
             Long conversationId,
-            String title,
             String message,
             Long createdByUserId);
 
@@ -144,7 +121,6 @@ public interface NotificationService {
     NotificationResponse createReviewNotification(
             Long userId,
             Long reviewId,
-            String title,
             String message,
             Long createdByUserId);
 
@@ -153,7 +129,6 @@ public interface NotificationService {
      */
     NotificationResponse createAdminNotification(
             Long userId,
-            String title,
             String message,
             Long createdByUserId);
 
@@ -163,7 +138,6 @@ public interface NotificationService {
     void broadcastNotification(
             List<Long> userIds,
             Notification.NotificationType type,
-            String title,
             String message,
             Notification.RelatedEntityType entityType,
             Long entityId,

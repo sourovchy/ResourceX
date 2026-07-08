@@ -4,7 +4,7 @@ import com.resourcex.resourcex.dto.request.RejectUserRequest;
 import com.resourcex.resourcex.dto.request.SuspendUserRequest;
 import jakarta.validation.Valid;
 import com.resourcex.resourcex.dto.response.DashboardStatsResponse;
-import com.resourcex.resourcex.dto.response.PendingUserResponse;
+import com.resourcex.resourcex.dto.response.UserResponse;
 import com.resourcex.resourcex.service.AdminService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -31,13 +31,13 @@ public class AdminController {
     }
 
     @GetMapping("/pending-users")
-    public Page<PendingUserResponse> getPendingUsers(
-            @PageableDefault(size = 10, sort = "pendingUserId", direction = Sort.Direction.DESC) Pageable pageable) {
+    public Page<UserResponse> getPendingUsers(
+            @PageableDefault(size = 10, sort = "userId", direction = Sort.Direction.DESC) Pageable pageable) {
         return adminService.getPendingUsers(pageable);
     }
 
     @GetMapping("/pending-users/{id}")
-    public PendingUserResponse getPendingUserById(@PathVariable Long id) {
+    public UserResponse getPendingUserById(@PathVariable Long id) {
         return adminService.getPendingUserById(id);
     }
 
@@ -50,7 +50,7 @@ public class AdminController {
     @PostMapping("/reject/{id}")
     public ResponseEntity<Void> rejectUser(
             @PathVariable Long id,
-            @RequestBody(required = false) RejectUserRequest request
+            @Valid @RequestBody(required = false) RejectUserRequest request
     ) {
         String reason = request != null ? request.getReason() : null;
         adminService.rejectUser(id, reason);
@@ -74,6 +74,22 @@ public class AdminController {
     @PostMapping("/unblock/{id}")
     public ResponseEntity<Void> unblockUser(@PathVariable Long id) {
         adminService.unblockUser(id);
+        return ResponseEntity.ok().build();
+    }
+
+    @GetMapping("/platform-activity")
+    public ResponseEntity<List<com.resourcex.resourcex.dto.response.PlatformActivityResponse>> getPlatformActivities() {
+        return ResponseEntity.ok(adminService.getPlatformActivities());
+    }
+
+    @GetMapping("/admins")
+    public ResponseEntity<List<com.resourcex.resourcex.dto.response.UserResponse>> getAdminsAndModerators() {
+        return ResponseEntity.ok(adminService.getAdminsAndModerators());
+    }
+
+    @PostMapping("/unblock-item/{id}")
+    public ResponseEntity<Void> unblockItem(@PathVariable Long id) {
+        adminService.unblockItem(id);
         return ResponseEntity.ok().build();
     }
 }

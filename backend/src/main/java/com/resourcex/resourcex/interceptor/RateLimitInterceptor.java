@@ -30,6 +30,9 @@ public class RateLimitInterceptor implements HandlerInterceptor {
         PATH_LIMITS.put("/api/auth/forgot-password", 3);
         PATH_LIMITS.put("/api/auth/reset-password", 3);
         PATH_LIMITS.put("/api/otp/", 1);
+        // Upload allows anonymous ID_CARD submissions during registration —
+        // throttle so unauthenticated clients cannot fill the disk.
+        PATH_LIMITS.put("/api/files/upload", 10);
     }
 
     private final Map<String, Deque<Long>> timestamps = new ConcurrentHashMap<>();

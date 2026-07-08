@@ -27,8 +27,6 @@ public class ItemResponse {
 
     private BigDecimal dailyRate;
 
-    private BigDecimal deposit;
-
     private String status;
 
     private List<String> imageUrls;
@@ -36,4 +34,10 @@ public class ItemResponse {
     private LocalDateTime createdAt;
 
     private LocalDateTime updatedAt;
+
+    private String availabilityScope;
+
+    private Double rating;
+
+    private Integer reviews;
 }

@@ -2,12 +2,11 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Info, MessageSquare, ChevronLeft, ShieldCheck, MoreVertical, Eraser, Trash2 } from "lucide-react";
+import { Info, MessageSquare, ChevronLeft, ShieldCheck, MoreVertical, Trash2 } from "lucide-react";
 import { ConfirmModal } from "@/components/ui/ConfirmModal";
-import { Conversation, Message } from "@/types/chat";
-import type { BlockStatus } from "../types/chat";
+import SafeImage from "@/components/ui/SafeImage";
+import type { BlockStatus, Conversation, Message } from "@/types/chat";
 import { chatService } from "../services/chatService";
-import { getFileUrl } from "@/lib/api";
 import MessageBubble from "./MessageBubble";
 import MessageInput from "./MessageInput";
 import UserInfoModal from "./UserInfoModal";
@@ -19,7 +18,6 @@ interface ChatWindowProps {
 	isCurrentUserStaff?: boolean;
 	onSend: (text: string) => void;
 	onBack: () => void;
-	onClearChat?: (id: number) => void;
 	onDeleteConversation?: (id: number) => void;
 }
 
@@ -30,7 +28,6 @@ export default function ChatWindow({
 	isCurrentUserStaff,
 	onSend,
 	onBack,
-	onClearChat,
 	onDeleteConversation,
 }: ChatWindowProps) {
 	const router = useRouter();
@@ -40,7 +37,6 @@ export default function ChatWindow({
 	const [blockStatus, setBlockStatus] = useState<BlockStatus | null>(null);
 	
 	const [menuOpen, setMenuOpen] = useState(false);
-	const [confirmClearOpen, setConfirmClearOpen] = useState(false);
 	const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
 
 	// Close menu on click outside
@@ -76,13 +72,6 @@ export default function ChatWindow({
 		};
 	}, [conversation, currentUserId]);
 
-	const contextLabel = useMemo(() => {
-		if (!conversation) return "";
-		if (conversation.bookingId) return `Booking #${conversation.bookingId}`;
-		if (conversation.disputeId) return `Dispute #${conversation.disputeId}`;
-		return "Direct Conversation";
-	}, [conversation]);
-
 	// Auto-scroll to bottom on new messages
 	useEffect(() => {
 		bottomRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -111,8 +100,8 @@ export default function ChatWindow({
 
 	if (!conversation || !otherParticipant) {
 		return (
-			<div className="hidden flex-1 flex-col items-center justify-center gap-4 bg-[var(--color-chatBase)] text-textSecondary md:flex">
-				<div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-[var(--color-chatElevated)] border border-[var(--color-chatBorder)]">
+			<div className="hidden flex-1 flex-col items-center justify-center gap-4 bg-card/40 backdrop-blur-xl border border-borderLight rounded-2xl shadow-sm text-textSecondary md:flex h-full">
+				<div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-surface border border-borderLight shadow-sm">
 					<MessageSquare className="w-8 h-8 text-outline" />
 				</div>
 				<div className="text-center">
@@ -132,9 +121,9 @@ export default function ChatWindow({
 		: "U";
 
 	return (
-		<div className="flex min-w-0 flex-1 flex-col bg-[var(--color-chatBase)] h-full">
+		<div className="relative flex min-w-0 flex-1 flex-col bg-card/40 backdrop-blur-xl border border-borderLight rounded-2xl shadow-sm overflow-hidden h-full">
 			{/* Header */}
-			<div className="flex h-14 shrink-0 items-center justify-between border-b border-[var(--color-chatBorder)] bg-[var(--color-chatElevated)] px-3 shadow-sm sm:h-16 sm:px-6">
+			<div className="flex h-14 shrink-0 items-center justify-between border-b border-borderLight bg-transparent px-3 sm:h-16 sm:px-6">
 				<div className="flex items-center gap-1 sm:gap-2 min-w-0">
 					<button
 						onClick={onBack}
@@ -151,16 +140,18 @@ export default function ChatWindow({
 						className={`group flex min-w-0 items-center gap-2 text-left sm:gap-3 ${otherParticipant.isStaff ? "cursor-default" : ""}`}
 						title={otherParticipant.isStaff ? "Staff Member" : "View profile"}>
 					<div className="relative">
-						{otherParticipant.isStaff ? (
+						{otherParticipant.avatarUrl ? (
+							<SafeImage
+								src={otherParticipant.avatarUrl}
+								alt={otherParticipant.name}
+								width={40}
+								height={40}
+								className="h-9 w-9 rounded-full object-cover shadow-sm sm:h-10 sm:w-10 transition-opacity group-hover:opacity-80"
+							/>
+						) : otherParticipant.isStaff ? (
 							<div className="flex h-9 w-9 items-center justify-center rounded-full bg-dashboardBlueTint text-base font-bold text-dashboardBlue sm:h-10 sm:w-10 sm:text-lg">
 								<ShieldCheck className="h-5 w-5" />
 							</div>
-						) : otherParticipant.avatarUrl ? (
-							<img
-								src={getFileUrl(otherParticipant.avatarUrl)}
-								alt={otherParticipant.name}
-								className="h-9 w-9 rounded-full object-cover shadow-sm sm:h-10 sm:w-10 transition-opacity group-hover:opacity-80"
-							/>
 						) : (
 							<div className="flex h-9 w-9 items-center justify-center rounded-full bg-primary text-base font-bold text-white transition-opacity group-hover:opacity-80 sm:h-10 sm:w-10 sm:text-lg">
 								{participantInitial}
@@ -209,16 +200,7 @@ export default function ChatWindow({
 						</button>
 
 						{menuOpen && (
-							<div className="absolute right-0 mt-1 w-56 origin-top-right rounded-xl bg-[var(--color-chatElevated)] py-2 shadow-lg ring-1 ring-black/5 z-50 border border-[var(--color-chatBorder)]">
-								<button
-									onClick={() => {
-										setMenuOpen(false);
-										setConfirmClearOpen(true);
-									}}
-									className="flex w-full items-center gap-3 px-4 py-2.5 text-sm font-medium text-textPrimary hover:bg-surfaceVariant transition-colors">
-									<Eraser className="w-4 h-4 text-textSecondary" />
-									Clear Chat
-								</button>
+							<div className="absolute right-0 mt-1 w-56 origin-top-right rounded-xl bg-surface py-2 shadow-lg ring-1 ring-black/5 z-50 border border-border">
 								<button
 									onClick={() => {
 										setMenuOpen(false);
@@ -235,15 +217,7 @@ export default function ChatWindow({
 			</div>
 
 			{/* Messages Area */}
-			<div className="flex-1 overflow-y-auto px-3 py-3 sm:px-4 md:px-6">
-				{(conversation.bookingId || conversation.disputeId) && (
-					<div className="mb-3 flex justify-center">
-						<span className="rounded-full bg-[var(--color-chatElevated)] border border-[var(--color-chatBorder)] px-3 py-1 text-[10px] font-semibold uppercase tracking-wider text-textTertiary sm:text-xs">
-							{contextLabel}
-						</span>
-					</div>
-				)}
-
+			<div className="flex-1 overflow-y-auto px-3 py-3 sm:px-4 md:px-6 pb-24 sm:pb-28">
 				{messages.length === 0 ? (
 					<div className="flex flex-col items-center justify-center py-16 text-textSecondary gap-3">
 						<MessageSquare className="w-10 h-10 text-outline" />
@@ -283,32 +257,16 @@ export default function ChatWindow({
 			{/* Input */}
 			<MessageInput onSend={onSend} blocked={!!blockStatus?.blocked} />
 
-			{/* User Info Modal */}
 			{showInfo && (
 				<UserInfoModal
 					user={otherParticipant}
-					itemTitle={contextLabel}
+					itemTitle=""
 					blockStatus={blockStatus}
 					isCurrentUserStaff={isCurrentUserStaff}
 					onClose={() => setShowInfo(false)}
 					onBlockChange={setBlockStatus}
 				/>
 			)}
-
-			{/* Confirm Clear Chat */}
-			<ConfirmModal
-				isOpen={confirmClearOpen}
-				title="Clear Chat"
-				message={`Are you sure you want to clear this chat with ${otherParticipant.name}? This will remove all messages for you, but they will still be visible to the other person.`}
-				confirmText="Clear Chat"
-				cancelText="Cancel"
-				isDestructive={true}
-				onConfirm={() => {
-					onClearChat?.(conversation.conversationId);
-					setConfirmClearOpen(false);
-				}}
-				onCancel={() => setConfirmClearOpen(false)}
-			/>
 
 			{/* Confirm Delete Conversation */}
 			<ConfirmModal
