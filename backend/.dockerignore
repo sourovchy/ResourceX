@@ -1,0 +1,34 @@
+# Build output
+target/
+*.jar
+*.war
+
+# Local Maven repo cache (if any)
+.m2/
+
+# IDE / editor
+.idea/
+.vscode/
+*.iml
+*.iws
+*.ipr
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Local uploads (Cloud Run has ephemeral filesystem anyway)
+uploads/
+
+# Git
+.git/
+.gitignore
+
+# Logs / dumps
+*.log
+*.dumpstream
+*.dump
+
+# Env / secrets (never bake into image)
+.env
+.env.*

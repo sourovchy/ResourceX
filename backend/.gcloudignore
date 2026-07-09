@@ -1,0 +1,31 @@
+# .gcloudignore — explicitly INCLUDE properties files (Spring Boot needs them at runtime).
+# Without this file, gcloud auto-generates one from .gitignore which excludes application.properties.
+# Keep this minimal: only exclude bulky/local-only stuff that the Cloud Build does not need.
+
+# Maven build output (regenerated inside the container)
+target/
+
+# Uploaded user files (runtime content, never part of build)
+uploads/
+
+# Maven wrapper jar (re-downloaded inside container)
+.mvn/wrapper/maven-wrapper.jar
+
+# IDE / OS junk
+.idea/
+*.iml
+.vscode/
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+logs/
+
+# Local env files
+.env
+.env.*
+
+# DO NOT ignore: src/main/resources/application.properties
+# DO NOT ignore: src/main/resources/application-local.properties
+# DO NOT ignore: src/main/resources/application-production.properties

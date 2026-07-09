@@ -1,15 +1,15 @@
 package com.resourcex.resourcex.service.impl;
 
-import com.resourcex.resourcex.dto.FileUploadResponse;
-import com.resourcex.resourcex.entity.FileMetadata;
-import com.resourcex.resourcex.entity.FilePurpose;
-import com.resourcex.resourcex.entity.User;
-import com.resourcex.resourcex.exception.ResourceNotFoundException;
-import com.resourcex.resourcex.exception.UnauthorizedException;
-import com.resourcex.resourcex.repository.FileMetadataRepository;
-import com.resourcex.resourcex.repository.UserRepository;
-import com.resourcex.resourcex.service.FileStorageService;
-import lombok.extern.slf4j.Slf4j;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.nio.file.StandardCopyOption;
+import java.nio.file.StandardOpenOption;
+import java.util.Base64;
+import java.util.Set;
+import java.util.UUID;
+
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.core.io.Resource;
@@ -21,11 +21,17 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.io.IOException;
-import java.nio.file.*;
-import java.util.Base64;
-import java.util.Set;
-import java.util.UUID;
+import com.resourcex.resourcex.dto.FileUploadResponse;
+import com.resourcex.resourcex.entity.FileMetadata;
+import com.resourcex.resourcex.entity.FilePurpose;
+import com.resourcex.resourcex.entity.User;
+import com.resourcex.resourcex.exception.ResourceNotFoundException;
+import com.resourcex.resourcex.exception.UnauthorizedException;
+import com.resourcex.resourcex.repository.FileMetadataRepository;
+import com.resourcex.resourcex.repository.UserRepository;
+import com.resourcex.resourcex.service.FileStorageService;
+
+import lombok.extern.slf4j.Slf4j;
 
 @Service
 @Slf4j
@@ -45,11 +51,11 @@ public class FileStorageServiceImpl implements FileStorageService {
     private final UserRepository userRepository;
 
     public FileStorageServiceImpl(
-            @Value("${storage.local-dir:uploads}") String localDir,
+            @Value("${app.storage.upload-dir:uploads}") String uploadDir,
             FileMetadataRepository fileMetadataRepository,
             UserRepository userRepository
     ) {
-        this.storageRoot = Paths.get(localDir).toAbsolutePath().normalize();
+        this.storageRoot = Paths.get(uploadDir).toAbsolutePath().normalize();
         this.fileMetadataRepository = fileMetadataRepository;
         this.userRepository = userRepository;
         try {
