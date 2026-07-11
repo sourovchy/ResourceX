@@ -151,7 +151,7 @@ public class ItemServiceImpl implements ItemService {
         Item item = itemRepository.findById(itemId)
                 .orElseThrow(() -> new ResourceNotFoundException("Item not found"));
 
-        // Deleted items are invisible to everyone — including admins — via direct
+        // Deleted items are invisible to everyone â€” including admins â€” via direct
         // URL / ID lookup. There is no hidden access path to a deleted listing.
         if (item.getStatus() == Item.ItemStatus.DELETED) {
             throw new ResourceNotFoundException("Item not found");
@@ -201,7 +201,7 @@ public class ItemServiceImpl implements ItemService {
     }
 
     /**
-     * Single source of truth for removing an item — invoked by both the owner
+     * Single source of truth for removing an item â€” invoked by both the owner
      * delete and the admin take-down. Runs inside the caller's transaction so
      * the whole operation is atomic.
      *
@@ -219,7 +219,7 @@ public class ItemServiceImpl implements ItemService {
         List<Booking> bookings = bookingRepository.findByItem(item);
 
         // An item that is approved for handoff or physically out on an active rental
-        // cannot be deleted — doing so would orphan an in-progress rental.
+        // cannot be deleted â€” doing so would orphan an in-progress rental.
         boolean hasActiveBooking = bookings.stream()
                 .anyMatch(b -> b.getStatus() == Booking.BookingStatus.APPROVED
                         || b.getStatus() == Booking.BookingStatus.ACTIVE);
@@ -241,7 +241,7 @@ public class ItemServiceImpl implements ItemService {
         // Remove wishlist references so the item leaves every wishlist.
         wishlistRepository.deleteByItem(item);
 
-        // Soft-delete — excluded from all queries from here on.
+        // Soft-delete â€” excluded from all queries from here on.
         item.setStatus(Item.ItemStatus.DELETED);
         itemRepository.save(item);
 
@@ -317,7 +317,7 @@ public class ItemServiceImpl implements ItemService {
         for (String url : imageUrls) {
             if (url != null && !url.isBlank()) {
                 String storedName = extractStoredName(url);
-                fileMetadataRepository.findByStoredName(storedName).ifPresent(file -> {
+                fileMetadataRepository.findByFileUrl("/api/files/" + storedName).ifPresent(file -> {
                     file.setItem(item);
                     newImages.add(file);
                 });

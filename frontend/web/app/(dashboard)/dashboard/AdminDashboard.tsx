@@ -229,8 +229,7 @@ function HealthTile({
 	return (
 		<Link href={href} className="w-full">
 			<TiltCard
-				maxTilt={4}
-				glare={true}
+				maxTilt={1}
 				className={`group flex items-center gap-3 rounded-xl border p-4 shadow-sm transition hover:border-primary/40 hover:shadow-md ${tone}`}
 			>
 				<div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-lg ${iconWrap}`}>

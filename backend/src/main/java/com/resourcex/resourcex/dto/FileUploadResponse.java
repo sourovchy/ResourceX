@@ -12,10 +12,8 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 public class FileUploadResponse {
     private Long fileId;
-    private String originalName;
-    private String storedName;
     private String fileUrl;
-    private String fileType;
-    private Long fileSize;
     private FilePurpose purpose;
+    private Long uploaderId;
+    private Long itemId;
 }

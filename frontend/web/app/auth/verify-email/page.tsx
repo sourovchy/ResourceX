@@ -223,7 +223,7 @@ export default function EmailVerificationPage() {
 			<AuthProgressOverlay progress={progress} />
 
 			<Reveal className="relative z-10 w-full max-w-md px-1 sm:px-0">
-				<TiltCard className="glass-surface rounded-2xl p-5 shadow-md sm:p-6 md:p-8">
+				<TiltCard maxTilt={1} className="glass-surface rounded-2xl p-5 shadow-md sm:p-6 md:p-8">
 					<div className="mb-6 text-center sm:mb-8">
 						<div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full border border-primary/20 bg-primaryLight sm:h-16 sm:w-16">
 							<LogoIcon size={32} />

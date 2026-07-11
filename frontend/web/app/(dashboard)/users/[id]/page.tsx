@@ -579,7 +579,7 @@ export default function AdminUserDetailPage() {
       />
 
       {/* Verification Details */}
-      <Card padding="none" className="p-5" interactive={true} maxTilt={2}>
+      <Card padding="none" className="p-5" interactive={true} maxTilt={1}>
         <div className="mb-4 flex items-center gap-2">
           <Shield className="h-4 w-4 text-primary" />
           <h2 className="font-bold text-textPrimary">Verification Details</h2>
@@ -714,7 +714,7 @@ export default function AdminUserDetailPage() {
       {!isPendingType && (
         <>
           {/* Trust Score */}
-          <Card padding="none" className="p-5" interactive={true} maxTilt={2}>
+          <Card padding="none" className="p-5" interactive={true} maxTilt={1}>
             <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <h2 className="flex items-center gap-2 font-bold text-textPrimary">
                 <Star className="h-4 w-4 text-success" /> Trust Score
@@ -794,7 +794,7 @@ export default function AdminUserDetailPage() {
           {/* User Activity */}
           <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
             {/* Bookings */}
-            <Card padding="none" className="overflow-hidden" interactive={true} maxTilt={2}>
+            <Card padding="none" className="overflow-hidden" interactive={true} maxTilt={1}>
               <div className="flex items-center gap-2 border-b border-borderLight px-4 py-4 sm:px-5">
                 <Bookmark className="h-4 w-4 text-primary" />
                 <h2 className="font-bold text-textPrimary">Booking History</h2>
@@ -836,7 +836,7 @@ export default function AdminUserDetailPage() {
             </Card>
 
             {/* Listed Items */}
-            <Card padding="none" className="overflow-hidden" interactive={true} maxTilt={2}>
+            <Card padding="none" className="overflow-hidden" interactive={true} maxTilt={1}>
               <div className="flex items-center gap-2 border-b border-borderLight px-4 py-4 sm:px-5">
                 <Package className="h-4 w-4 text-accent" />
                 <h2 className="font-bold text-textPrimary">Listed Items</h2>

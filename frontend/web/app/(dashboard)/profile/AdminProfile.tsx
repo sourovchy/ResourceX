@@ -190,8 +190,7 @@ export default function AdminProfilePage() {
 
 					<div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
 						<TiltCard
-							maxTilt={5}
-							glare={true}
+							maxTilt={1}
 							className="flex items-center gap-4 rounded-2xl border border-borderLight bg-surface p-4 sm:p-5 transition-all duration-300 hover:border-primary/40 hover:shadow-md"
 						>
 							<div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-primaryLight text-primary">
@@ -208,8 +207,7 @@ export default function AdminProfilePage() {
 						</TiltCard>
 
 						<TiltCard
-							maxTilt={5}
-							glare={true}
+							maxTilt={1}
 							className="flex items-center gap-4 rounded-2xl border border-borderLight bg-surface p-4 sm:p-5 transition-all duration-300 hover:border-primary/40 hover:shadow-md"
 						>
 							<div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-dashboardBlueTint text-dashboardBlue">
@@ -226,8 +224,7 @@ export default function AdminProfilePage() {
 						</TiltCard>
 
 						<TiltCard
-							maxTilt={5}
-							glare={true}
+							maxTilt={1}
 							className="flex items-center gap-4 rounded-2xl border border-borderLight bg-surface p-4 sm:p-5 transition-all duration-300 hover:border-primary/40 hover:shadow-md"
 						>
 							<div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-successLight text-success">

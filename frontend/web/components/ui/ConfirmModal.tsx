@@ -4,7 +4,6 @@ import React, { useEffect, useId, useState } from "react";
 import { createPortal } from "react-dom";
 import { AlertTriangle, AlertCircle, X } from "lucide-react";
 import { useDialog } from "@/hooks/useDialog";
-import { TiltCard } from "./TiltCard";
 
 type ConfirmModalProps = {
     isOpen: boolean;
@@ -90,32 +89,14 @@ export function ConfirmModal({
         <div
             onClick={() => !isLoading && onCancel()}
             className="fixed inset-0 z-[100] flex items-end justify-center sm:items-center p-3 sm:p-4 bg-black/35 backdrop-blur-md animate-in fade-in duration-200">
-            <style dangerouslySetInnerHTML={{ __html: `
-				@keyframes confirm-modal-scale-up {
-					0% { transform: scale(0.94); opacity: 0; }
-					100% { transform: scale(1); opacity: 1; }
-				}
-				.animate-confirm-modal-enter {
-					animation: confirm-modal-scale-up 350ms cubic-bezier(0.34, 1.56, 0.64, 1) both;
-				}
-				@media (prefers-reduced-motion: reduce) {
-					.animate-confirm-modal-enter {
-						animation: none !important;
-						transform: none !important;
-					}
-				}
-			`}} />
-            <TiltCard
-                ref={dialogRef as any}
+            <div
+                ref={dialogRef as React.Ref<HTMLDivElement>}
                 role="dialog"
                 aria-modal="true"
                 aria-label={title}
                 tabIndex={-1}
-                maxTilt={2}
-                hoverScale={1.01}
-                glare={false}
                 onClick={(e) => e.stopPropagation()}
-                className="flex w-full max-w-md max-h-[90dvh] flex-col overflow-hidden border border-borderLight/60 bg-surface/90 shadow-2xl backdrop-blur-md outline-none animate-confirm-modal-enter">
+                className="flex w-full max-w-md max-h-[90dvh] flex-col overflow-hidden rounded-2xl border border-borderLight/60 bg-surface/90 shadow-2xl backdrop-blur-md outline-none animate-confirm-modal-enter">
                 {/* Header */}
                 <div className="flex items-start justify-between gap-4 border-b border-borderLight p-4 sm:p-5">
                     <div className="flex items-start gap-3 min-w-0">
@@ -199,7 +180,7 @@ export function ConfirmModal({
                         {isLoading ? "Please wait..." : confirmText}
                     </button>
                 </div>
-            </TiltCard>
+            </div>
         </div>,
         document.body,
     );

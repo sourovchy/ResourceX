@@ -34,8 +34,7 @@ const ActionCard = ({
 	if (variant === "row") {
 		return (
 			<TiltCard
-				maxTilt={4}
-				glare={true}
+				maxTilt={1}
 				className={`group rounded-xl transition-colors hover:bg-surfaceVariant ${className}`.trim()}
 			>
 				<Link
@@ -64,8 +63,7 @@ const ActionCard = ({
 
 	return (
 		<TiltCard
-			maxTilt={6}
-			glare={true}
+			maxTilt={1}
 			className={`
 				group flex min-h-[140px] flex-col gap-3 rounded-2xl border border-borderLight bg-surface p-4 shadow-sm transition-all
 				hover:border-outline hover:shadow-md focus-within:ring-4 focus-within:ring-primaryLight

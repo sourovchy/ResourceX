@@ -120,7 +120,7 @@ public class UserServiceImpl implements UserService {
                         // name so the client can load it via GET /api/files/{storedName}.
                         fileMetadataRepository.findById(response.getStudentProfile().getIdCardFileId())
                                 .ifPresent(meta -> response.getStudentProfile()
-                                        .setIdCardDataUrl(meta.getStoredName()));
+                                        .setIdCardDataUrl(meta.getFileUrl()));
                     }
 
                     return response;
@@ -223,7 +223,7 @@ public class UserServiceImpl implements UserService {
             // since avatars now live in the files table (single source of truth).
             String newAvatarUrl = request.getAvatarUrl().trim();
             String newStoredName = newAvatarUrl.substring(newAvatarUrl.lastIndexOf('/') + 1);
-            Long newFileId = fileMetadataRepository.findByStoredName(newStoredName)
+            Long newFileId = fileMetadataRepository.findByFileUrl("/api/files/" + newStoredName)
                     .map(com.resourcex.resourcex.entity.FileMetadata::getFileId)
                     .orElse(null);
 
@@ -234,10 +234,10 @@ public class UserServiceImpl implements UserService {
                     fileMetadataRepository.findById(oldFileId).ifPresent(metadata -> {
                         try {
                             java.nio.file.Path filePath = java.nio.file.Paths.get("uploads")
-                                    .toAbsolutePath().normalize().resolve(metadata.getStoredName());
+                                    .toAbsolutePath().normalize().resolve((metadata.getFileUrl().substring(metadata.getFileUrl().lastIndexOf('/') + 1)));
                             java.nio.file.Files.deleteIfExists(filePath);
                         } catch (Exception ex) {
-                            log.warn("Failed to delete old avatar file from disk: {}", metadata.getStoredName(), ex);
+                            log.warn("Failed to delete old avatar file from disk: {}", (metadata.getFileUrl().substring(metadata.getFileUrl().lastIndexOf('/') + 1)), ex);
                         }
                         fileMetadataRepository.delete(metadata);
                     });

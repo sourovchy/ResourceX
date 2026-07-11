@@ -19,7 +19,7 @@ public class AvatarUrlResolver {
             return null;
         }
         return fileMetadataRepository.findById(avatarFileId)
-                .map(file -> "/api/files/" + file.getStoredName())
+                .map(com.resourcex.resourcex.entity.FileMetadata::getFileUrl)
                 .orElse(null);
     }
 }

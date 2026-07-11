@@ -352,7 +352,7 @@ export default function StaffManagementPage() {
 				)}
 
 				<div className="grid gap-6 lg:grid-cols-[minmax(0,420px)_minmax(0,1fr)]">
-					<TiltCard maxTilt={3} glare={true} className="lg:sticky lg:top-6 lg:self-start">
+					<TiltCard maxTilt={1} className="lg:sticky lg:top-6 lg:self-start">
 						<section className="rounded-3xl border border-borderLight bg-surface p-4 shadow-sm sm:p-6 h-full">
 						<div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
 							<div>
@@ -505,7 +505,7 @@ export default function StaffManagementPage() {
 						</section>
 					</TiltCard>
 
-					<TiltCard maxTilt={1.5} glare={true} className="h-full">
+					<TiltCard maxTilt={1} className="h-full">
 						<section className="rounded-3xl border border-borderLight bg-card p-4 shadow-sm sm:p-6 min-w-0 h-full">
 						<div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
 							<div>
@@ -619,8 +619,7 @@ function Field({
 function StatCard({ title, value }: { title: string; value: number }) {
 	return (
 		<TiltCard
-			maxTilt={6}
-			glare={true}
+			maxTilt={1}
 			className="w-full rounded-2xl border border-borderLight bg-surfaceVariant px-4 py-4 text-left shadow-sm sm:min-w-[180px] transition-all duration-300 hover:border-primary/40 hover:shadow-md hover:bg-surfaceVariant/80">
 			<div className="text-xs font-semibold uppercase tracking-[0.16em] text-textSecondary relative z-10">
 				{title}

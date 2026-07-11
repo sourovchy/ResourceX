@@ -369,7 +369,7 @@ export default function BookItemPage({ params }: { params: { id: string } }) {
 					</Card>
 
 					{/* ── Payment info notice ── */}
-					<TiltCard maxTilt={3} glare={true} className="flex items-start gap-3 rounded-xl border border-borderLight bg-surface p-4 text-sm transition-all duration-300 hover:border-primary/40 hover:shadow-sm">
+					<TiltCard maxTilt={1} className="flex items-start gap-3 rounded-xl border border-borderLight bg-surface p-4 text-sm transition-all duration-300 hover:border-primary/40 hover:shadow-sm">
 						<Info className="mt-0.5 h-5 w-5 shrink-0 text-textSecondary" />
 						<div className="text-textSecondary">
 							<strong className="mb-0.5 block text-textPrimary uppercase text-xs tracking-wider">How payment works</strong>

@@ -306,8 +306,7 @@ export default function RequestsPage() {
 					return (
 						<TiltCard
 							key={booking.bookingId}
-							maxTilt={4}
-							glare={true}
+							maxTilt={1}
 							className="overflow-hidden rounded-2xl border border-borderLight bg-surface shadow-sm transition-all duration-300 hover:border-primary/40 hover:shadow-md"
 						>
 

@@ -20,7 +20,7 @@ export function ReviewCard({ review }: { review: ReviewResponse }) {
 
   return (
     <TiltCard
-      maxTilt={2}
+      maxTilt={1}
       glare={true}
       className="group overflow-hidden rounded-2xl border border-borderLight bg-surface p-4 shadow-sm transition-all duration-300 hover:border-primary/40 hover:shadow-lg sm:p-5"
     >

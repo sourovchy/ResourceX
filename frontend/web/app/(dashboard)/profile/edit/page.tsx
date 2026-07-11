@@ -343,8 +343,7 @@ export default function EditProfilePage() {
 
 			{/* ──── Profile Information Form ──── */}
 			<TiltCard
-				maxTilt={3}
-				glare={true}
+				maxTilt={1}
 				className="rounded-2xl border border-borderLight bg-surface shadow-sm transition-all duration-300 hover:border-primary/40 hover:shadow-md"
 			>
 			<form
@@ -541,8 +540,7 @@ export default function EditProfilePage() {
 
 			{/* ──── Security / Password Form ──── */}
 			<TiltCard
-				maxTilt={3}
-				glare={true}
+				maxTilt={1}
 				className="rounded-2xl border border-borderLight bg-surface shadow-sm transition-all duration-300 hover:border-primary/40 hover:shadow-md"
 			>
 			<form

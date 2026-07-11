@@ -89,7 +89,7 @@ export default function LoginPage() {
   return (
     <div className="graph-grid relative flex min-h-screen items-center justify-center overflow-hidden bg-background px-4 py-8 sm:px-6 lg:px-8">
       <Reveal className="relative z-10 w-full max-w-md px-1 sm:px-0">
-        <TiltCard className="glass-surface rounded-2xl p-5 shadow-md sm:p-6 md:p-8">
+        <TiltCard maxTilt={1} className="glass-surface rounded-2xl p-5 shadow-md sm:p-6 md:p-8">
           {/* Header */}
           <div className="mb-6 text-center sm:mb-8">
             <div className="mb-4 flex justify-center">

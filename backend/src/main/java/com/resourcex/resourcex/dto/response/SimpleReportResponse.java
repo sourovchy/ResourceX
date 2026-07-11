@@ -15,4 +15,5 @@ public class SimpleReportResponse {
     private String description;
     private String priority;
     private String type;
+    private String status;
 }

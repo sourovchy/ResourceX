@@ -1,27 +1,23 @@
 package com.resourcex.resourcex.service;
 
 import com.resourcex.resourcex.dto.response.ReportResponse;
-import java.time.LocalDateTime;
+import com.resourcex.resourcex.entity.Report;
+
 import java.util.List;
 
 public interface ReportService {
 
-    /**
-     * Resolve a report.
-     *
-     * @param reportId         the report to resolve
-     * @param confirmed        {@code true} if the moderator confirms a violation (penalises the reported user)
-     * @param penalizeReporter {@code true} if the report is false and the reporter should be penalized
-     */
+    ReportResponse createReport(Long reporterId, Long reportedUserId, Long reportedItemId, String reason);
+
     void resolveReport(Long reportId, boolean confirmed, boolean penalizeReporter);
 
-    ReportResponse createReport(Long reporterId, String entityType, Long entityId, String reason);
+    List<ReportResponse> getAllReports(Report.ReportStatus status);
 
     List<ReportResponse> getReporterReports(Long reporterId);
 
-    List<ReportResponse> getEntityReports(String entityType, Long entityId);
+    List<ReportResponse> getReportsForUser(Long userId);
+
+    List<ReportResponse> getReportsForItem(Long itemId);
 
     ReportResponse getReportDetails(Long reportId);
-
-    List<ReportResponse> getAllReportsWithDetails();
 }

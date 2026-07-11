@@ -2,6 +2,7 @@ package com.resourcex.resourcex.interceptor;
 
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Component;
 import org.springframework.web.servlet.HandlerInterceptor;
@@ -30,12 +31,22 @@ public class RateLimitInterceptor implements HandlerInterceptor {
         PATH_LIMITS.put("/api/auth/forgot-password", 3);
         PATH_LIMITS.put("/api/auth/reset-password", 3);
         PATH_LIMITS.put("/api/otp/", 1);
-        // Upload allows anonymous ID_CARD submissions during registration —
+        // Upload allows anonymous STUDENT_ID submissions during registration —
         // throttle so unauthenticated clients cannot fill the disk.
         PATH_LIMITS.put("/api/files/upload", 10);
     }
 
     private final Map<String, Deque<Long>> timestamps = new ConcurrentHashMap<>();
+
+    /**
+     * Whether to trust the {@code X-Forwarded-For} header for client identity.
+     * MUST stay false unless the app sits behind a trusted reverse proxy that
+     * overwrites this header. When true on a directly-exposed app, an attacker
+     * can rotate X-Forwarded-For to mint a fresh rate-limit bucket per request,
+     * defeating brute-force protection on login / OTP / password-reset entirely.
+     */
+    @Value("${app.security.trust-forwarded-for:false}")
+    private boolean trustForwardedFor;
 
     @Override
     public boolean preHandle(
@@ -78,9 +89,13 @@ public class RateLimitInterceptor implements HandlerInterceptor {
     }
 
     private String getClientIp(HttpServletRequest request) {
-        String forwarded = request.getHeader("X-Forwarded-For");
-        if (forwarded != null && !forwarded.isBlank()) {
-            return forwarded.split(",")[0].trim();
+        // Only honour X-Forwarded-For when explicitly configured to trust a fronting proxy.
+        // Otherwise the header is attacker-controlled and would defeat rate limiting.
+        if (trustForwardedFor) {
+            String forwarded = request.getHeader("X-Forwarded-For");
+            if (forwarded != null && !forwarded.isBlank()) {
+                return forwarded.split(",")[0].trim();
+            }
         }
         return request.getRemoteAddr();
     }

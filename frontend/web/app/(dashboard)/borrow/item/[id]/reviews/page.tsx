@@ -81,7 +81,7 @@ export default function ItemReviewsPage() {
 
       <div className="grid grid-cols-1 gap-8 md:grid-cols-[320px_1fr] lg:gap-12 items-start w-full">
         {/* Left column: Summary sticky sidebar */}
-        <TiltCard maxTilt={2} glare={true} className="rounded-2xl border border-borderLight bg-surface p-6 shadow-sm md:sticky md:top-24 transition-all duration-300 hover:border-primary/40 hover:shadow-lg">
+        <TiltCard maxTilt={1} className="rounded-2xl border border-borderLight bg-surface p-6 shadow-sm md:sticky md:top-24 transition-all duration-300 hover:border-primary/40 hover:shadow-lg">
           {summaryLoading || !summary ? (
             <div className="space-y-6 animate-pulse">
               <div className="flex flex-col items-center">

@@ -23,8 +23,7 @@ export default function PrivacyPolicy() {
         </div>
 
         <TiltCard
-          maxTilt={3}
-          glare={true}
+          maxTilt={1}
           className="space-y-8 rounded-3xl border border-border bg-card p-6 sm:p-10 shadow-sm transition-all duration-300 hover:border-primary/20 hover:shadow-md"
         >
           {/* 1. Introduction */}

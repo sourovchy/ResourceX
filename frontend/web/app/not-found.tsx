@@ -18,7 +18,7 @@ export default function NotFoundPage() {
 				</div>
 
 				{/* Error status card */}
-				<TiltCard maxTilt={5} className="rounded-3xl border border-border bg-card p-6 sm:p-8 shadow-sm transition hover:border-primary/20">
+				<TiltCard maxTilt={1} className="rounded-3xl border border-border bg-card p-6 sm:p-8 shadow-sm transition hover:border-primary/20">
 					<h1 className="text-3xl font-normal tracking-[-1px] text-textPrimary sm:text-4xl">
 						Page not <span className="text-primary italic">found.</span>
 					</h1>

@@ -19,18 +19,27 @@ public class Report {
     private Long reportId;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "reporter_id", nullable = false)
+    @JoinColumn(name = "reporter_id", nullable = true)
     private User reporter;
 
-    @Enumerated(EnumType.STRING)
-    @Column(nullable = false)
-    private EntityType entityType;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "reported_user_id", nullable = true)
+    private User reportedUser;
 
-    @Column(nullable = false)
-    private Long entityId;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "reported_item_id", nullable = true)
+    private Item reportedItem;
 
     @Column(nullable = false, columnDefinition = "TEXT")
     private String reason;
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    @Builder.Default
+    private ReportStatus status = ReportStatus.PENDING;
+
+    @Column(name = "resolved_at")
+    private LocalDateTime resolvedAt;
 
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
@@ -40,7 +49,9 @@ public class Report {
         this.createdAt = LocalDateTime.now();
     }
 
-    public enum EntityType {
-        USER, ITEM, BOOKING
+    public enum ReportStatus {
+        PENDING,
+        RESOLVED,
+        DISMISSED
     }
 }

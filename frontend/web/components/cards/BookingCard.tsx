@@ -42,8 +42,7 @@ export const BookingCard = ({
 
 	return (
 		<TiltCard
-			maxTilt={5}
-			glare={true}
+			maxTilt={1}
 			className="group flex h-full min-w-0 flex-col overflow-hidden rounded-2xl border border-borderLight bg-surface transition-all duration-300 hover:border-primary/40 hover:shadow-md"
 		>
 			{/* Item image */}

@@ -4,7 +4,6 @@ import com.resourcex.resourcex.dto.request.UpdateItemRequest;
 import com.resourcex.resourcex.dto.response.ItemResponse;
 import com.resourcex.resourcex.entity.Item;
 import com.resourcex.resourcex.entity.FileMetadata;
-import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -46,16 +45,7 @@ public final class ItemMapper {
                 .owner(UserMapper.toResponse(item.getOwner()))
                 .imageUrls(item.getImages() != null
                         ? item.getImages().stream()
-                          .map(file -> {
-                              try {
-                                  return ServletUriComponentsBuilder.fromCurrentContextPath()
-                                          .path("/api/files/")
-                                          .path(file.getStoredName())
-                                          .toUriString();
-                              } catch (Exception e) {
-                                  return "/api/files/" + file.getStoredName();
-                              }
-                          })
+                          .map(com.resourcex.resourcex.entity.FileMetadata::getFileUrl)
                           .toList()
                         : List.of())
                 .build();

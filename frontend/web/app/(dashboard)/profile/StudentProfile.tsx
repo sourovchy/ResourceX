@@ -161,8 +161,7 @@ export default function ProfilePage() {
 
 				<div className="space-y-6 lg:col-span-3">
 					<TiltCard
-						maxTilt={3}
-						glare={true}
+						maxTilt={1}
 						className="rounded-2xl border border-borderLight bg-surface p-6 shadow-sm transition-all duration-300 hover:border-primary/40 hover:shadow-md"
 					>
 						<div className="mb-5 flex items-center justify-between">
@@ -233,8 +232,7 @@ function ProfileStat({
 }) {
 	return (
 		<TiltCard
-			maxTilt={5}
-			glare={true}
+			maxTilt={1}
 			className="group rounded-2xl border border-borderLight bg-surfaceVariant p-5 transition-all duration-300 hover:border-primary/40 hover:shadow-md"
 		>
 			<div className="flex items-center justify-between">

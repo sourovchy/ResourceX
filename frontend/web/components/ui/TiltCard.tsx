@@ -1,125 +1,51 @@
-"use client";
-
-import React, { useRef, useState, MouseEvent } from "react";
+import React from "react";
 
 export interface TiltCardProps extends React.HTMLAttributes<HTMLDivElement> {
-    /** Maximum tilt angle in degrees. Defaults to 6. */
+    /** @deprecated Tilt was replaced by a CSS hover-lift. Accepted for API compatibility but ignored. */
     maxTilt?: number;
-    /** Scale factor on hover. Defaults to 1.02. */
+    /** @deprecated No longer used; the lift is a fixed, GPU-composited translate. */
     hoverScale?: number;
-    /** Enables glare reflection overlay. Defaults to true. */
+    /** @deprecated The glare overlay was removed with the tilt effect. */
     glare?: boolean;
-    /** Enables the tilt-reactive depth shadow (the card "lifts" toward the cursor). Defaults to true. */
+    /** @deprecated The cursor-reactive depth shadow was replaced by a static hover shadow. */
     depth?: boolean;
 }
 
+/**
+ * A subtle, accessible hover-lift card.
+ *
+ * Previously this rendered a JS-driven 3D tilt that called `setState` on every
+ * `mousemove` — with this component mounted ~150 times across the app, that was
+ * a significant re-render / INP cost, and the moving transform shifted click
+ * targets (buttons inside the card) under the cursor.
+ *
+ * It is now a pure-CSS hover-lift: a small upward translate + soft brand shadow,
+ * fully GPU-composited (no React re-renders, no layout work) and disabled under
+ * `prefers-reduced-motion`. The original tilt props are accepted but ignored so
+ * existing call sites keep working without edits.
+ */
 export const TiltCard = React.forwardRef<HTMLDivElement, TiltCardProps>(
     (
         {
-            maxTilt = 6,
-            hoverScale = 1.02,
-            glare = true,
-            depth = true,
+            // Tilt-era props are intentionally destructured out so they are not
+            // spread onto the DOM node (which would warn about unknown attrs).
+            maxTilt: _maxTilt,
+            hoverScale: _hoverScale,
+            glare: _glare,
+            depth: _depth,
             className = "",
             children,
-            style,
             ...props
         },
         ref
     ) => {
-        const localRef = useRef<HTMLDivElement>(null);
-        const [tiltStyle, setTiltStyle] = useState<React.CSSProperties>({});
-        const [glareStyle, setGlareStyle] = useState<React.CSSProperties>({
-            opacity: 0,
-        });
-
-        // Combined ref utility
-        const setRefs = (node: HTMLDivElement | null) => {
-            (localRef as any).current = node;
-            if (ref) {
-                if (typeof ref === "function") {
-                    ref(node);
-                } else {
-                    (ref as any).current = node;
-                }
-            }
-        };
-
-        const handleMouseMove = (e: MouseEvent<HTMLDivElement>) => {
-            const card = localRef.current;
-            if (!card) return;
-
-            // Check if user prefers reduced motion or device doesn't support hover (mobile)
-            const prefersReduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-            const supportsHover = window.matchMedia("(hover: hover)").matches;
-            if (prefersReduced || !supportsHover) return;
-
-            const rect = card.getBoundingClientRect();
-            const x = e.clientX - rect.left; // cursor x relative to card
-            const y = e.clientY - rect.top;  // cursor y relative to card
-
-            const xc = rect.width / 2;
-            const yc = rect.height / 2;
-
-            // Calculate rotation angles (-maxTilt to +maxTilt)
-            const angleX = -((y - yc) / yc) * maxTilt;
-            const angleY = ((x - xc) / xc) * maxTilt;
-
-            // Depth shadow lifts the card toward the cursor: offset opposite the tilt,
-            // tinted with the forest-green brand for a cohesive, premium feel.
-            const nextStyle: React.CSSProperties = {
-                transform: `perspective(900px) rotateX(${angleX}deg) rotateY(${angleY}deg) scale3d(${hoverScale}, ${hoverScale}, ${hoverScale})`,
-                transition: "none",
-            };
-            if (depth) {
-                const ox = (-angleY / maxTilt) * 18;
-                const oy = (angleX / maxTilt) * 18 + 10;
-                nextStyle.boxShadow = `${ox.toFixed(1)}px ${oy.toFixed(1)}px 34px -12px rgba(31, 71, 54, 0.28), 0 6px 14px -8px rgba(17, 24, 39, 0.18)`;
-            }
-            setTiltStyle(nextStyle);
-
-            if (glare) {
-                const px = (x / rect.width) * 100;
-                const py = (y / rect.height) * 100;
-
-                setGlareStyle({
-                    opacity: 1,
-                    background: `radial-gradient(circle at ${px}% ${py}%, rgba(255, 255, 255, 0.32) 0%, rgba(255, 255, 255, 0) 60%)`,
-                });
-            }
-        };
-
-        const handleMouseLeave = () => {
-            setTiltStyle({
-                transform: "perspective(900px) rotateX(0deg) rotateY(0deg) scale3d(1, 1, 1)",
-                transition: "transform 0.6s cubic-bezier(0.25, 1, 0.5, 1), box-shadow 0.6s cubic-bezier(0.25, 1, 0.5, 1)",
-                boxShadow: undefined,
-            });
-
-            if (glare) {
-                setGlareStyle({
-                    opacity: 0,
-                    transition: "opacity 0.6s cubic-bezier(0.25, 1, 0.5, 1)",
-                });
-            }
-        };
-
         return (
             <div
-                ref={setRefs}
-                onMouseMove={handleMouseMove}
-                onMouseLeave={handleMouseLeave}
-                style={{ transformStyle: "preserve-3d", ...style, ...tiltStyle }}
-                className={`relative transform-gpu will-change-transform ${className}`}
+                ref={ref}
+                className={`rx-lift transform-gpu transition-[transform,box-shadow] duration-300 ease-out motion-reduce:transition-none hover:-translate-y-1 ${className}`}
                 {...props}
             >
                 {children}
-                {glare && (
-                    <div
-                        className="pointer-events-none absolute inset-0 opacity-0 transition-opacity duration-300 rounded-[inherit] overflow-hidden z-[5]"
-                        style={glareStyle}
-                    />
-                )}
             </div>
         );
     }

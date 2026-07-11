@@ -198,8 +198,7 @@ export default function ItemDetailPage({ params }: { params: { id: string } }) {
           {/* Images */}
           <Reveal from="left" className="space-y-3">
             <TiltCard
-              maxTilt={3}
-              glare={true}
+              maxTilt={1}
               className="group relative aspect-[4/3] overflow-hidden rounded-2xl border border-borderLight bg-surfaceVariant shadow-sm"
             >
               {mainImage ? (
@@ -307,8 +306,7 @@ export default function ItemDetailPage({ params }: { params: { id: string } }) {
 
             {/* Pricing card */}
             <TiltCard
-              maxTilt={3}
-              glare={true}
+              maxTilt={1}
               className="space-y-4 rounded-2xl border border-borderLight bg-surface p-4 shadow-sm sm:p-5"
             >
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-borderLight pb-4">
@@ -394,8 +392,7 @@ export default function ItemDetailPage({ params }: { params: { id: string } }) {
             {!isOwnItem && (
               <div className="space-y-2">
                 <TiltCard
-                  maxTilt={3}
-                  glare={true}
+                  maxTilt={1}
                   className="rounded-xl border border-borderLight bg-surface p-4 shadow-sm"
                 >
                   <div className="flex flex-col gap-3">
@@ -485,8 +482,7 @@ export default function ItemDetailPage({ params }: { params: { id: string } }) {
         {/* Reviews & Ratings */}
         <Reveal className="border-t border-borderLight pt-6" id="item-reviews">
           <TiltCard
-            maxTilt={3}
-            glare={true}
+            maxTilt={1}
             className="rounded-2xl border border-borderLight bg-surface shadow-sm overflow-hidden"
           >
             <div className="p-5 sm:p-6 border-b border-borderLight flex items-center justify-between">

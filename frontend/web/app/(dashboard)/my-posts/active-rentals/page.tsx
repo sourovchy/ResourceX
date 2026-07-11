@@ -161,8 +161,7 @@ export default function ActiveRentalsPage() {
 						return (
 						<TiltCard
 							key={booking.bookingId}
-							maxTilt={4}
-							glare={true}
+							maxTilt={1}
 							className="space-y-5 rounded-2xl border border-borderLight bg-surface p-5 shadow-sm transition-all duration-300 hover:border-primary/40 hover:shadow-md sm:p-6 lg:p-8"
 						>
 								{/* Header */}

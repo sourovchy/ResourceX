@@ -1,6 +1,8 @@
 package com.resourcex.resourcex.repository;
 
+import com.resourcex.resourcex.entity.Item;
 import com.resourcex.resourcex.entity.Report;
+import com.resourcex.resourcex.entity.User;
 import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
@@ -10,16 +12,24 @@ import java.util.List;
 @Repository
 public interface ReportRepository extends JpaRepository<Report, Long> {
 
-    // mapToResponse reads reporter's scalar fields, so join-fetch the lazy reporter
-    // to avoid one extra SELECT per report row on these admin list endpoints.
-    @EntityGraph(attributePaths = "reporter", type = EntityGraph.EntityGraphType.LOAD)
+    @EntityGraph(attributePaths = {"reporter", "reportedUser", "reportedItem", "reportedItem.owner"}, type = EntityGraph.EntityGraphType.LOAD)
     List<Report> findAllByOrderByCreatedAtDesc();
 
-    @EntityGraph(attributePaths = "reporter", type = EntityGraph.EntityGraphType.LOAD)
-    List<Report> findByReporterUserIdOrderByCreatedAtDesc(Long userId);
+    @EntityGraph(attributePaths = {"reporter", "reportedUser", "reportedItem", "reportedItem.owner"}, type = EntityGraph.EntityGraphType.LOAD)
+    List<Report> findByStatusOrderByCreatedAtDesc(Report.ReportStatus status);
 
-    boolean existsByReporterUserIdAndEntityTypeAndEntityId(Long reporterId, Report.EntityType entityType, Long entityId);
+    @EntityGraph(attributePaths = {"reporter", "reportedUser", "reportedItem", "reportedItem.owner"}, type = EntityGraph.EntityGraphType.LOAD)
+    List<Report> findByReporter_UserIdOrderByCreatedAtDesc(Long reporterId);
 
-    @EntityGraph(attributePaths = "reporter", type = EntityGraph.EntityGraphType.LOAD)
-    List<Report> findByEntityTypeAndEntityIdOrderByCreatedAtDesc(Report.EntityType entityType, Long entityId);
+    @EntityGraph(attributePaths = {"reporter", "reportedUser", "reportedItem", "reportedItem.owner"}, type = EntityGraph.EntityGraphType.LOAD)
+    List<Report> findByReportedUserOrderByCreatedAtDesc(User reportedUser);
+
+    @EntityGraph(attributePaths = {"reporter", "reportedUser", "reportedItem", "reportedItem.owner"}, type = EntityGraph.EntityGraphType.LOAD)
+    List<Report> findByReportedItemOrderByCreatedAtDesc(Item reportedItem);
+
+    boolean existsByReporter_UserIdAndReportedUser(Long reporterId, User reportedUser);
+
+    boolean existsByReporter_UserIdAndReportedItem(Long reporterId, Item reportedItem);
+
+    List<Report> findByReportedUserAndStatus(User reportedUser, Report.ReportStatus status);
 }

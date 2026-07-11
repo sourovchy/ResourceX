@@ -84,7 +84,7 @@ public class AuthServiceImpl implements AuthService {
         com.resourcex.resourcex.entity.FileMetadata file = fileMetadataRepository.findById(request.getIdCardFileId())
                 .orElseThrow(() -> new ResourceNotFoundException("ID Card file not found"));
 
-        if (file.getPurpose() != com.resourcex.resourcex.entity.FilePurpose.ID_CARD) {
+        if (file.getPurpose() != com.resourcex.resourcex.entity.FilePurpose.STUDENT_ID) {
             throw new BadRequestException("Invalid file purpose for ID card");
         }
 

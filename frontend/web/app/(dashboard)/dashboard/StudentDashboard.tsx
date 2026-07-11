@@ -443,8 +443,7 @@ function Panel({
 }) {
   return (
     <TiltCard
-      maxTilt={3}
-      glare={true}
+      maxTilt={1}
       className={`overflow-hidden rounded-xl border border-borderLight bg-surface shadow-sm ${className}`}
     >
       {/* Header */}

@@ -26,7 +26,10 @@ const PADDING_CLASSES: Record<CardPadding, string> = {
  */
 export const Card = React.forwardRef<HTMLDivElement, CardProps>(
 	(
-		{ interactive = false, padding = "md", maxTilt = 5, className = "", children, ...props },
+		// Motion hierarchy: dashboard / utility cards default to a
+		// barely-perceptible 1° tilt. Hero / showcase usages should
+		// opt-in to a higher value explicitly via the `maxTilt` prop.
+		{ interactive = false, padding = "md", maxTilt = 1, className = "", children, ...props },
 		ref,
 	) => {
 		const baseClass = `rounded-2xl border border-borderLight bg-surface shadow-[0_1px_2px_-1px_rgba(31,71,54,0.08),0_8px_24px_-12px_rgba(31,71,54,0.12)]
@@ -39,7 +42,6 @@ export const Card = React.forwardRef<HTMLDivElement, CardProps>(
 				<TiltCard
 					ref={ref}
 					maxTilt={maxTilt}
-					glare={true}
 					className={baseClass}
 					{...props}
 				>

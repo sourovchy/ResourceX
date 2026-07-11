@@ -151,8 +151,7 @@ function ChartCard({
 }) {
 	return (
 		<TiltCard
-			maxTilt={3}
-			glare={true}
+			maxTilt={1}
 			className="overflow-hidden rounded-xl border border-borderLight bg-surface shadow-sm transition-shadow hover:border-primary/40 hover:shadow-md"
 		>
 			<div className="border-b border-borderLight px-5 py-4">
@@ -319,8 +318,7 @@ export default function AdminAnalyticsPage() {
 				{summaryCards.map((card) => (
 					<TiltCard
 						key={card.label}
-						maxTilt={6}
-						glare={true}
+						maxTilt={1}
 						className="relative overflow-hidden rounded-xl border border-borderLight bg-surface p-4 shadow-sm transition hover:shadow-md">
 						<div className="text-xs font-semibold uppercase tracking-wider text-textTertiary relative z-10">
 							{card.label}

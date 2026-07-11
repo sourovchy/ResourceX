@@ -248,7 +248,7 @@ export default function LandingPage() {
             {FAQS.map((faq, i) => (
               <Reveal key={i} delay={i * 80}>
                 <TiltCard
-                  maxTilt={4}
+                  maxTilt={1}
                   hoverScale={1.01}
                   className="group rounded-2xl border border-border bg-card shadow-sm transition-all duration-300 hover:border-primary/40 hover:shadow-md"
                 >
@@ -285,7 +285,7 @@ export default function LandingPage() {
         <div className="mx-auto max-w-3xl px-6">
           <Reveal>
             <TiltCard
-              maxTilt={5}
+              maxTilt={1}
               hoverScale={1.01}
               className="space-y-6 rounded-3xl border border-border bg-card p-10 text-center shadow-md transition-all duration-300 hover:border-primary/40 hover:shadow-lg md:p-14"
             >

@@ -25,9 +25,7 @@ export default function ConversationList({
 				return (
 					<TiltCard
 						key={c.conversationId}
-						maxTilt={4}
-						hoverScale={1.02}
-						glare={true}
+						maxTilt={1}
 						className={`
 							overflow-hidden rounded-2xl border transition-all duration-300 cursor-pointer
 							bg-card/75 backdrop-blur-md

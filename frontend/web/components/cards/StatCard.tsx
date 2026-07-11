@@ -43,8 +43,7 @@ const StatCard = ({
 
 	const inner = (
 		<TiltCard
-			maxTilt={6}
-			glare={true}
+			maxTilt={1}
 			className={`
 				group rounded-2xl border border-borderLight bg-surface p-4 shadow-sm transition-all duration-300 hover:border-primary/40 hover:bg-surfaceVariant/20 hover:shadow-md
 				${icon ? "flex items-start gap-3 sm:gap-4" : "flex flex-col gap-2"}

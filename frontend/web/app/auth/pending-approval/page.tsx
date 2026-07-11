@@ -11,7 +11,7 @@ export default function PendingApprovalPage() {
 	return (
 		<div className="graph-grid relative flex min-h-screen items-center justify-center overflow-hidden bg-background px-4 py-8 sm:px-6 lg:px-8">
 			<Reveal className="relative z-10 w-full max-w-md px-1 sm:px-0">
-				<TiltCard className="glass-surface rounded-2xl p-5 text-center shadow-md sm:p-6 md:p-8">
+				<TiltCard maxTilt={1} className="glass-surface rounded-2xl p-5 text-center shadow-md sm:p-6 md:p-8">
 					<div className="mb-6 flex justify-center">
 						<LogoIcon size={40} />
 					</div>

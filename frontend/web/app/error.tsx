@@ -31,7 +31,7 @@ export default function GlobalErrorPage({
 
         {/* Error status card */}
         <TiltCard
-          maxTilt={5}
+          maxTilt={1}
           className="rounded-3xl border border-border bg-card p-6 sm:p-8 shadow-sm transition hover:border-primary/20"
         >
           <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-errorLight text-error">

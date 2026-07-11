@@ -1,10 +1,8 @@
 package com.resourcex.resourcex.service.impl;
 
-import com.resourcex.resourcex.entity.AuditLog;
 import com.resourcex.resourcex.entity.StudentProfile;
 import com.resourcex.resourcex.entity.User;
 import com.resourcex.resourcex.repository.StudentProfileRepository;
-import com.resourcex.resourcex.service.AuditLogService;
 import com.resourcex.resourcex.service.NotificationService;
 import com.resourcex.resourcex.service.TrustEnforcementService;
 import com.resourcex.resourcex.service.TrustScoreService;
@@ -22,7 +20,6 @@ public class TrustScoreServiceImpl implements TrustScoreService {
 
     private final StudentProfileRepository studentProfileRepository;
     private final NotificationService notificationService;
-    private final AuditLogService auditLogService;
     private final TrustEnforcementService trustEnforcementService;
 
     @Override
@@ -42,16 +39,6 @@ public class TrustScoreServiceImpl implements TrustScoreService {
 
         profile.setTrustScore(newScore);
         studentProfileRepository.save(profile);
-
-        auditLogService.logAction(
-                AuditLog.ActorType.SYSTEM,
-                null,
-                "TRUST_SCORE_CHANGED",
-                "USER",
-                userId,
-                AuditLog.AuditOutcome.SUCCESS,
-                String.format("TRUST %+d (%d → %d): %s", points, oldScore, newScore, reason)
-        );
 
         if (points != 0) {
             String message = "Your trust score " + (points > 0 ? "increased" : "decreased")

@@ -54,8 +54,7 @@ const ItemCard = ({ item, href, actionsSlot, topRightSlot }: ItemCardProps) => {
 
   return (
     <TiltCard
-      maxTilt={6}
-      glare={true}
+      maxTilt={1}
       className="group relative flex h-full min-w-0 flex-col overflow-hidden rounded-2xl border border-borderLight bg-surface shadow-md transition-colors duration-300 hover:border-primary/40 hover:shadow-lg"
     >
       {/* Stretched overlay link — the whole-card click target. Kept as a sibling

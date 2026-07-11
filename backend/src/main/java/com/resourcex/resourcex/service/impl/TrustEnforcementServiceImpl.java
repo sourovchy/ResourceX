@@ -1,12 +1,10 @@
 package com.resourcex.resourcex.service.impl;
 
-import com.resourcex.resourcex.entity.AuditLog;
 import com.resourcex.resourcex.entity.StudentProfile;
 import com.resourcex.resourcex.entity.StudentRestriction;
 import com.resourcex.resourcex.entity.User;
 import com.resourcex.resourcex.entity.UserStatus;
 import com.resourcex.resourcex.repository.UserRepository;
-import com.resourcex.resourcex.service.AuditLogService;
 import com.resourcex.resourcex.service.EmailService;
 import com.resourcex.resourcex.service.NotificationService;
 import com.resourcex.resourcex.service.StudentRestrictionManager;
@@ -41,7 +39,6 @@ public class TrustEnforcementServiceImpl implements TrustEnforcementService {
     private final UserRepository userRepository;
     private final NotificationService notificationService;
     private final EmailService emailService;
-    private final AuditLogService auditLogService;
     private final StudentRestrictionManager restrictionManager;
 
     @Override
@@ -64,7 +61,6 @@ public class TrustEnforcementServiceImpl implements TrustEnforcementService {
                     userId, null, WARNING_MESSAGE, null);
             emailService.sendTrustNotificationEmail(
                     user.getEmail(), "ResourceX — Trust Score Warning", "Trust Score Warning", WARNING_MESSAGE);
-            audit(userId, "TRUST_WARNING_ISSUED", "Trust warning issued at score " + score);
         }
 
         // ── Restriction (<50) ────────────────────────────────────────────────
@@ -73,13 +69,11 @@ public class TrustEnforcementServiceImpl implements TrustEnforcementService {
                     userId, null, RESTRICTION_MESSAGE, null);
             emailService.sendTrustNotificationEmail(
                     user.getEmail(), "ResourceX — Account Restricted", "Account Restricted", RESTRICTION_MESSAGE);
-            audit(userId, "TRUST_RESTRICTION_ENABLED", "Automatic restriction enabled at score " + score);
         } else if (score >= TrustPoints.RESTRICTION_THRESHOLD && oldScore < TrustPoints.RESTRICTION_THRESHOLD) {
             notificationService.createTrustNotification(
                     userId, null,
                     "Your account restriction has been lifted as your Trust Score recovered. Thank you for improving your standing.",
                     null);
-            audit(userId, "TRUST_RESTRICTION_LIFTED", "Automatic restriction lifted at score " + score);
         }
 
         // ── Automatic suspension (<40) ───────────────────────────────────────
@@ -131,9 +125,4 @@ public class TrustEnforcementServiceImpl implements TrustEnforcementService {
         log.info("[Trust] Auto-suspended user {} (PERMANENT) due to low score", user.getUserId());
     }
 
-    private void audit(Long userId, String action, String details) {
-        auditLogService.logAction(
-                AuditLog.ActorType.SYSTEM, null, action, "USER", userId,
-                AuditLog.AuditOutcome.SUCCESS, details);
-    }
 }

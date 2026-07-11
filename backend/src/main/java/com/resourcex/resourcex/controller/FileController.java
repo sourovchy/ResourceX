@@ -30,7 +30,7 @@ public class FileController {
             @RequestParam("purpose") FilePurpose purpose,
             @AuthenticationPrincipal UserDetails userDetails) {
 
-        if (userDetails == null && purpose != FilePurpose.ID_CARD) {
+        if (userDetails == null && purpose != FilePurpose.STUDENT_ID) {
             throw new com.resourcex.resourcex.exception.UnauthorizedException("Authentication required for this upload purpose");
         }
 

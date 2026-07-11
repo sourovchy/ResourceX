@@ -53,7 +53,7 @@ export default function TrustSummaryCard({
   if (loading) {
     return (
       <TiltCard
-        maxTilt={4}
+        maxTilt={1}
         glare={true}
         className={`flex items-center justify-center rounded-2xl border border-borderLight bg-surface p-8 shadow-sm ${className}`}
       >
@@ -66,7 +66,7 @@ export default function TrustSummaryCard({
   if (trustScore == null) {
     return (
       <TiltCard
-        maxTilt={4}
+        maxTilt={1}
         glare={true}
         className={`rounded-2xl border border-borderLight bg-surface p-5 text-sm text-textTertiary shadow-sm ${className}`}
       >
@@ -87,7 +87,7 @@ export default function TrustSummaryCard({
 
   return (
     <TiltCard
-      maxTilt={4}
+      maxTilt={1}
       glare={true}
       className={`overflow-hidden rounded-2xl border border-borderLight bg-surface shadow-sm transition-all duration-300 hover:border-primary/40 hover:shadow-md ${className}`}
     >

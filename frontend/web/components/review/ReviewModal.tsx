@@ -104,7 +104,7 @@ export function ReviewModal({
         aria-modal="true"
         aria-label="Review your rental"
         tabIndex={-1}
-        maxTilt={2}
+        maxTilt={1}
         hoverScale={1.01}
         glare={false}
         className="relative z-10 flex max-h-[90dvh] w-full max-w-lg flex-col overflow-hidden rounded-2xl border border-borderLight/60 bg-surface/90 shadow-2xl backdrop-blur-md outline-none animate-in fade-in zoom-in-95 slide-in-from-bottom-2 sm:slide-in-from-bottom-0 duration-200"

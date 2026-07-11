@@ -23,7 +23,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.BDDMockito.given;
-import static org.mockito.Mockito.*;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
 
 @ExtendWith(MockitoExtension.class)
 class ReportServiceTest {
@@ -36,9 +37,6 @@ class ReportServiceTest {
 
     @Mock
     private UserRepository userRepository;
-
-    @Mock
-    private AuditLogService auditLogService;
 
     @Mock
     private TrustScoreService trustScoreService;
@@ -70,63 +68,54 @@ class ReportServiceTest {
 
     @Test
     void createReport_selfReportListing_throwsBadRequest() {
-        // Given
         given(userRepository.findById(reporter.getUserId())).willReturn(Optional.of(reporter));
-        
+
         // Make the reporter the owner of the item
         item.setOwner(reporter);
         given(itemRepository.findById(item.getItemId())).willReturn(Optional.of(item));
 
-        // When/Then
-        assertThatThrownBy(() -> reportService.createReport(reporter.getUserId(), "ITEM", item.getItemId(), "FRAUD_OR_SCAM"))
+        assertThatThrownBy(() -> reportService.createReport(reporter.getUserId(), null, item.getItemId(), "FRAUD_OR_SCAM"))
                 .isInstanceOf(BadRequestException.class)
                 .hasMessageContaining("You cannot report your own listing.");
     }
 
     @Test
     void createReport_duplicateReport_throwsConflict() {
-        // Given
         given(userRepository.findById(reporter.getUserId())).willReturn(Optional.of(reporter));
         given(itemRepository.findById(item.getItemId())).willReturn(Optional.of(item));
-        
-        // Report already exists
-        given(reportRepository.existsByReporterUserIdAndEntityTypeAndEntityId(
-                reporter.getUserId(), Report.EntityType.ITEM, item.getItemId()))
+
+        given(reportRepository.existsByReporter_UserIdAndReportedItem(reporter.getUserId(), item))
                 .willReturn(true);
 
-        // When/Then
-        assertThatThrownBy(() -> reportService.createReport(reporter.getUserId(), "ITEM", item.getItemId(), "FRAUD_OR_SCAM"))
+        assertThatThrownBy(() -> reportService.createReport(reporter.getUserId(), null, item.getItemId(), "FRAUD_OR_SCAM"))
                 .isInstanceOf(ConflictException.class)
-                .hasMessageContaining("You have already reported this. A review is pending.");
+                .hasMessageContaining("You have already reported this item. A review is pending.");
     }
 
     @Test
     void createReport_validItemReport_savesAndReturnsResponse() {
-        // Given
         given(userRepository.findById(reporter.getUserId())).willReturn(Optional.of(reporter));
         given(itemRepository.findById(item.getItemId())).willReturn(Optional.of(item));
-        given(reportRepository.existsByReporterUserIdAndEntityTypeAndEntityId(
-                reporter.getUserId(), Report.EntityType.ITEM, item.getItemId()))
+        given(reportRepository.existsByReporter_UserIdAndReportedItem(reporter.getUserId(), item))
                 .willReturn(false);
 
         Report report = Report.builder()
                 .reportId(100L)
                 .reporter(reporter)
-                .entityType(Report.EntityType.ITEM)
-                .entityId(item.getItemId())
+                .reportedItem(item)
                 .reason("FRAUD_OR_SCAM")
+                .status(Report.ReportStatus.PENDING)
                 .build();
 
         given(reportRepository.save(any(Report.class))).willReturn(report);
 
-        // When
-        ReportResponse res = reportService.createReport(reporter.getUserId(), "ITEM", item.getItemId(), "FRAUD_OR_SCAM");
+        ReportResponse res = reportService.createReport(reporter.getUserId(), null, item.getItemId(), "FRAUD_OR_SCAM");
 
-        // Then
         assertThat(res).isNotNull();
         assertThat(res.getReportId()).isEqualTo(100L);
-        assertThat(res.getEntityType()).isEqualTo("ITEM");
+        assertThat(res.getReportedItemId()).isEqualTo(item.getItemId());
         assertThat(res.getReason()).isEqualTo("FRAUD_OR_SCAM");
+        assertThat(res.getStatus()).isEqualTo("PENDING");
         verify(reportRepository, times(1)).save(any(Report.class));
     }
 }

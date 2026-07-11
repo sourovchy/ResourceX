@@ -354,20 +354,22 @@ body {
     );
 }
 
-/* ─── Marquee ticker (landing) ──────────────────────────────────── */
-
-@keyframes rxMarquee {
+/* ─── Modal: ConfirmModal enter ────────────────────────────────── */
+/* One-shot 350ms scale-up on mount; global reduced-motion rule below
+   collapses it to ~0ms for users who prefer reduced motion. */
+@keyframes confirm-modal-scale-up {
   from {
-    transform: translateX(0);
+    transform: scale(0.94);
+    opacity: 0;
   }
   to {
-    transform: translateX(-50%);
+    transform: scale(1);
+    opacity: 1;
   }
 }
 
-.animate-marquee {
-  animation: rxMarquee 32s linear infinite;
-  will-change: transform;
+.animate-confirm-modal-enter {
+  animation: confirm-modal-scale-up 350ms cubic-bezier(0.34, 1.56, 0.64, 1) both;
 }
 
 /* ─── Scroll reveals (Reveal component) ─────────────────────────── */
@@ -429,7 +431,144 @@ body {
   will-change: transform;
 }
 
+/* ─── Ambient dust (homepage background) ──────────────────────────── */
+/* Three independent drift+twinkle keyframes so the 20 dots never move
+   in lockstep. Each variant uses a different period (14s/18s/22s) and
+   a different vertical amplitude (±14/18/22px) so the motion is
+   perceptible within a few seconds of viewing. The `opacity` half-cycle
+   dips to ~0.45 of the dot's own baseline for a faint "firefly" feel.
+   Pure GPU (transform + opacity), no layout work, idle when off-screen. */
+
+@keyframes rxDustA {
+  0%,
+  100% {
+    transform: translate3d(0, 0, 0);
+    opacity: var(--rx-dust-opacity, 1);
+  }
+  50% {
+    transform: translate3d(0, -10px, 0);
+    opacity: calc(var(--rx-dust-opacity, 1) * 0.65);
+  }
+}
+
+@keyframes rxDustB {
+  0%,
+  100% {
+    transform: translate3d(0, 0, 0);
+    opacity: var(--rx-dust-opacity, 1);
+  }
+  50% {
+    transform: translate3d(0, -13px, 0);
+    opacity: calc(var(--rx-dust-opacity, 1) * 0.6);
+  }
+}
+
+@keyframes rxDustC {
+  0%,
+  100% {
+    transform: translate3d(0, 0, 0);
+    opacity: var(--rx-dust-opacity, 1);
+  }
+  50% {
+    transform: translate3d(0, -16px, 0);
+    opacity: calc(var(--rx-dust-opacity, 1) * 0.7);
+  }
+}
+
+/* Periods are intentionally long (20s / 26s / 32s) so motion reads as
+   subconscious ambient drift rather than decoration. The three
+   coprime-ish durations keep the constellation from ever appearing to
+   sync. Pair with the per-dot `animation-delay` set inline in
+   `Background.tsx` to fully desync. */
+.animate-rx-dust-a {
+  animation: rxDustA 20s var(--ease-in-out) infinite;
+  will-change: transform, opacity;
+}
+.animate-rx-dust-b {
+  animation: rxDustB 26s var(--ease-in-out) infinite;
+  will-change: transform, opacity;
+}
+.animate-rx-dust-c {
+  animation: rxDustC 32s var(--ease-in-out) infinite;
+  will-change: transform, opacity;
+}
+
 /* ─── Mount-time stagger for grids (.stagger-children) ──────────── */
+
+/* ─── Decorative academic-icon drift (homepage wallpaper) ───────── */
+/* 10 outline icons (calculator, laptop, notebook, ruler, backpack,
+   graduation cap, microscope, flask, pencil, compass) sit near page
+   edges and corners at 4–6% opacity and drift extremely slowly so
+   they feel like wallpaper, not foreground animation. Three
+   coprime-ish periods (35s/42s/50s) keep them out of phase; the
+   `opacity` half-cycle dips only slightly below the icon's own
+   baseline (0.9 → 0.75 → 0.9) for a faint breathing effect, not a
+   noticeable fade.
+
+   No rotation, no scaling, no mouse interaction — only a tiny
+   vertical translate and an opacity dip. Pure GPU work. The global
+   `prefers-reduced-motion` block below disables these animations
+   automatically for users who opt out. */
+
+@keyframes rxIconDriftA {
+  0%,
+  100% {
+    transform: translate3d(0, 0, 0);
+    opacity: var(--rx-icon-opacity, 0.05);
+  }
+  50% {
+    transform: translate3d(0, -12px, 0);
+    opacity: calc(var(--rx-icon-opacity, 0.05) * 0.75);
+  }
+}
+
+@keyframes rxIconDriftB {
+  0%,
+  100% {
+    transform: translate3d(0, 0, 0);
+    opacity: var(--rx-icon-opacity, 0.05);
+  }
+  50% {
+    transform: translate3d(0, -16px, 0);
+    opacity: calc(var(--rx-icon-opacity, 0.05) * 0.75);
+  }
+}
+
+@keyframes rxIconDriftC {
+  0%,
+  100% {
+    transform: translate3d(0, 0, 0);
+    opacity: var(--rx-icon-opacity, 0.05);
+  }
+  50% {
+    transform: translate3d(0, -20px, 0);
+    opacity: calc(var(--rx-icon-opacity, 0.05) * 0.75);
+  }
+}
+
+.animate-rx-icon-a {
+  animation: rxIconDriftA 35s var(--ease-in-out) infinite;
+  will-change: transform, opacity;
+}
+.animate-rx-icon-b {
+  animation: rxIconDriftB 42s var(--ease-in-out) infinite;
+  will-change: transform, opacity;
+}
+.animate-rx-icon-c {
+  animation: rxIconDriftC 50s var(--ease-in-out) infinite;
+  will-change: transform, opacity;
+}
+
+/* ─── Decorative icon drift (hero) — removed. ───────────────────── */
+/* The hero previously rendered floating academic icons (BookOpen,
+  Laptop, GraduationCap) using 3 vertical-drift keyframes. Those were
+  removed in the final UI polish pass because recognisable moving
+  objects competed with the hero copy and pulled attention away from
+  the CTAs. The hero now relies on the radial-gradient wash + dust
+  layer for atmosphere. Academic icons were moved into the global
+  background wallpaper layer (see `Background.tsx`) so campus
+  identity is still present, but as ambient texture rather than
+  hero-stage decoration. */
 /* Children cascade in on mount; reduced-motion kills it globally below. */
 
 .stagger-children > * {

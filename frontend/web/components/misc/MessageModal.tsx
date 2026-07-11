@@ -73,9 +73,7 @@ export default function MessageModal({
 				role="dialog"
 				aria-modal="true"
 				tabIndex={-1}
-				maxTilt={2}
-				hoverScale={1.01}
-				glare={false}
+				maxTilt={1}
 				className="relative z-10 flex max-h-[90dvh] w-full max-w-md flex-col overflow-y-auto rounded-2xl border border-borderLight/60 bg-surface/90 p-5 shadow-2xl backdrop-blur-md outline-none animate-in fade-in zoom-in-95 duration-200 sm:p-6">
 				{/* Header */}
 				<div className="mb-4 flex items-center justify-between gap-3">

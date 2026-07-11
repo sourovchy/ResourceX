@@ -177,7 +177,7 @@ public class AdminServiceImpl implements AdminService {
 
         @Override
         @Transactional
-        // Admin take-down — delegates to the single core deletion routine so an
+        // Admin take-down â€” delegates to the single core deletion routine so an
         // admin removal is globally consistent with an owner deletion (item is
         // excluded from every query and its references are cleaned up).
         public void blockItem(Long itemId, String reason) {
@@ -229,7 +229,7 @@ public class AdminServiceImpl implements AdminService {
                 restrictionManager.save(restriction);
 
                 String detail = String.format(
-                        "Suspended user %s — duration=%s, until=%s, reason=%s",
+                        "Suspended user %s â€” duration=%s, until=%s, reason=%s",
                         user.getEmail(),
                         duration,
                         suspendedUntil != null ? suspendedUntil.toString() : "PERMANENT",
@@ -282,7 +282,7 @@ public class AdminServiceImpl implements AdminService {
                 );
         }
 
-        // ── Private helpers ──────────────────────────────────────────────────────
+        // â”€â”€ Private helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
         /** Returns the userId of the currently authenticated admin, or null if not resolvable. */
         private Long resolveCurrentAdminId() {
@@ -320,7 +320,7 @@ public class AdminServiceImpl implements AdminService {
                         return null;
                 }
                 return fileMetadataRepository.findById(fileId)
-                                .map(FileMetadata::getStoredName)
+                                .map(com.resourcex.resourcex.entity.FileMetadata::getFileUrl)
                                 .orElse(null);
         }
 
