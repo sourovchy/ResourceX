@@ -1,5 +1,24 @@
 package com.resourcex.resourcex.service;
 
+import java.math.BigDecimal;
+import java.time.LocalDate;
+import java.util.List;
+import java.util.Optional;
+
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.BDDMockito.given;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import static org.mockito.Mockito.mock;
+import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContext;
+import org.springframework.security.core.context.SecurityContextHolder;
+
 import com.resourcex.resourcex.dto.request.CreateBookingRequest;
 import com.resourcex.resourcex.entity.Booking;
 import com.resourcex.resourcex.entity.Item;
@@ -11,24 +30,6 @@ import com.resourcex.resourcex.repository.BookingRepository;
 import com.resourcex.resourcex.repository.ItemRepository;
 import com.resourcex.resourcex.repository.UserRepository;
 import com.resourcex.resourcex.service.impl.BookingServiceImpl;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.InjectMocks;
-import org.mockito.Mock;
-import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContext;
-import org.springframework.security.core.context.SecurityContextHolder;
-
-import java.math.BigDecimal;
-import java.time.LocalDate;
-import java.util.List;
-import java.util.Optional;
-
-import static org.assertj.core.api.Assertions.*;
-import static org.mockito.ArgumentMatchers.*;
-import static org.mockito.BDDMockito.*;
 
 @ExtendWith(MockitoExtension.class)
 class BookingServiceTest {
@@ -43,6 +44,7 @@ class BookingServiceTest {
     @Mock com.resourcex.resourcex.service.impl.BookingMaintenanceService bookingMaintenanceService;
     @Mock com.resourcex.resourcex.security.AccountAccessGuard accountAccessGuard;
     @Mock StudentRestrictionManager restrictionManager;
+    @Mock jakarta.persistence.EntityManager entityManager;
     @InjectMocks BookingServiceImpl bookingService;
 
     private User owner;
@@ -137,6 +139,7 @@ class BookingServiceTest {
         mockSecurityContext(owner.getEmail());
         pendingBooking.setStatus(Booking.BookingStatus.APPROVED);
         given(bookingRepository.findById(100L)).willReturn(Optional.of(pendingBooking));
+        given(itemRepository.findByIdWithLock(item.getItemId())).willReturn(Optional.of(item));
         given(userRepository.findByEmailIgnoreCase(owner.getEmail())).willReturn(Optional.of(owner));
 
         assertThatThrownBy(() -> bookingService.approveBooking(100L))
@@ -159,6 +162,7 @@ class BookingServiceTest {
         mockSecurityContext(owner.getEmail());
         pendingBooking.setStatus(Booking.BookingStatus.CANCELLED);
         given(bookingRepository.findById(100L)).willReturn(Optional.of(pendingBooking));
+        given(itemRepository.findByIdWithLock(item.getItemId())).willReturn(Optional.of(item));
         given(userRepository.findByEmailIgnoreCase(owner.getEmail())).willReturn(Optional.of(owner));
 
         assertThatThrownBy(() -> bookingService.rejectBooking(100L, "test"))
@@ -173,6 +177,7 @@ class BookingServiceTest {
         mockSecurityContext(renter.getEmail());
         pendingBooking.setStatus(Booking.BookingStatus.COMPLETED);
         given(bookingRepository.findById(100L)).willReturn(Optional.of(pendingBooking));
+        given(itemRepository.findByIdWithLock(item.getItemId())).willReturn(Optional.of(item));
         given(userRepository.findByEmailIgnoreCase(renter.getEmail())).willReturn(Optional.of(renter));
 
         assertThatThrownBy(() -> bookingService.cancelBooking(100L))

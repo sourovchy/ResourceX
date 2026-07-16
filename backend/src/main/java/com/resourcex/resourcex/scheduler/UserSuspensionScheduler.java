@@ -1,20 +1,19 @@
 package com.resourcex.resourcex.scheduler;
 
-import com.resourcex.resourcex.entity.AuditLog;
-import com.resourcex.resourcex.entity.StudentRestriction;
-import com.resourcex.resourcex.entity.User;
-import com.resourcex.resourcex.entity.UserStatus;
-import com.resourcex.resourcex.repository.StudentRestrictionRepository;
-import com.resourcex.resourcex.repository.UserRepository;
-import com.resourcex.resourcex.service.AuditLogService;
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
-import org.springframework.scheduling.annotation.Scheduled;
-import org.springframework.stereotype.Component;
-import org.springframework.transaction.annotation.Transactional;
-
 import java.time.LocalDateTime;
 import java.util.List;
+
+import org.springframework.scheduling.annotation.Scheduled;
+import org.springframework.stereotype.Component;
+
+import com.resourcex.resourcex.entity.StudentRestriction;
+import com.resourcex.resourcex.entity.User;
+import com.resourcex.resourcex.repository.StudentRestrictionRepository;
+import com.resourcex.resourcex.repository.UserRepository;
+import com.resourcex.resourcex.service.SuspensionLifecycleService;
+
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
 /**
  * Nightly jobs that enforce the suspension lifecycle:
@@ -24,6 +23,13 @@ import java.util.List;
  * </ol>
  *
  * Runs at 02:00 UTC every day ({@code 0 0 2 * * *}).
+ *
+ * <p>The scheduler itself is intentionally NOT {@code @Transactional}. Each
+ * per-user side-effect runs in its own
+ * {@link org.springframework.transaction.annotation.Propagation#REQUIRES_NEW REQUIRES_NEW}
+ * transaction via {@link SuspensionLifecycleService}, so a failure on one row
+ * cannot leave the rest of the batch in a partial state. The outer try/catch
+ * in this class is only for logging and continuing with the next user.
  */
 @Component
 @RequiredArgsConstructor
@@ -32,23 +38,19 @@ public class UserSuspensionScheduler {
 
     private final UserRepository userRepository;
     private final StudentRestrictionRepository restrictionRepository;
-    private final AuditLogService auditLogService;
+    private final SuspensionLifecycleService suspensionLifecycleService;
 
-    // ── 1. Lift expired timed suspensions ───────────────────────────────────
-
+    // ── 1. Lift expired timed suspensions ────────────────────────────────────────
     @Scheduled(cron = "0 0 2 * * *")
-    @Transactional
     public void liftExpiredSuspensions() {
         LocalDateTime now = LocalDateTime.now();
         List<StudentRestriction> expired = restrictionRepository.findExpiredTimedSuspensions(now);
-
         if (expired.isEmpty()) {
             log.debug("[Scheduler] No expired suspensions to lift.");
             return;
         }
 
         log.info("[Scheduler] Lifting {} expired suspension(s).", expired.size());
-
         for (StudentRestriction restriction : expired) {
             User user = userRepository.findById(restriction.getStudentUserId()).orElse(null);
             if (user == null) {
@@ -56,43 +58,24 @@ public class UserSuspensionScheduler {
             }
             String email = user.getEmail();
             try {
-                user.setStatus(UserStatus.ACTIVE);
-                userRepository.save(user);
-
-                restriction.clearSuspension();
-                restrictionRepository.save(restriction);
-
-                auditLogService.logAction(
-                        AuditLog.ActorType.SYSTEM,
-                        null,
-                        "SUSPENSION_EXPIRED",
-                        "USER",
-                        user.getUserId(),
-                        AuditLog.AuditOutcome.SUCCESS,
-                        "Suspension period ended — account restored for " + email
-                );
-                log.info("[Scheduler] Restored account: {}", email);
+                suspensionLifecycleService.liftExpiredFor(user, restriction);
             } catch (Exception ex) {
                 log.error("[Scheduler] Failed to lift suspension for {}: {}", email, ex.getMessage(), ex);
             }
         }
     }
 
-    // ── 2. Delete permanently suspended accounts past retention ─────────────
-
+    // ── 2. Delete permanently suspended accounts past retention ───────────────────
     @Scheduled(cron = "0 0 2 * * *")
-    @Transactional
     public void deletePermanentlySuspendedAccounts() {
         LocalDateTime now = LocalDateTime.now();
         List<StudentRestriction> toDelete = restrictionRepository.findScheduledForDeletion(now);
-
         if (toDelete.isEmpty()) {
             log.debug("[Scheduler] No permanently suspended accounts due for deletion.");
             return;
         }
 
         log.info("[Scheduler] Deleting {} permanently suspended account(s).", toDelete.size());
-
         for (StudentRestriction restriction : toDelete) {
             User user = userRepository.findById(restriction.getStudentUserId()).orElse(null);
             if (user == null) {
@@ -101,20 +84,7 @@ public class UserSuspensionScheduler {
             Long userId = user.getUserId();
             String email = user.getEmail();
             try {
-                // Audit first — we need the record before deletion
-                auditLogService.logAction(
-                        AuditLog.ActorType.SYSTEM,
-                        null,
-                        "USER_PERMANENT_DELETION",
-                        "USER",
-                        userId,
-                        AuditLog.AuditOutcome.SUCCESS,
-                        "Permanently suspended account deleted after retention period: " + email
-                );
-
-                // Cascade deletes handle related data (items, bookings, profiles, etc.)
-                userRepository.delete(user);
-                log.info("[Scheduler] Deleted permanently suspended account: {} (id={})", email, userId);
+                suspensionLifecycleService.deletePermanentlySuspendedFor(user);
             } catch (Exception ex) {
                 log.error("[Scheduler] Failed to delete account {} (id={}): {}",
                         email, userId, ex.getMessage(), ex);

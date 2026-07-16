@@ -1,7 +1,21 @@
 package com.resourcex.resourcex.service.impl;
 
+import java.math.BigDecimal;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.temporal.ChronoUnit;
+import java.util.List;
+
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
 import com.resourcex.resourcex.dto.request.CreateBookingRequest;
 import com.resourcex.resourcex.dto.response.BookingResponse;
+import com.resourcex.resourcex.entity.AuditLog;
 import com.resourcex.resourcex.entity.Booking;
 import com.resourcex.resourcex.entity.Item;
 import com.resourcex.resourcex.entity.User;
@@ -16,20 +30,10 @@ import com.resourcex.resourcex.repository.UserRepository;
 import com.resourcex.resourcex.service.AuditLogService;
 import com.resourcex.resourcex.service.BookingService;
 import com.resourcex.resourcex.service.NotificationService;
-import com.resourcex.resourcex.entity.AuditLog;
-import lombok.RequiredArgsConstructor;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.Pageable;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
-import java.math.BigDecimal;
-import java.time.LocalDate;
-import java.time.LocalDateTime;
-import java.time.temporal.ChronoUnit;
-import java.util.List;
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.LockModeType;
+import lombok.RequiredArgsConstructor;
 
 @Service
 @RequiredArgsConstructor
@@ -46,6 +50,7 @@ public class BookingServiceImpl implements BookingService {
     private final com.resourcex.resourcex.security.AccountAccessGuard accountAccessGuard;
     private final com.resourcex.resourcex.service.StudentRestrictionManager restrictionManager;
     private final com.resourcex.resourcex.service.AvatarUrlResolver avatarUrlResolver;
+    private final EntityManager entityManager;
 
     @Override
     @Transactional
@@ -192,8 +197,21 @@ public class BookingServiceImpl implements BookingService {
     @Override
     @Transactional
     public BookingResponse approveBooking(Long bookingId) {
+        // Step 1 — locate the booking. This read happens before any lock so we
+        // can identify the item whose row we need to lock.
         Booking booking = bookingRepository.findById(bookingId)
                 .orElseThrow(() -> new ResourceNotFoundException("Booking not found"));
+
+        // Step 2 — serialize all booking lifecycle transitions on this item so
+        // the overlap auto-reject below cannot race with a concurrent
+        // createBooking or approveBooking for the same item.
+        itemRepository.findByIdWithLock(booking.getItem().getItemId())
+                .orElseThrow(() -> new ResourceNotFoundException("Item not found"));
+
+        // Step 3 — force a fresh DB read while holding the item lock. A stale
+        // snapshot loaded before the lock would let a concurrent approver
+        // overwrite another transaction's REJECTED state with APPROVED.
+        entityManager.refresh(booking, LockModeType.PESSIMISTIC_WRITE);
 
         User currentUser = resolveCurrentUser();
         assertCanManageOwnerSide(booking, currentUser);
@@ -271,6 +289,14 @@ public class BookingServiceImpl implements BookingService {
         Booking booking = bookingRepository.findById(bookingId)
                 .orElseThrow(() -> new ResourceNotFoundException("Booking not found"));
 
+        // Serialize on the item row — see approveBooking() for rationale.
+        itemRepository.findByIdWithLock(booking.getItem().getItemId())
+                .orElseThrow(() -> new ResourceNotFoundException("Item not found"));
+
+        // Force a fresh DB read while holding the lock — see approveBooking()
+        // for rationale.
+        entityManager.refresh(booking, LockModeType.PESSIMISTIC_WRITE);
+
         User currentUser = resolveCurrentUser();
         assertCanManageOwnerSide(booking, currentUser);
 
@@ -309,6 +335,14 @@ public class BookingServiceImpl implements BookingService {
     public BookingResponse rejectBooking(Long bookingId, String reason) {
         Booking booking = bookingRepository.findById(bookingId)
                 .orElseThrow(() -> new ResourceNotFoundException("Booking not found"));
+
+        // Serialize on the item row — see approveBooking() for rationale.
+        itemRepository.findByIdWithLock(booking.getItem().getItemId())
+                .orElseThrow(() -> new ResourceNotFoundException("Item not found"));
+
+        // Force a fresh DB read while holding the lock — see approveBooking()
+        // for rationale.
+        entityManager.refresh(booking, LockModeType.PESSIMISTIC_WRITE);
 
         User currentUser = resolveCurrentUser();
         assertCanManageOwnerSide(booking, currentUser);
@@ -352,6 +386,14 @@ public class BookingServiceImpl implements BookingService {
     public BookingResponse cancelBooking(Long bookingId) {
         Booking booking = bookingRepository.findById(bookingId)
                 .orElseThrow(() -> new ResourceNotFoundException("Booking not found"));
+
+        // Serialize on the item row — see approveBooking() for rationale.
+        itemRepository.findByIdWithLock(booking.getItem().getItemId())
+                .orElseThrow(() -> new ResourceNotFoundException("Item not found"));
+
+        // Force a fresh DB read while holding the lock — see approveBooking()
+        // for rationale.
+        entityManager.refresh(booking, LockModeType.PESSIMISTIC_WRITE);
 
         User canceller = resolveCurrentUser();
         assertCanCancelBooking(booking, canceller);
@@ -405,6 +447,14 @@ public class BookingServiceImpl implements BookingService {
         Booking booking = bookingRepository.findById(bookingId)
                 .orElseThrow(() -> new ResourceNotFoundException("Booking not found"));
 
+        // Serialize on the item row — see approveBooking() for rationale.
+        itemRepository.findByIdWithLock(booking.getItem().getItemId())
+                .orElseThrow(() -> new ResourceNotFoundException("Item not found"));
+
+        // Force a fresh DB read while holding the lock — see approveBooking()
+        // for rationale.
+        entityManager.refresh(booking, LockModeType.PESSIMISTIC_WRITE);
+
         if (!isStaff()) {
             throw new ForbiddenException("Only staff members can moderate bookings");
         }
@@ -438,6 +488,14 @@ public class BookingServiceImpl implements BookingService {
     public BookingResponse completeBooking(Long bookingId) {
         Booking booking = bookingRepository.findById(bookingId)
                 .orElseThrow(() -> new ResourceNotFoundException("Booking not found"));
+
+        // Serialize on the item row — see approveBooking() for rationale.
+        itemRepository.findByIdWithLock(booking.getItem().getItemId())
+                .orElseThrow(() -> new ResourceNotFoundException("Item not found"));
+
+        // Force a fresh DB read while holding the lock — see approveBooking()
+        // for rationale.
+        entityManager.refresh(booking, LockModeType.PESSIMISTIC_WRITE);
 
         User currentUser = resolveCurrentUser();
         assertCanManageOwnerSide(booking, currentUser);
