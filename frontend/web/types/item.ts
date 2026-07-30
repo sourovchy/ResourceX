@@ -10,7 +10,6 @@ export interface ItemResponse {
   itemCondition: string;
   owner?: UserResponse;
   dailyRate: number;
-  deposit?: number | null;
   status: ItemStatus;
   imageUrls: string[];
   createdAt?: string;

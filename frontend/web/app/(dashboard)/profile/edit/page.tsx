@@ -208,20 +208,21 @@ export default function EditProfilePage() {
 				name: profile.name.trim(),
 			};
 
-			if (uploadedAvatarUrl) {
-				payload.avatarUrl = uploadedAvatarUrl;
+			if (uploadedAvatarUrl && uploadedAvatarUrl.trim()) {
+				payload.avatarUrl = uploadedAvatarUrl.trim();
 			}
 
 			// Staff: cannot change email (no phone — not in their DB schema)
 
 			// Students: can change phone (no email change allowed)
-			if (isStudent) {
-				if (!validatePhone(profile.phone)) {
+			if (isStudent && profile.phone && profile.phone.trim()) {
+				const trimmedPhone = profile.phone.trim();
+				if (!validatePhone(trimmedPhone)) {
 					setProfileError("Please enter a valid Bangladesh mobile number (e.g., 01XXXXXXXXX)");
 					setSavingProfile(false);
 					return;
 				}
-				payload.phone = normalizePhone(profile.phone.trim());
+				payload.phone = normalizePhone(trimmedPhone);
 				if (isPhoneChanged) {
 					payload.currentPassword = profileCurrentPassword;
 				}

@@ -42,7 +42,7 @@ export default function MyReportsPage() {
 			setLoading(true);
 			setError(null);
 			try {
-				const res = await api.get<Report[]>("/api/reports/my");
+				const res = await api.get<Report[]>("/reports/my");
 				if (!active) return;
 				setReports(res.data || []);
 			} catch (err) {

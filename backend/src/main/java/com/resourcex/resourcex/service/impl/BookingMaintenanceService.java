@@ -36,8 +36,7 @@ public class BookingMaintenanceService {
     private final BookingTrustHandler bookingTrustHandler;
     private final ItemAvailabilityService itemAvailabilityService;
 
-    /** Nightly: auto-complete ACTIVE bookings whose due date has passed without a return. */
-    @Scheduled(cron = "0 0 0 * * *")
+    /** Auto-complete ACTIVE bookings (can be invoked manually if needed; removed from automated schedule to preserve owner return confirmation and overdue tracking). */
     @Transactional
     public void autoTransitionBookings() {
         LocalDate today = LocalDate.now();

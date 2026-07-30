@@ -23,6 +23,7 @@ import { PageError } from "@/components/ui/PageError";
 
 type FilterType =
 	| "ALL"
+	| "APPROVED"
 	| "ACTIVE"
 	| "OVERDUE"
 	| "COMPLETED"
@@ -30,6 +31,7 @@ type FilterType =
 	| "REJECTED";
 
 type BookingStatus =
+	| "APPROVED"
 	| "ACTIVE"
 	| "OVERDUE"
 	| "COMPLETED"
@@ -63,6 +65,7 @@ interface BookingApiRow {
 
 const FILTERS: FilterType[] = [
 	"ALL",
+	"APPROVED",
 	"ACTIVE",
 	"OVERDUE",
 	"COMPLETED",
@@ -78,6 +81,7 @@ const OVERRIDE_STATUS_OPTIONS: { value: BookingStatus; label: string }[] = [
 function normalizeStatus(status?: string): BookingStatus {
 	const value = (status ?? "PENDING").toUpperCase();
 	if (
+		value === "APPROVED" ||
 		value === "ACTIVE" ||
 		value === "OVERDUE" ||
 		value === "COMPLETED" ||

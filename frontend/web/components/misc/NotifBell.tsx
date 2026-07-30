@@ -3,14 +3,23 @@
 import React, { useEffect, useRef, useState } from "react";
 import { Bell } from "lucide-react";
 import { useRouter } from "next/navigation";
+import { Client } from "@stomp/stompjs";
+import SockJS from "sockjs-client";
 import api from "@/lib/api";
+import { useAuth } from "@/context/AuthContext";
 
 const POLL_INTERVAL_MS = 30_000; // 30 seconds
+const WS_ENDPOINT =
+	(process.env.NEXT_PUBLIC_API_BASE_URL ??
+		(typeof window === "undefined" ? "http://localhost:8082" : "")) +
+	"/ws-endpoint";
 
 export default function NotifBell({ className }: { className?: string }) {
 	const router = useRouter();
+	const { user } = useAuth();
 	const [count, setCount] = useState(0);
 	const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+	const stompClientRef = useRef<Client | null>(null);
 
 	const fetchCount = async () => {
 		try {
@@ -30,6 +39,35 @@ export default function NotifBell({ className }: { className?: string }) {
 			if (intervalRef.current) clearInterval(intervalRef.current);
 		};
 	}, []);
+
+	useEffect(() => {
+		if (!user?.userId) return;
+
+		const client = new Client({
+			webSocketFactory: () => new SockJS(WS_ENDPOINT),
+			reconnectDelay: 5000,
+			onConnect: () => {
+				client.subscribe(`/topic/notifications/${user.userId}`, (frame) => {
+					try {
+						const notification = JSON.parse(frame.body) as { isRead?: boolean };
+						if (!notification.isRead) {
+							setCount((current) => current + 1);
+						}
+					} catch {
+						// Ignore malformed frames; polling remains the fallback.
+					}
+				});
+			},
+		});
+
+		client.activate();
+		stompClientRef.current = client;
+
+		return () => {
+			client.deactivate();
+			stompClientRef.current = null;
+		};
+	}, [user?.userId]);
 
 	const hasNotifications = count > 0;
 

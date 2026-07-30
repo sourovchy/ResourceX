@@ -147,12 +147,32 @@ export default function ProfilePage() {
 							{ icon: <CalendarDays className="w-4 h-4" />, text: studentProfile?.department || "Department not set" }
 						]}
 						actions={
-							<Link
-								href="/profile/edit"
-								className="inline-flex items-center justify-center gap-2 rounded-full bg-surfaceVariant px-6 py-2.5 font-bold text-textPrimary shadow-sm transition-all hover:-translate-y-0.5 hover:bg-borderLight hover:shadow-md"
-							>
-								<Edit3 className="w-4 h-4" /> Edit Profile
-							</Link>
+							<div className="flex flex-wrap gap-2">
+								<Link
+									href="/profile/edit"
+									className="inline-flex items-center justify-center gap-2 rounded-full bg-surfaceVariant px-6 py-2.5 font-bold text-textPrimary shadow-sm transition-all hover:-translate-y-0.5 hover:bg-borderLight hover:shadow-md"
+								>
+									<Edit3 className="w-4 h-4" /> Edit Profile
+								</Link>
+								<Link
+									href="/history"
+									className="inline-flex items-center justify-center rounded-full bg-surfaceVariant px-4 py-2.5 text-sm font-bold text-textPrimary transition-colors hover:bg-borderLight"
+								>
+									Rental History
+								</Link>
+								<Link
+									href="/profile/my-reviews"
+									className="inline-flex items-center justify-center rounded-full bg-surfaceVariant px-4 py-2.5 text-sm font-bold text-textPrimary transition-colors hover:bg-borderLight"
+								>
+									My Reviews
+								</Link>
+								<Link
+									href="/profile/my-reports"
+									className="inline-flex items-center justify-center rounded-full bg-surfaceVariant px-4 py-2.5 text-sm font-bold text-textPrimary transition-colors hover:bg-borderLight"
+								>
+									My Reports
+								</Link>
+							</div>
 						}
 					/>
 

@@ -42,8 +42,8 @@ export default function ReportModal({
 		setError(null);
 		try {
 			await api.post("/reports", {
-				entityType,
-				entityId,
+				reportedItemId: entityType === "ITEM" ? entityId : undefined,
+				reportedUserId: entityType === "USER" ? entityId : undefined,
 				reason: selectedReason,
 			});
 			toast("Report submitted successfully for moderation review.");
