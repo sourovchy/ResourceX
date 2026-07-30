@@ -21,6 +21,9 @@ public class EmailServiceImpl implements EmailService {
   @Value("${spring.mail.username}")
   private String fromEmail;
 
+  @Value("${app.frontend-url}")
+  private String frontendUrl;
+
   @Override
   public void sendOtpEmail(String toEmail, String otpCode) {
     validateInputs(toEmail, otpCode);
@@ -216,7 +219,8 @@ public class EmailServiceImpl implements EmailService {
       helper.setTo(toEmail.trim().toLowerCase());
       helper.setSubject("Reset your ResourceX Password");
 
-      String resetLink = "http://localhost:3000/auth/reset-password?token=" + resetToken;
+      String baseUrl = frontendUrl != null ? frontendUrl.replaceAll("/+$", "") : "http://localhost:3000";
+      String resetLink = baseUrl + "/auth/reset-password?token=" + resetToken;
 
       String template = """
           <html>
