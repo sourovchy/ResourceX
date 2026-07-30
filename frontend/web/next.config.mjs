@@ -1,4 +1,6 @@
 /** @type {import('next').NextConfig} */
+const backendUrl = process.env.BACKEND_API_URL || "http://localhost:8082";
+
 const nextConfig = {
 	transpilePackages: ["three", "@react-three/fiber", "@react-three/drei"],
 	images: {
@@ -27,11 +29,11 @@ const nextConfig = {
 		return [
 			{
 				source: "/api/:path*",
-				destination: "http://localhost:8082/api/:path*",
+				destination: `${backendUrl}/api/:path*`,
 			},
 			{
 				source: "/ws-endpoint/:path*",
-				destination: "http://localhost:8082/ws-endpoint/:path*",
+				destination: `${backendUrl}/ws-endpoint/:path*`,
 			},
 		];
 	},

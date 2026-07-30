@@ -2,15 +2,16 @@ import axios from "axios";
 import { logger } from "@/lib/logger";
 
 export const API_BASE =
-	process.env.NEXT_PUBLIC_API_URL?.replace(/\/$/, "") || 
-	(typeof window === "undefined" ? "http://localhost:8082/api" : "/api");
+	typeof window === "undefined"
+		? `${(process.env.BACKEND_API_URL || "http://localhost:8082").replace(/\/$/, "")}/api`
+		: "/api";
 
 export const getFileUrl = (url: string | null | undefined): string => {
 	if (!url) return "";
 	if (url.startsWith("http")) return url;
 	if (url.startsWith("blob:")) return url;
 	if (url.startsWith("/api/")) {
-		// e.g. /api/files/xyz -> http://localhost:8082/api/files/xyz
+		// e.g. /api/files/xyz -> /api/files/xyz in the browser, absolute backend URL during SSR
 		return API_BASE.replace(/\/api$/, "") + url;
 	}
 	return API_BASE.replace(/\/api$/, "") + "/" + url.replace(/^\//, "");

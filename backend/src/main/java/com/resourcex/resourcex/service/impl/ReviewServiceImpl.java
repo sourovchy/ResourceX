@@ -342,8 +342,13 @@ public class ReviewServiceImpl implements ReviewService {
 
     private boolean isAdmin() {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        return authentication != null
-                && authentication.getAuthorities().stream()
-                .anyMatch(authority -> "ROLE_ADMIN".equals(authority.getAuthority()));
+        if (authentication == null || authentication.getAuthorities() == null) {
+            return false;
+        }
+        return authentication.getAuthorities().stream()
+                .map(authority -> authority.getAuthority())
+                .anyMatch(role -> "ROLE_ADMIN".equals(role)
+                        || "ROLE_SUPER_ADMIN".equals(role)
+                        || "ROLE_MODERATOR".equals(role));
     }
 }
