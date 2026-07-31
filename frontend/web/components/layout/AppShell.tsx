@@ -273,7 +273,7 @@ export default function AppShell({
                             groupActive
                               ? "nav-active text-primary font-semibold"
                               : "font-medium text-textSecondary hover:bg-surfaceVariant/70 hover:text-textPrimary hover:shadow-sm"
-                          } ${collapsed ? "md:justify-center" : ""} ${hasSub && !collapsed ? "pr-10" : ""}`}
+                          } ${collapsed ? "md:justify-center md:gap-0" : ""} ${hasSub && !collapsed ? "pr-10" : ""}`}
                           aria-current={groupActive ? "page" : undefined}
                         >
                           <Icon

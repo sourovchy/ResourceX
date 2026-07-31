@@ -5,19 +5,19 @@ import { Logo } from "@/components/ui/Logo";
 const socialLinks = [
 	{ name: "Facebook",  href: "https://www.facebook.com",  icon: Facebook  },
 	{ name: "Instagram", href: "https://www.instagram.com", icon: Instagram },
-	{ name: "GitHub",    href: "https://github.com",        icon: Github    },
+	{ name: "GitHub",    href: "https://github.com/sourovchy/ResourceX", icon: Github },
 	{ name: "LinkedIn",  href: "https://www.linkedin.com",  icon: Linkedin  },
 ];
 
 const supportLinks = [
 	{
 		name: "Report a bug",
-		href: "mailto:[REDACTED_MAIL_USERNAME]?subject=ResourceX%20Bug%20Report",
+		href: "mailto:support.resourcex@gmail.com?subject=ResourceX%20Bug%20Report",
 		icon: Bug,
 	},
 	{
 		name: "Contact support",
-		href: "mailto:[REDACTED_MAIL_USERNAME]",
+		href: "mailto:support.resourcex@gmail.com",
 		icon: Mail,
 	},
 ];

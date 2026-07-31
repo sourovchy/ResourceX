@@ -18,7 +18,7 @@ export default function PrivacyPolicy() {
             Privacy <span className="text-primary italic">Policy.</span>
           </h1>
           <p className="mt-3 text-[10px] font-bold tracking-[1.5px] text-textTertiary uppercase">
-            Last updated: June 2026
+            Last updated: July 2026
           </p>
         </div>
 
@@ -112,8 +112,8 @@ export default function PrivacyPolicy() {
             </p>
             <ul className="list-none space-y-2 text-sm text-textSecondary sm:text-base">
               {[
-                "Platform administrators for moderation and dispute resolution purposes.",
-                "Service providers who assist us in operating the platform (e.g., hosting and analytics), under strict confidentiality obligations.",
+                "Platform administrators for moderation purposes.",
+                "Service providers who assist us in operating, maintaining, and improving the platform.",
                 "Law enforcement or regulatory bodies if required by applicable law.",
               ].map((item, i) => (
                 <li key={i} className="flex gap-2.5">
@@ -136,9 +136,9 @@ export default function PrivacyPolicy() {
               We retain your personal data for as long as your account is
               active or as needed to provide our services. You may request
               account deletion at any time by contacting our support team.
-              Certain records (such as completed booking history) may be
-              retained for up to 3 years for dispute resolution and audit
-              purposes.
+              Certain information may be retained for security, moderation,
+              operational, and legal purposes before being permanently removed
+              from our systems.
             </p>
           </section>
 
@@ -153,9 +153,11 @@ export default function PrivacyPolicy() {
             <p className="text-sm leading-relaxed text-textSecondary sm:text-base">
               We implement industry-standard security measures including
               encrypted data transmission (HTTPS), hashed password storage, and
-              role-based access controls. While we strive to protect your
-              personal information, no method of transmission over the internet
-              is 100% secure, and we cannot guarantee absolute security.
+              role-based access controls. We implement technical and
+              organizational measures designed to protect our systems and user
+              data. While we strive to protect your personal information, no
+              method of transmission over the internet is 100% secure, and we
+              cannot guarantee absolute security.
             </p>
           </section>
 
