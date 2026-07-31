@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ArrowRight, RefreshCw } from "lucide-react";
@@ -18,10 +18,12 @@ import {
 } from "@/lib/auth";
 
 const RESEND_COOLDOWN_SECONDS = 180;
+const FALLBACK_RESEND_COOLDOWN_SECONDS = 60;
 const MAX_RESEND_ATTEMPTS = 3;
 
 export default function EmailVerificationPage() {
 	const router = useRouter();
+	const resendInFlightRef = useRef(false);
 
 	const [otp, setOtp] = useState("");
 	const [email, setEmail] = useState("");
@@ -155,10 +157,11 @@ export default function EmailVerificationPage() {
 	};
 
 	const handleResend = async () => {
-		if (!email || timer > 0 || resendPermaDisabled || resending) return;
+		if (!email || timer > 0 || resendPermaDisabled || resending || resendInFlightRef.current) return;
 
 		setError("");
 		setMessage("");
+		resendInFlightRef.current = true;
 		setResending(true);
 
 		try {
@@ -185,8 +188,14 @@ export default function EmailVerificationPage() {
 				markPermaDisabled();
 			}
 		} catch (err: any) {
-			const msg =
-				err?.response?.data?.message || err?.message || "Failed to resend code";
+			const status = err?.response?.status;
+			let msg = err?.response?.data?.message || err?.message || "Failed to resend code";
+
+			if (status === 429) {
+				msg = "Too many requests. Please wait one minute before trying again.";
+			} else if (status === 503) {
+				msg = "We couldn't send the email right now. Please try again in a minute.";
+			}
 			setError(msg);
 
 			const cooldown = parseCooldownFromMessage(msg);
@@ -194,26 +203,34 @@ export default function EmailVerificationPage() {
 				const anchor = Date.now() - (RESEND_COOLDOWN_SECONDS - cooldown) * 1000;
 				setCooldownAnchor(anchor);
 				setOtpLastSendTimestamp(anchor);
+			} else if (status === 429 || status === 503) {
+				// Fallback cooldown to prevent spamming on rate-limits or email delivery failures
+				const anchor = Date.now() - (RESEND_COOLDOWN_SECONDS - FALLBACK_RESEND_COOLDOWN_SECONDS) * 1000;
+				setCooldownAnchor(anchor);
+				setOtpLastSendTimestamp(anchor);
 			}
 
 			const lowered = msg.toLowerCase();
-			if (
-				lowered.includes("maximum") ||
-				lowered.includes("limit") ||
-				lowered.includes("too many") ||
-				lowered.includes("attempts") ||
-				lowered.includes("resend")
-			) {
+			if (status !== 429 && status !== 503) {
 				if (
 					lowered.includes("maximum") ||
 					lowered.includes("limit") ||
 					lowered.includes("too many") ||
-					lowered.includes("attempts")
+					lowered.includes("attempts") ||
+					lowered.includes("resend")
 				) {
-					markPermaDisabled();
+					if (
+						lowered.includes("maximum") ||
+						lowered.includes("limit") ||
+						lowered.includes("too many") ||
+						lowered.includes("attempts")
+					) {
+						markPermaDisabled();
+					}
 				}
 			}
 		} finally {
+			resendInFlightRef.current = false;
 			setResending(false);
 		}
 	};
