@@ -18,6 +18,7 @@ import com.resourcex.resourcex.service.TrustScoreService;
 import com.resourcex.resourcex.util.constants.RoleConstants;
 import com.resourcex.resourcex.util.constants.TrustPoints;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -34,6 +35,10 @@ import org.springframework.data.domain.Pageable;
 @RequiredArgsConstructor
 public class AdminServiceImpl implements AdminService {
 
+        private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(AdminServiceImpl.class);
+
+        @Value("${storage.local-dir:uploads}")
+        private String localDir;
 
         private final UserRepository userRepository;
         private final StudentProfileRepository studentProfileRepository;
@@ -49,6 +54,7 @@ public class AdminServiceImpl implements AdminService {
         private final ReportRepository reportRepository;
         private final NotificationService notificationService;
         private final StudentRestrictionRepository studentRestrictionRepository;
+        private final OtpRepository otpRepository;
         private final PlatformActivityAggregator platformActivityAggregator;
 
         @Override
@@ -145,33 +151,76 @@ public class AdminServiceImpl implements AdminService {
                         throw new ConflictException("User cannot be rejected in current status");
                 }
 
-                pending.setStatus(UserStatus.DELETED);
-                userRepository.save(pending);
+                if (pending.getRole() != null) {
+                        String roleName = pending.getRole().getName();
+                        if (RoleConstants.ROLE_ADMIN.equalsIgnoreCase(roleName)
+                                || RoleConstants.ROLE_MODERATOR.equalsIgnoreCase(roleName)
+                                || RoleConstants.ROLE_SUPER_ADMIN.equalsIgnoreCase(roleName)) {
+                                throw new ConflictException("Privileged users cannot be deleted");
+                        }
+                }
 
+                String email = pending.getEmail();
+                String name = pending.getName();
                 String rejectionReason = reason != null && !reason.isBlank()
                                 ? reason.trim()
                                 : "No rejection reason provided";
 
+                // 1. Clean up Student ID Card file (disk + db)
                 StudentProfile profile = studentProfileRepository.findByUser(pending).orElse(null);
-                if (profile != null) {
-                        profile.setRejectionReason(rejectionReason);
-                        studentProfileRepository.save(profile);
+                if (profile != null && profile.getIdCardFileId() != null) {
+                        fileMetadataRepository.findById(profile.getIdCardFileId()).ifPresent(metadata -> {
+                                try {
+                                        String fileName = metadata.getFileUrl().substring(metadata.getFileUrl().lastIndexOf('/') + 1);
+                                        java.nio.file.Path filePath = java.nio.file.Paths.get(localDir)
+                                                .toAbsolutePath().normalize().resolve(fileName);
+                                        java.nio.file.Files.deleteIfExists(filePath);
+                                } catch (Exception ex) {
+                                        log.warn("Failed to delete ID card file from disk: {}", metadata.getFileUrl(), ex);
+                                }
+                                fileMetadataRepository.delete(metadata);
+                        });
                 }
 
+                // 2. Clean up Avatar file (disk + db)
+                if (pending.getAvatarFileId() != null) {
+                        fileMetadataRepository.findById(pending.getAvatarFileId()).ifPresent(metadata -> {
+                                try {
+                                        String fileName = metadata.getFileUrl().substring(metadata.getFileUrl().lastIndexOf('/') + 1);
+                                        java.nio.file.Path filePath = java.nio.file.Paths.get(localDir)
+                                                .toAbsolutePath().normalize().resolve(fileName);
+                                        java.nio.file.Files.deleteIfExists(filePath);
+                                } catch (Exception ex) {
+                                        log.warn("Failed to delete avatar file from disk: {}", metadata.getFileUrl(), ex);
+                                }
+                                fileMetadataRepository.delete(metadata);
+                        });
+                }
+
+                // 3. Delete Student Restriction manually
+                studentRestrictionRepository.findByStudentUserId(pendingId)
+                                .ifPresent(studentRestrictionRepository::delete);
+
+                // 4. Delete Student Profile manually
+                if (profile != null) {
+                        studentProfileRepository.delete(profile);
+                }
+
+                // 5. Delete associated OTP tokens
+                otpRepository.deleteAllByEmailIgnoreCase(email);
+
+                // 6. Delete the User record permanently
+                userRepository.delete(pending);
+
+                // 7. Audit Log
                 auditLogService.logAction(
                                 AuditLog.ActorType.USER,
                                 resolveCurrentAdminId(),
                                 "USER_REJECTED",
                                 "USER",
-                                pending.getUserId(),
+                                pendingId,
                                 AuditLog.AuditOutcome.REJECTED,
-                                "Rejected university verification for " + pending.getName() + " (" + pending.getEmail() + "). Reason: " + rejectionReason
-                );
-
-                notificationService.createAdminNotification(
-                                pending.getUserId(),
-                                "Your verification request was rejected. Reason: " + rejectionReason,
-                                resolveCurrentAdminId()
+                                "Permanently deleted rejected pending user: " + name + " (" + email + "). Reason: " + rejectionReason
                 );
         }
 

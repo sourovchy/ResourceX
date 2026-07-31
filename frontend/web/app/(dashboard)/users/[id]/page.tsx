@@ -33,7 +33,7 @@ import { TrustLevel, trustLevelFor, TRUST_LEVEL_LABEL } from "@/types/trust";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
-type UserStatus = "VERIFIED" | "PENDING" | "SUSPENDED";
+type UserStatus = "VERIFIED" | "PENDING" | "SUSPENDED" | "DELETED";
 type SuspensionDuration =
   | "ONE_DAY"
   | "SEVEN_DAYS"
@@ -118,11 +118,20 @@ const STATUS_COLORS: Record<UserStatus, string> = {
   VERIFIED: "bg-successLight text-success",
   PENDING: "bg-warningLight text-warning",
   SUSPENDED: "bg-errorLight text-error",
+  DELETED: "bg-gray-100 text-gray-800",
 };
 
-function mapUserStatus(raw?: string): UserStatus {
-  if (raw === "ACTIVE") return "VERIFIED";
+function mapUserStatus(raw?: string, suspendedAt?: string | null, suspendedUntil?: string | null): UserStatus {
+  if (raw === "ACTIVE") {
+    if (suspendedAt) {
+      if (!suspendedUntil || new Date(suspendedUntil) > new Date()) {
+        return "SUSPENDED";
+      }
+    }
+    return "VERIFIED";
+  }
   if (raw === "SUSPENDED") return "SUSPENDED";
+  if (raw === "DELETED") return "DELETED";
   return "PENDING";
 }
 
@@ -328,7 +337,7 @@ export default function AdminUserDetailPage() {
             phone: payload.studentProfile?.phone ?? "—",
             department: payload.studentProfile?.department ?? "—",
             university: payload.studentProfile?.university ?? "—",
-            status: mapUserStatus(payload.status),
+            status: mapUserStatus(payload.status, payload.suspendedAt, payload.suspendedUntil),
             trustScore: payload.studentProfile?.trustScore ?? 0,
             registered: formatShortDate(payload.createdAt),
             lastActive: "—",
@@ -391,6 +400,8 @@ export default function AdminUserDetailPage() {
       await api.post(`/admin/reject/${userId}`, {
         reason: adminFeedback || "Rejected by admin",
       });
+      setUserStatus("DELETED");
+      setUser((prev) => (prev ? { ...prev, status: "DELETED" } : prev));
       setActionDone("User registration rejected.");
       toast("User rejected.");
     } catch (err) {
@@ -665,6 +676,10 @@ export default function AdminUserDetailPage() {
           {actionDone ? (
             <div className="mt-4 rounded-xl bg-successLight px-4 py-3 text-sm font-semibold text-success">
               {actionDone}
+            </div>
+          ) : userStatus === "DELETED" ? (
+            <div className="mt-4 rounded-xl bg-errorLight px-4 py-3 text-sm font-semibold text-error">
+              This user&apos;s registration has been rejected (Deleted).
             </div>
           ) : isPendingType ? (
             <div className="mt-4 flex items-center gap-3">

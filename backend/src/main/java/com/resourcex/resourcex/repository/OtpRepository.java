@@ -46,4 +46,8 @@ public interface OtpRepository extends JpaRepository<OtpToken, Long> {
         @Modifying
         @Query("delete from OtpToken o where o.expiresAt < :threshold")
         void deleteExpiredBefore(@Param("threshold") Instant threshold);
+
+        @Modifying
+        @Query("delete from OtpToken o where lower(o.email) = lower(:email)")
+        void deleteAllByEmailIgnoreCase(@Param("email") String email);
 }

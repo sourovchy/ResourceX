@@ -3,7 +3,7 @@
 import api from "@/lib/api";
 import { Card } from "@/components/ui/Card";
 import { useSearchParams } from "next/navigation";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState, useRef } from "react";
 import Link from "next/link";
 import { formatShortDate } from "@/lib/dateUtils";
 import { extractErrorMessage } from "@/lib/errorUtils";
@@ -15,7 +15,7 @@ import TrustBadge from "@/components/TrustBadge";
 import Avatar from "@/components/ui/Avatar";
 import { trustLevelFor, TRUST_LEVEL_LABEL } from "@/types/trust";
 
-type UserStatus = "VERIFIED" | "PENDING" | "SUSPENDED";
+type UserStatus = "VERIFIED" | "PENDING" | "SUSPENDED" | "DELETED";
 type FilterType = "ALL" | UserStatus;
 type SortField = "name" | "joined";
 type SortOrder = "asc" | "desc";
@@ -37,9 +37,17 @@ type AdminUser = {
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
-function mapUserStatus(raw?: string): UserStatus {
-	if (raw === "ACTIVE") return "VERIFIED";
+function mapUserStatus(raw?: string, suspendedAt?: string | null, suspendedUntil?: string | null): UserStatus {
+	if (raw === "ACTIVE") {
+		if (suspendedAt) {
+			if (!suspendedUntil || new Date(suspendedUntil) > new Date()) {
+				return "SUSPENDED";
+			}
+		}
+		return "VERIFIED";
+	}
 	if (raw === "SUSPENDED") return "SUSPENDED";
+	if (raw === "DELETED") return "DELETED";
 	return "PENDING";
 }
 
@@ -61,7 +69,7 @@ function mapNormalUser(u: any): AdminUser {
 		studentId: u.studentProfile?.studentId ?? "—",
 		university: u.studentProfile?.university ?? "—",
 		department: u.studentProfile?.department ?? "—",
-		status: mapUserStatus(u.status),
+		status: mapUserStatus(u.status, u.suspendedAt, u.suspendedUntil),
 		trustScore: u.studentProfile?.trustScore ?? 0,
 		registered: formatShortDate(u.createdAt),
 		createdAt: new Date(u.createdAt).getTime() || 0,
@@ -99,6 +107,7 @@ const STATUS_COLORS: Record<UserStatus, string> = {
 	VERIFIED: "bg-successLight text-success",
 	PENDING: "bg-warningLight text-warning",
 	SUSPENDED: "bg-errorLight text-error",
+	DELETED: "bg-gray-100 text-gray-800",
 };
 
 const FILTERS: FilterType[] = ["ALL", "PENDING", "VERIFIED", "SUSPENDED"];
@@ -129,6 +138,23 @@ export default function AdminUsersPage() {
 	const [totalPages, setTotalPages] = useState(0);
 	const [sortField, setSortField] = useState<SortField>("joined");
 	const [sortOrder, setSortOrder] = useState<SortOrder>("desc");
+	const [stats, setStats] = useState<any>(null);
+
+	const requestCountRef = useRef(0);
+	const prevFilterRef = useRef<FilterType>("ALL");
+
+	const fetchStats = useCallback(async () => {
+		try {
+			const res = await api.get("/admin/dashboard");
+			setStats(res.data);
+		} catch (err) {
+			console.error("Failed to fetch dashboard stats:", err);
+		}
+	}, []);
+
+	useEffect(() => {
+		void fetchStats();
+	}, [fetchStats]);
 
 	useEffect(() => {
 		const urlFilter = searchParams.get("filter") as FilterType | null;
@@ -140,56 +166,51 @@ export default function AdminUsersPage() {
 	const fetchUsers = useCallback(
 		async (page: number, currentFilter: FilterType) => {
 			setLoading(true);
+			void fetchStats();
+			const reqId = ++requestCountRef.current;
 			try {
 				if (currentFilter === "ALL") {
-					// Pending users are prepended on page 0 only; regular users are paginated normally.
-					const requests: Promise<any>[] = [api.get(`/users?page=${page}&size=10`)];
-					if (page === 0) requests.push(api.get(`/admin/pending-users?page=0&size=10`));
-
-					const results = await Promise.allSettled(requests);
-
-					let normalUsers: AdminUser[] = [];
-					let pendingUsers: AdminUser[] = [];
-					let normalTotalPages = 1;
-
-					if (results[0].status === "fulfilled") {
-						const { data, totalPages: tp } = extractPageContent<any>(results[0].value.data);
-						normalUsers = data.map(mapNormalUser);
-						normalTotalPages = tp;
-					}
-					if (page === 0 && results[1]?.status === "fulfilled") {
-						const { data } = extractPageContent<any>(
-							(results[1] as PromiseFulfilledResult<any>).value.data,
-						);
-						pendingUsers = data.map(mapPendingUser);
-					}
-
-					setUsers([...pendingUsers, ...normalUsers]);
-					setTotalPages(normalTotalPages);
+					const res = await api.get(`/users?page=${page}&size=10`);
+					if (reqId !== requestCountRef.current) return;
+					const { data, totalPages: tp } = extractPageContent<any>(res.data);
+					setUsers(data.map(mapNormalUser));
+					setTotalPages(tp);
 				} else if (currentFilter === "PENDING") {
 					const res = await api.get(`/admin/pending-users?page=${page}&size=10`);
+					if (reqId !== requestCountRef.current) return;
 					const { data, totalPages: tp } = extractPageContent<any>(res.data);
 					setUsers(data.map(mapPendingUser));
 					setTotalPages(tp);
 				} else {
 					// VERIFIED or SUSPENDED — fetch from /users and client-side filter by status
 					const res = await api.get(`/users?page=${page}&size=10`);
+					if (reqId !== requestCountRef.current) return;
 					const { data, totalPages: tp } = extractPageContent<any>(res.data);
 					setUsers(data.map(mapNormalUser));
 					setTotalPages(tp);
 				}
 			} catch (err) {
+				if (reqId !== requestCountRef.current) return;
 				console.error("Failed to fetch users:", err);
 				toast(extractErrorMessage(err), "error");
 				setUsers([]);
 			} finally {
-				setLoading(false);
+				if (reqId === requestCountRef.current) {
+					setLoading(false);
+				}
 			}
 		},
-		[toast],
+		[toast, fetchStats],
 	);
 
 	useEffect(() => {
+		if (prevFilterRef.current !== filter) {
+			prevFilterRef.current = filter;
+			if (pageIndex !== 0) {
+				setPageIndex(0);
+				return;
+			}
+		}
 		void fetchUsers(pageIndex, filter);
 	}, [pageIndex, filter, fetchUsers]);
 
@@ -265,7 +286,7 @@ export default function AdminUsersPage() {
 					</div>
 					<div className="flex w-full items-center gap-2 rounded-xl border border-borderLight bg-surface px-3 py-2 text-sm text-textSecondary shadow-sm sm:w-auto self-start sm:self-auto">
 						<Users className="h-4 w-4" />
-						<span className="font-bold text-textPrimary">{users.length}</span>
+						<span className="font-bold text-textPrimary">{filteredUsers.length}</span>
 						<span>on this page</span>
 					</div>
 				</div>
@@ -279,7 +300,13 @@ export default function AdminUsersPage() {
 							{card.label}
 						</div>
 						<div className={`mt-2 text-2xl font-bold ${SUMMARY_COLORS[card.label]}`}>
-							{users.filter((u) => u.status === card.status).length}
+							{stats ? (
+								card.status === "PENDING" ? stats.pendingApprovals :
+								card.status === "VERIFIED" ? stats.verifiedStudents :
+								card.status === "SUSPENDED" ? stats.suspendedUsers : 0
+							) : (
+								users.filter((u) => u.status === card.status).length
+							)}
 						</div>
 					</Card>
 				))}
@@ -319,7 +346,6 @@ export default function AdminUsersPage() {
 
 			<div className="text-xs text-textTertiary">
 				Note: Search and filtering apply only to the current page.
-				{filter === "ALL" && " Pending users appear first on page 1."}
 			</div>
 
 			{/* Table */}
