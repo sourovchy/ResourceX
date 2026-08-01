@@ -192,9 +192,10 @@ export default function AdminUserDetailPage() {
     }
 
     let fetchUrl = url;
-    if (
+    if (url.startsWith("/api/")) {
+      fetchUrl = url.replace(/^\/api/, "");
+    } else if (
       !url.startsWith("http") &&
-      !url.startsWith("/api/") &&
       !url.startsWith("/")
     ) {
       fetchUrl = `/files/${url}`;
