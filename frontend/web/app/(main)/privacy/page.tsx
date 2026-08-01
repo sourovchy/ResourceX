@@ -175,10 +175,10 @@ export default function PrivacyPolicy() {
               your account settings. For data deletion requests or other privacy
               concerns, contact us at{" "}
               <a
-                href="mailto:[REDACTED_MAIL_USERNAME]"
+                href="mailto:support.resourcex@gmail.com"
                 className="font-medium text-primary underline-offset-2 hover:underline"
               >
-                [REDACTED_MAIL_USERNAME]
+                support.resourcex@gmail.com
               </a>
               .
             </p>

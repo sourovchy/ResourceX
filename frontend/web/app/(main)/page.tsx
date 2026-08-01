@@ -291,7 +291,7 @@ export default function LandingPage() {
             >
               <h2 className="text-3xl font-bold leading-tight tracking-tight text-textPrimary md:text-5xl">
                 Ready to join your{" "}
-                <span className="text-gradient-brand italic">campus network?</span>
+                <span className="text-gradient-brand italic pr-[0.2em] box-decoration-clone">campus network?</span>
               </h2>
               <p className="mx-auto max-w-xl text-sm leading-6 text-textSecondary">
                 Create a free account in under two minutes and start renting or

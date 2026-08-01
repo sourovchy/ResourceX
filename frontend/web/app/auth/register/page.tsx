@@ -36,11 +36,21 @@ import {
 
 const universityOptions = [
 	{
+		value: "Bangladesh University of Engineering and Technology",
+		label: "Bangladesh University of Engineering and Technology",
+	},
+	{
 		value: "Chittagong University of Engineering and Technology",
 		label: "Chittagong University of Engineering and Technology",
 	},
-	{ value: "North South University", label: "North South University" },
-	{ value: "BRAC University", label: "BRAC University" },
+	{
+		value: "Khulna University of Engineering and Technology",
+		label: "Khulna University of Engineering and Technology",
+	},
+	{
+		value: "Rajshahi University of Engineering and Technology",
+		label: "Rajshahi University of Engineering and Technology",
+	},
 	{ value: "Dhaka University", label: "Dhaka University" },
 ];
 
@@ -49,9 +59,22 @@ const departmentOptions = [
 		value: "Computer Science and Engineering",
 		label: "Computer Science and Engineering",
 	},
-	{ value: "Electrical Engineering", label: "Electrical Engineering" },
-	{ value: "Business Administration", label: "Business Administration" },
-	{ value: "English", label: "English" },
+	{
+		value: "Electrical and Electronic Engineering",
+		label: "Electrical and Electronic Engineering",
+	},
+	{
+		value: "Mechanical Engineering",
+		label: "Mechanical Engineering",
+	},
+	{
+		value: "Civil Engineering",
+		label: "Civil Engineering",
+	},
+	{
+		value: "Urban and Regional Planning",
+		label: "Urban and Regional Planning",
+	},
 ];
 
 type AuthResponse = {
@@ -336,7 +359,7 @@ export default function RegisterPage() {
 													})
 												}
 												className={`${inputBase} pl-10`}
-												placeholder="John Doe"
+												placeholder="e.g. Peter Parker"
 												maxLength={50}
 												required
 											/>
@@ -360,7 +383,7 @@ export default function RegisterPage() {
 												})
 											}
 											className={inputBase}
-											placeholder="CSE2304082"
+											placeholder="e.g. 2304082"
 											maxLength={20}
 											required
 										/>
