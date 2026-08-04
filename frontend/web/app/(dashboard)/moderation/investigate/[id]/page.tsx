@@ -62,21 +62,55 @@ export default function InvestigatePage({ params }: { params: { id: string } }) 
 			setError(null);
 			try {
 				// 1. Load details of this report
-				const reportRes = await api.get<Report>(`/admin/reports/${params.id}`);
+				const reportRes = await api.get<any>(`/admin/reports/${params.id}`);
 				if (!active) return;
-				setReport(reportRes.data);
-
-				// 2. Load other reports on the same entity
-				if (reportRes.data) {
-					const relatedRes = await api.get<Report[]>(
-						`/admin/reports/entity/${reportRes.data.entityType}/${reportRes.data.entityId}`
-					);
-					if (!active) return;
-					// Filter out current report to prevent showing it in related
-					setRelatedReports(
-						(relatedRes.data || []).filter((r) => r.reportId !== reportRes.data.reportId)
-					);
+				
+				const rawReport = reportRes.data;
+				if (!rawReport) {
+					throw new Error("No report data returned");
 				}
+				
+				const isUserReport = rawReport.reportedUserId != null;
+				const mappedReport: Report = {
+					reportId: rawReport.reportId,
+					reporterId: rawReport.reporterId,
+					reporterName: rawReport.reporterName,
+					reporterEmail: rawReport.reporterEmail,
+					entityType: isUserReport ? "USER" : "ITEM",
+					entityId: isUserReport ? rawReport.reportedUserId : rawReport.reportedItemId,
+					entityName: isUserReport ? rawReport.reportedUserName : rawReport.reportedItemTitle,
+					ownerId: isUserReport ? rawReport.reportedUserId : undefined,
+					ownerName: isUserReport ? rawReport.reportedUserName : rawReport.reportedItemOwnerName,
+					ownerEmail: isUserReport ? rawReport.reportedUserEmail : undefined,
+					reason: rawReport.reason,
+					createdAt: rawReport.createdAt,
+				};
+				setReport(mappedReport);
+
+				// 2. Load other reports on the same entity using the correct backend endpoint
+				const endpoint = isUserReport
+					? `/admin/reports/user/${mappedReport.entityId}`
+					: `/admin/reports/item/${mappedReport.entityId}`;
+
+				const relatedRes = await api.get<any[]>(endpoint);
+				if (!active) return;
+
+				const mappedRelated = (relatedRes.data || []).map((r) => ({
+					reportId: r.reportId,
+					reporterId: r.reporterId,
+					reporterName: r.reporterName,
+					reporterEmail: r.reporterEmail,
+					entityType: r.reportedUserId != null ? "USER" : "ITEM",
+					entityId: r.reportedUserId != null ? r.reportedUserId : r.reportedItemId,
+					entityName: r.reportedUserId != null ? r.reportedUserName : r.reportedItemTitle,
+					reason: r.reason,
+					createdAt: r.createdAt,
+				}));
+
+				// Filter out current report to prevent showing it in related
+				setRelatedReports(
+					mappedRelated.filter((r) => r.reportId !== mappedReport.reportId)
+				);
 			} catch (err) {
 				console.error("Failed to load investigation details", err);
 				if (active) setError("Could not find moderation record.");

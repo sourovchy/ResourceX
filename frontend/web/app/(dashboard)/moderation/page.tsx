@@ -63,13 +63,30 @@ export default function ModerationDashboard() {
 		if (!silent) setLoading(true);
 		setError(null);
 		try {
-			const res = await api.get<Report[]>("/admin/reports");
-			setReports(res.data || []);
+			const res = await api.get<any[]>("/admin/reports");
+			const mapped = (res.data || []).map((rawReport) => {
+				const isUserReport = rawReport.reportedUserId != null;
+				return {
+					reportId: rawReport.reportId,
+					reporterId: rawReport.reporterId,
+					reporterName: rawReport.reporterName,
+					reporterEmail: rawReport.reporterEmail,
+					entityType: isUserReport ? "USER" : "ITEM",
+					entityId: isUserReport ? rawReport.reportedUserId : rawReport.reportedItemId,
+					entityName: isUserReport ? rawReport.reportedUserName : rawReport.reportedItemTitle,
+					ownerId: isUserReport ? rawReport.reportedUserId : undefined,
+					ownerName: isUserReport ? rawReport.reportedUserName : rawReport.reportedItemOwnerName,
+					ownerEmail: isUserReport ? rawReport.reportedUserEmail : undefined,
+					reason: rawReport.reason,
+					createdAt: rawReport.createdAt,
+				};
+			});
+			setReports(mapped);
 		} catch (err) {
 			console.error("Failed to load reports", err);
 			setError("Unable to load reports. Please check your credentials.");
 		} finally {
-			setLoading(false);
+			if (!silent) setLoading(false);
 		}
 	};
 
